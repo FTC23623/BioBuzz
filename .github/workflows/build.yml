@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Assemble debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # gradle.properties (owned by the FTC SDK) sets -Xmx1024M; runners have plenty more.
+      GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Validates gradle-wrapper.jar checksum and caches ~/.gradle between runs
+      - uses: gradle/actions/setup-gradle@v4
+
+      # TeamCode depends on :FtcRobotController, so both modules compile.
+      # Only one APK is packaged, which keeps the run a few minutes shorter.
+      - name: Build TeamCode
+        run: ./gradlew :TeamCode:assembleDebug --no-daemon --stacktrace
+
+      - name: Upload build reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: '**/build/reports/**'
+          if-no-files-found: ignore
