@@ -51,9 +51,10 @@ public final class Constants {
     public static final String cfgHubImu = "imu";
 
     // ---- Safe Mode key (docs/decisions/0007-safe-mode-key.md) --------------------------
-    // Checked once at INIT. Key in = full speed. Key out = Safe Mode.
+    // Checked once at INIT. "Remove Before Flight": key in = Safe Mode, key removed = full speed.
     //
-    // NOW (bench testing): the touch sensor "liftHomeSwitch". Pressed = pretend the key is out.
+    // NOW (bench testing): the touch sensor "liftHomeSwitch". Pressed = pretend the key is
+    //   removed (full speed). Not pressed = key in (Safe Mode).
     // LATER (the real key): REV Magnetic Limit Switch. Change the name below to the magnetic
     //   switch's name, and change keyPressedMeansKeyIn to true.
 
@@ -61,7 +62,7 @@ public final class Constants {
     public static final String cfgSafeModeKey = "liftHomeSwitch";
     /**
      * true: the sensor reads "pressed" when the key is IN (magnetic switch, magnet near).
-     * false: "pressed" means the key is OUT (touch sensor stand-in for testing).
+     * false: "pressed" means the key is REMOVED (touch sensor stand-in for testing).
      */
     public static final boolean keyPressedMeansKeyIn = false;
 

@@ -9,9 +9,10 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  * Checks the Safe Mode key ONE time, when INIT is pressed, and sets
  * {@code HydraOpMode.mSafeMode}.
  *
+ * <p>Think "Remove Before Flight": the key is a safety pin.
  * <ul>
- *   <li><b>Key in</b>: full speed.
- *   <li><b>Key out</b>: Safe Mode. The drive is limited to a quarter speed.
+ *   <li><b>Key in</b>: Safe Mode. The drive is limited to a quarter speed.
+ *   <li><b>Key removed</b>: full speed.
  * </ul>
  *
  * <p>After INIT the sensor is never read again. A bump or a loose wire in the middle of a
@@ -19,7 +20,7 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  * To stop the robot, use the power switch.
  *
  * <p>Hardware: a REV Magnetic Limit Switch and a 3D printed key with a magnet in it. For
- * bench testing now, a touch sensor stands in: pressing it pretends the key is out.
+ * bench testing now, a touch sensor stands in: pressing it pretends the key is removed.
  * {@code Constants.keyPressedMeansKeyIn} says which one is on the robot.
  * See docs/decisions/0007-safe-mode-key.md.
  */
@@ -43,11 +44,11 @@ public class SafeModeKey implements Subsystem {
 
         boolean keyIsIn = KeyIsIn(keySensor.isPressed(), Constants.keyPressedMeansKeyIn);
         if (keyIsIn) {
-            mOp.mSafeMode = false;
-            mStatus = "FULL SPEED: Safe Mode key is in.";
-        } else {
             mOp.mSafeMode = true;
-            mStatus = "SAFE MODE: key is out. Drive limited to " + limitPercent + "%.";
+            mStatus = "SAFE MODE: key is in. Drive limited to " + limitPercent + "%.";
+        } else {
+            mOp.mSafeMode = false;
+            mStatus = "FULL SPEED: Safe Mode key is removed.";
         }
     }
 
@@ -67,9 +68,11 @@ public class SafeModeKey implements Subsystem {
     /** Put the Safe Mode line on the Driver Station. Call every loop while waiting for START. */
     public void ShowStatus() {
         mOp.mTelemetry.addLine(mStatus);
-        if (!Constants.keyPressedMeansKeyIn) {
+        if (Constants.keyPressedMeansKeyIn) {
+            mOp.mTelemetry.addLine("(An unplugged key sensor also reads as key removed.)");
+        } else {
             mOp.mTelemetry.addLine("(Test sensor '" + Constants.cfgSafeModeKey
-                    + "': pressed = key out. Unplugged reads as key IN.)");
+                    + "': pressed = key removed = full speed.)");
         }
     }
 

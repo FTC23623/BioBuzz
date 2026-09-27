@@ -19,7 +19,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * These tests talk about "key in" and "key out", not "pressed". So they stay correct
+ * Key in = Safe Mode. Key removed = full speed ("Remove Before Flight").
+ *
+ * <p>These tests talk about "key in" and "key removed", not "pressed". So they stay correct
  * when Constants.keyPressedMeansKeyIn changes from the touch stand-in to the magnetic key.
  */
 @DisplayName("SafeModeKey")
@@ -57,19 +59,19 @@ class SafeModeKeyTest {
     }
 
     @Test
-    @DisplayName("key out: SAFE")
-    void keyOutIsSafe() {
+    @DisplayName("key in: SAFE (touch sensor NOT pressed)")
+    void keyInIsSafe() {
         op.mSafeMode = false;
-        keySensor(false);
+        keySensor(true);
         new SafeModeKey(op).ShowStatus();
         assertTrue(op.mSafeMode);
-        verify(telemetry).addLine(contains("key is out"));
+        verify(telemetry).addLine(contains("key is in"));
     }
 
     @Test
-    @DisplayName("key in: FULL speed")
-    void keyInIsFull() {
-        keySensor(true);
+    @DisplayName("key removed: FULL speed (touch sensor pressed)")
+    void keyRemovedIsFull() {
+        keySensor(false);
         new SafeModeKey(op).ShowStatus();
         assertFalse(op.mSafeMode);
         verify(telemetry).addLine(contains("FULL SPEED"));
@@ -87,12 +89,12 @@ class SafeModeKeyTest {
     @Test
     @DisplayName("the key is read exactly once, at INIT, and a mid-match change is ignored")
     void readOnlyOnce() {
-        TouchSensor sensor = keySensor(true);
+        TouchSensor sensor = keySensor(false);
         SafeModeKey key = new SafeModeKey(op);
         assertFalse(op.mSafeMode);
 
-        // A fluke mid-match: the sensor suddenly says "key out".
-        when(sensor.isPressed()).thenReturn(sensorReading(false));
+        // A fluke mid-match: the sensor suddenly says "key in".
+        when(sensor.isPressed()).thenReturn(sensorReading(true));
         for (int loop = 0; loop < 100; loop++) {
             key.Init();
             key.ShowStatus();
@@ -105,7 +107,7 @@ class SafeModeKeyTest {
     }
 
     @Test
-    @DisplayName("touch stand-in: pressed means key OUT, released means key IN")
+    @DisplayName("touch stand-in: pressed means key REMOVED, not pressed means key IN")
     void touchStandIn() {
         assertFalse(SafeModeKey.KeyIsIn(true, false));
         assertTrue(SafeModeKey.KeyIsIn(false, false));

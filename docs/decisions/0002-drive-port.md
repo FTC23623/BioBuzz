@@ -61,8 +61,9 @@ current behavior first, so the fix is a deliberate, visible change.
 
 **Bench test checklist, in order:**
 
-0. Safe Mode: with the touch stand-in, INIT without pressing `liftHomeSwitch` = full
-   speed; hold it pressed while pressing INIT = 25%. See 0007-safe-mode-key.md.
+0. Safe Mode: with the touch stand-in, INIT without pressing `liftHomeSwitch` = 25%
+   (key in); hold it pressed while pressing INIT = full speed (key removed).
+   See 0007-safe-mode-key.md.
 1. Wheels off the ground, hand on STOP. Run **Test: Drive Motors**. Each D-pad direction
    spins one wheel forward. Fix any backward wheel in the wiring or config, not in code.
 2. Still on blocks, run **HyDrive**. It says which heading source it picked (Pinpoint or
