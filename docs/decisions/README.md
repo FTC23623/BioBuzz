@@ -14,6 +14,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0005](0005-hub-imu-fallback.md) | Use the Control Hub IMU when there is no Pinpoint | Accepted, mounting not checked yet |
 | [0006](0006-code-for-students.md) | Write the code for students to read | Accepted |
 | [0007](0007-safe-mode-key.md) | Safe Mode input: magnetic key, checked once at INIT | Accepted; touch sensor stands in |
+| [0008](0008-pedro-pathing-autos.md) | Autonomous uses Pedro Pathing 3, odometry pods on the hub | Accepted, not tuned yet |
 
 ## Template
 

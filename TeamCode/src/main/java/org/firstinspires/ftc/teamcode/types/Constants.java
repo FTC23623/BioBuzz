@@ -84,4 +84,14 @@ public final class Constants {
             RevHubOrientationOnRobot.LogoFacingDirection.LEFT;
     public static final RevHubOrientationOnRobot.UsbFacingDirection hubUsbFacing =
             RevHubOrientationOnRobot.UsbFacingDirection.UP;
+
+    // ---- Odometry pods, read by Pedro Pathing (docs/decisions/0008) ---------------------
+    // With no Pinpoint, the two odometry pods plug straight into the hub's encoder jacks.
+    // An encoder jack belongs to a motor port, so the "name" of a pod is the name of the
+    // motor on that port. CHECK THESE ON THE ROBOT: they are a guess until someone looks.
+
+    /** Motor port whose encoder jack has the pod that rolls when the robot drives FORWARD. */
+    public static final String cfgForwardPodPort = "leftFront";
+    /** Motor port whose encoder jack has the pod that rolls when the robot drives SIDEWAYS. */
+    public static final String cfgStrafePodPort = "rightBack";
 }
