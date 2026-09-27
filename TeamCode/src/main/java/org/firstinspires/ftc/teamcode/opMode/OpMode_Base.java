@@ -6,18 +6,33 @@ import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
+import org.firstinspires.ftc.teamcode.subsystems.SafeModeSwitch;
 
 /**
- * Shared plumbing for every team OpMode.
+ * Shared plumbing for every team OpMode, TeleOp and Auto.
  *
  * <p>Ported from Decode opMode/OpMode_Base.java. The Decode version took a red/blue
  * VisionMode in its constructor. That is gone: alliance comes from the badge switch, not
  * from which OpMode the driver picked (docs/decisions/0001).
+ *
+ * <p>Every OpMode starts with {@link #CreateHydraOpMode()}. That also reads the Safe Mode
+ * switch, so no OpMode can forget it (docs/decisions/0004).
  */
 public abstract class OpMode_Base extends LinearOpMode {
     protected HydraOpMode mOpMode;
+    protected SafeModeSwitch mSafeModeSwitch;
     protected List<LynxModule> mAllHubs;
     protected final List<Subsystem> mSystems = new ArrayList<>();
+
+    /**
+     * Build the context object every subsystem gets, and read the Safe Mode switch.
+     * Call this first in runOpMode(), before creating any subsystem.
+     */
+    protected void CreateHydraOpMode() {
+        mOpMode = new HydraOpMode(telemetry, hardwareMap, gamepad1, gamepad2);
+        mSafeModeSwitch = new SafeModeSwitch(mOpMode);
+        mSystems.add(mSafeModeSwitch);
+    }
 
     /**
      * Read every hub's sensors in one trip per loop instead of one trip per sensor.

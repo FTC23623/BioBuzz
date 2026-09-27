@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.opMode;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.subsystems.Drive_Manual;
 import org.firstinspires.ftc.teamcode.subsystems.Imu;
@@ -24,7 +23,7 @@ public class HyDrive extends OpMode_Base {
     @Override
     public void runOpMode() {
         ElapsedTime loopTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-        mOpMode = new HydraOpMode(telemetry, hardwareMap, gamepad1, gamepad2);
+        CreateHydraOpMode();
 
         Imu imu = new Imu_Pinpoint(mOpMode);
         mSystems.add(imu);
@@ -35,6 +34,8 @@ public class HyDrive extends OpMode_Base {
 
         while (!isStarted() && !isStopRequested()) {
             ClearLynxHubCaches();
+            // Keep reading the switch until START, so flipping it during INIT shows up.
+            mSafeModeSwitch.Read();
             imu.Process();
             telemetry.addData("Heading ready", imu.Ready());
             telemetry.addData("Yaw", imu.GetYaw());

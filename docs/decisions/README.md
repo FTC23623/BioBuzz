@@ -10,6 +10,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0001](0001-one-opmode-alliance-from-hardware.md) | One OpMode; alliance comes from a badge switch | Accepted, switch not built yet |
 | [0002](0002-drive-port.md) | How the mecanum drive came over from Decode | Accepted, bench test pending |
 | [0003](0003-quality-gates.md) | Tests and checks from day one, aimed at the coach | Accepted, partly built |
+| [0004](0004-safe-mode.md) | Safe Mode: drive limited to 25% unless a robot switch says FULL | Accepted, switch not wired yet |
 
 ## Template
 

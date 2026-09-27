@@ -23,6 +23,13 @@ public class HydraOpMode {
      */
     public Alliance mAlliance;
 
+    /**
+     * true: drive motors are limited to Constants.safeModeMaxPower. Read from the Safe Mode
+     * switch during INIT and locked at START. Starts true so that an OpMode that never reads
+     * the switch is slow, not fast. See docs/decisions/0004-safe-mode.md.
+     */
+    public boolean mSafeMode;
+
     /** How long the last loop took, in milliseconds. */
     public double mLoopTime;
 
@@ -33,6 +40,7 @@ public class HydraOpMode {
         mDriverGamepad = driverGamepad;
         mOperatorGamepad = operatorGamepad;
         mAlliance = Alliance.UNKNOWN;
+        mSafeMode = true;
         mLoopTime = 0;
     }
 }

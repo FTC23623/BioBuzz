@@ -5,7 +5,6 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.MecanumMath;
-import org.firstinspires.ftc.teamcode.objects.MotorSlewRate;
 import org.firstinspires.ftc.teamcode.types.Constants;
 
 /**
@@ -76,15 +75,18 @@ public class Drive_Manual extends Drive {
         } else {
             MecanumMath.RobotCentric(mDrive, mStrafe, mRotate, mPowers);
         }
-        MotorSlewRate.Set(mMotDrBkLt, mPowers.backLeft * mMaxPower, Constants.driveMotorSlewRate);
-        MotorSlewRate.Set(mMotDrBkRt, mPowers.backRight * mMaxPower, Constants.driveMotorSlewRate);
-        MotorSlewRate.Set(mMotDrFrLt, mPowers.frontLeft * mMaxPower, Constants.driveMotorSlewRate);
-        MotorSlewRate.Set(mMotDrFrRt, mPowers.frontRight * mMaxPower, Constants.driveMotorSlewRate);
+        SetMotorPower(mMotDrBkLt, mPowers.backLeft * mMaxPower);
+        SetMotorPower(mMotDrBkRt, mPowers.backRight * mMaxPower);
+        SetMotorPower(mMotDrFrLt, mPowers.frontLeft * mMaxPower);
+        SetMotorPower(mMotDrFrRt, mPowers.frontRight * mMaxPower);
 
+        if (mOp.mSafeMode) {
+            mOp.mTelemetry.addLine("SAFE MODE: drive limited");
+        }
         mOp.mTelemetry.addData("Yaw", yaw);
-        mOp.mTelemetry.addData("Power FL", mPowers.frontLeft * mMaxPower);
-        mOp.mTelemetry.addData("Power FR", mPowers.frontRight * mMaxPower);
-        mOp.mTelemetry.addData("Power BL", mPowers.backLeft * mMaxPower);
-        mOp.mTelemetry.addData("Power BR", mPowers.backRight * mMaxPower);
+        mOp.mTelemetry.addData("Power FL", mMotDrFrLt.getPower());
+        mOp.mTelemetry.addData("Power FR", mMotDrFrRt.getPower());
+        mOp.mTelemetry.addData("Power BL", mMotDrBkLt.getPower());
+        mOp.mTelemetry.addData("Power BR", mMotDrBkRt.getPower());
     }
 }

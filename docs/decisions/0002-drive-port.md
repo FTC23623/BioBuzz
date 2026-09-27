@@ -61,6 +61,8 @@ current behavior first, so the fix is a deliberate, visible change.
 
 **Bench test checklist, in order:**
 
+0. Until the Safe Mode switch is wired, every drive runs at 25%. That's intended for the
+   bench; see 0004-safe-mode.md for how to get full speed.
 1. Wheels off the ground, hand on STOP. Run **Test: Drive Motors**. Each D-pad direction
    spins one wheel forward. Fix any backward wheel in the wiring or config, not in code.
 2. Still on blocks, run **HyDrive**. `Heading ready` should be true within a second.

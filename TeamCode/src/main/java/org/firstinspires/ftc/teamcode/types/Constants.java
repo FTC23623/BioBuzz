@@ -33,6 +33,11 @@ public final class Constants {
     /** Loops a button must be held before it counts. Filters out electrical noise. */
     public static final int debounce = 3;
 
+    // ---- Safe Mode (docs/decisions/0004-safe-mode.md) -------------------------------
+
+    /** Fastest any drive motor may go in Safe Mode. 0.25 is one quarter of full power. */
+    public static final double safeModeMaxPower = 0.25;
+
     // ---- Drive hardware names (must match the robot configuration on the Driver Station) --
 
     public static final String cfgDriveFrontLeft = "leftFront";
@@ -40,6 +45,8 @@ public final class Constants {
     public static final String cfgDriveBackLeft = "leftBack";
     public static final String cfgDriveBackRight = "rightBack";
     public static final String cfgPinpoint = "pinpoint";
+    /** Toggle switch on the robot. Configure as a "Digital Device". Open = SAFE, closed = FULL. */
+    public static final String cfgSafeModeSwitch = "safeMode";
 
     // ---- goBILDA Pinpoint odometry (tuned on the Decode robot) -------------------------
     // These only affect position tracking, not heading. Field-centric drive needs heading

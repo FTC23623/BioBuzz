@@ -12,10 +12,12 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  * up = front left, right = front right, down = back right, left = back left.
  * Every wheel should roll the way the robot drives forward. If one spins backward or
  * the wrong wheel moves, fix the wiring or the configuration before running HyDrive.
+ *
+ * <p>Always runs at the Safe Mode speed, whatever the Safe Mode switch says.
  */
 @TeleOp(name = "Test: Drive Motors", group = "Test")
 public class DriveMotorTest extends OpMode_Base {
-    private static final double TEST_POWER = 0.3;
+    private static final double TEST_POWER = Constants.safeModeMaxPower;
 
     @Override
     public void runOpMode() {

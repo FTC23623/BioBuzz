@@ -2,7 +2,9 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import org.firstinspires.ftc.teamcode.objects.DrivePowerLimit;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.MotorSlewRate;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.types.Constants;
 
@@ -55,12 +57,22 @@ public class Drive implements Subsystem {
     public void Process() {
     }
 
-    /** Set the same power on all four motors. 0 stops the robot. */
+    /** Set the same power on all four motors. 0 stops the robot. Safe Mode applies. */
     protected void SetAllMotorPower(double value) {
-        mMotDrBkLt.setPower(value);
-        mMotDrBkRt.setPower(value);
-        mMotDrFrLt.setPower(value);
-        mMotDrFrRt.setPower(value);
+        double limited = DrivePowerLimit.Apply(value, mOp.mSafeMode);
+        mMotDrBkLt.setPower(limited);
+        mMotDrBkRt.setPower(limited);
+        mMotDrFrLt.setPower(limited);
+        mMotDrFrRt.setPower(limited);
+    }
+
+    /**
+     * Move one drive motor toward a power, no faster than the slew rate. Safe Mode applies.
+     * Every drive power in TeleOp and Auto must go through here or SetAllMotorPower.
+     */
+    protected void SetMotorPower(DcMotorEx motor, double power) {
+        MotorSlewRate.Set(motor, DrivePowerLimit.Apply(power, mOp.mSafeMode),
+                Constants.driveMotorSlewRate);
     }
 
     /** Set the run mode on all four motors. */
