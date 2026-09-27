@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.types;
 
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+
 /**
  * Every tunable number on the robot, with a name.
  *
@@ -45,6 +47,8 @@ public final class Constants {
     public static final String cfgDriveBackLeft = "leftBack";
     public static final String cfgDriveBackRight = "rightBack";
     public static final String cfgPinpoint = "pinpoint";
+    /** The IMU inside the Control Hub. Every Control Hub configuration has it by default. */
+    public static final String cfgHubImu = "imu";
     /** Toggle switch on the robot. Configure as a "Digital Device". Open = SAFE, closed = FULL. */
     public static final String cfgSafeModeSwitch = "safeMode";
 
@@ -56,4 +60,14 @@ public final class Constants {
     public static final double pinpointInPerTick = 0.0019526927633206;
     public static final double pinpointParYTicks = -1209.212244933345;
     public static final double pinpointPerpXTicks = -2661.37617633336;
+
+    // ---- Control Hub IMU mounting (docs/decisions/0005) ---------------------------------
+    // Which way the REV logo and the USB ports point on the robot. Wrong values make
+    // turning read as tilting. Decode's robot: logo LEFT, USB UP (Decode Imu_Hub line 28).
+    // Check this robot: if turning left does not raise Yaw on the Driver Station, fix these.
+
+    public static final RevHubOrientationOnRobot.LogoFacingDirection hubLogoFacing =
+            RevHubOrientationOnRobot.LogoFacingDirection.LEFT;
+    public static final RevHubOrientationOnRobot.UsbFacingDirection hubUsbFacing =
+            RevHubOrientationOnRobot.UsbFacingDirection.UP;
 }

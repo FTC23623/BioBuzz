@@ -65,7 +65,9 @@ current behavior first, so the fix is a deliberate, visible change.
    bench; see 0004-safe-mode.md for how to get full speed.
 1. Wheels off the ground, hand on STOP. Run **Test: Drive Motors**. Each D-pad direction
    spins one wheel forward. Fix any backward wheel in the wiring or config, not in code.
-2. Still on blocks, run **HyDrive**. `Heading ready` should be true within a second.
+2. Still on blocks, run **HyDrive**. It says which heading source it picked (Pinpoint or
+   Control Hub IMU). `Heading ready` should be true within a second. Turn the robot left
+   by hand: `Yaw` should go up (see 0005 if not).
 3. On the floor: drive forward, strafe, turn. Then turn the robot 90 degrees and push
    forward. It should still go away from the driver.
 4. Press circle. The controller buzzes and the current facing becomes forward.

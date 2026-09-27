@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.subsystems.Drive_Manual;
 import org.firstinspires.ftc.teamcode.subsystems.Imu;
-import org.firstinspires.ftc.teamcode.subsystems.Imu_Pinpoint;
+import org.firstinspires.ftc.teamcode.subsystems.ImuSelector;
 
 /**
  * The one TeleOp. There is no red or blue version.
@@ -25,7 +25,7 @@ public class HyDrive extends OpMode_Base {
         ElapsedTime loopTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         CreateHydraOpMode();
 
-        Imu imu = new Imu_Pinpoint(mOpMode);
+        Imu imu = ImuSelector.Pick(mOpMode);
         mSystems.add(imu);
         mSystems.add(new Drive_Manual(mOpMode, imu));
 
