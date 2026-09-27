@@ -34,8 +34,8 @@ public class HyDrive extends OpMode_Base {
 
         while (!isStarted() && !isStopRequested()) {
             ClearLynxHubCaches();
-            // Keep reading the switch until START, so flipping it during INIT shows up.
-            mSafeModeSwitch.Read();
+            // Show whether Safe Mode is on. The key was checked once, at INIT; not read again.
+            mSafeModeKey.ShowStatus();
             imu.Process();
             telemetry.addData("Heading ready", imu.Ready());
             telemetry.addData("Yaw", imu.GetYaw());

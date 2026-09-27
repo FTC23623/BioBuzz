@@ -24,9 +24,9 @@ public class HydraOpMode {
     public Alliance mAlliance;
 
     /**
-     * true: drive motors are limited to Constants.safeModeMaxPower. Read from the Safe Mode
-     * switch during INIT and locked at START. Starts true so that an OpMode that never reads
-     * the switch is slow, not fast. See docs/decisions/0004-safe-mode.md.
+     * true: drive motors are limited to Constants.safeModeMaxPower. Set once from the Safe
+     * Mode key at INIT, then never changed. Starts true so that an OpMode that never checks
+     * the key is slow, not fast. See docs/decisions/0007-safe-mode-key.md.
      */
     public boolean mSafeMode;
 

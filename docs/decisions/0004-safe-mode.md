@@ -1,6 +1,7 @@
 # 0004: Safe Mode limits the drive to 25% unless a switch on the robot says otherwise
 
-Status: Accepted. The switch is not wired yet, so the robot is in Safe Mode until it is.
+Status: Accepted. The switch (how Safe Mode is turned on) is **Replaced by 0007**, a
+magnetic key checked once at INIT. The speed limit below still stands.
 Date: 2026-09-27
 
 ## Context

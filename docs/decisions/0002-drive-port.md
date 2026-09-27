@@ -61,8 +61,8 @@ current behavior first, so the fix is a deliberate, visible change.
 
 **Bench test checklist, in order:**
 
-0. Until the Safe Mode switch is wired, every drive runs at 25%. That's intended for the
-   bench; see 0004-safe-mode.md for how to get full speed.
+0. Safe Mode: with the touch stand-in, INIT without pressing `liftHomeSwitch` = full
+   speed; hold it pressed while pressing INIT = 25%. See 0007-safe-mode-key.md.
 1. Wheels off the ground, hand on STOP. Run **Test: Drive Motors**. Each D-pad direction
    spins one wheel forward. Fix any backward wheel in the wiring or config, not in code.
 2. Still on blocks, run **HyDrive**. It says which heading source it picked (Pinpoint or

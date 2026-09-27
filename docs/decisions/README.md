@@ -10,9 +10,10 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0001](0001-one-opmode-alliance-from-hardware.md) | One OpMode; alliance comes from a badge switch | Accepted, switch not built yet |
 | [0002](0002-drive-port.md) | How the mecanum drive came over from Decode | Accepted, bench test pending |
 | [0003](0003-quality-gates.md) | Tests and checks from day one, aimed at the coach | Accepted, partly built |
-| [0004](0004-safe-mode.md) | Safe Mode: drive limited to 25% unless a robot switch says FULL | Accepted, switch not wired yet |
+| [0004](0004-safe-mode.md) | Safe Mode: drive limited to 25% | Accepted; switch replaced by 0007 |
 | [0005](0005-hub-imu-fallback.md) | Use the Control Hub IMU when there is no Pinpoint | Accepted, mounting not checked yet |
 | [0006](0006-code-for-students.md) | Write the code for students to read | Accepted |
+| [0007](0007-safe-mode-key.md) | Safe Mode input: magnetic key, checked once at INIT | Accepted; touch sensor stands in |
 
 ## Template
 

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
-import org.firstinspires.ftc.teamcode.subsystems.SafeModeSwitch;
+import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
 
 /**
  * Shared plumbing for every team OpMode, TeleOp and Auto.
@@ -20,18 +20,19 @@ import org.firstinspires.ftc.teamcode.subsystems.SafeModeSwitch;
  */
 public abstract class OpMode_Base extends LinearOpMode {
     protected HydraOpMode mOpMode;
-    protected SafeModeSwitch mSafeModeSwitch;
+    protected SafeModeKey mSafeModeKey;
     protected List<LynxModule> mAllHubs;
     protected final List<Subsystem> mSystems = new ArrayList<>();
 
     /**
-     * Build the context object every subsystem gets, and read the Safe Mode switch.
-     * Call this first in runOpMode(), before creating any subsystem.
+     * Build the context object every subsystem gets, and check the Safe Mode key.
+     * Call this first in runOpMode(), before creating any subsystem. This is the only
+     * time the key is read; see docs/decisions/0007.
      */
     protected void CreateHydraOpMode() {
         mOpMode = new HydraOpMode(telemetry, hardwareMap, gamepad1, gamepad2);
-        mSafeModeSwitch = new SafeModeSwitch(mOpMode);
-        mSystems.add(mSafeModeSwitch);
+        mSafeModeKey = new SafeModeKey(mOpMode);
+        mSystems.add(mSafeModeKey);
     }
 
     /**
