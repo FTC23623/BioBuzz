@@ -1,64 +1,73 @@
 package org.firstinspires.ftc.teamcode.objects;
 
 /**
- * Debounce an input
+ * Turns a noisy button into one clean "pressed" event.
+ *
+ * <p>A button can flicker for a moment when pressed. The debouncer only says "pressed"
+ * after it has seen the button held for several loops in a row. Once your code has acted
+ * on the press, call {@link #Used()} so holding the button down doesn't act again every
+ * loop. Letting go of the button gets it ready for the next press.
+ *
+ * <p>Each loop: call {@link #In} with the button, then check {@link #Out}.
+ * <pre>
+ *   mResetHeadingButton.In(gamepad.circle);
+ *   if (mResetHeadingButton.Out()) {
+ *       mResetHeadingButton.Used();
+ *       // do the thing once
+ *   }
+ * </pre>
  */
 public class Debouncer {
-    // how many times to see the input high before debounced
-    private final int mActionCount;
-    // number of times signal has been high
-    private int mConsecutiveCount;
-    // optional to see false until the condition goes away again
+    /** How many loops in a row the button must be held before it counts as pressed. */
+    private final int mLoopsNeeded;
+    /** How many loops in a row the button has been held so far. */
+    private int mLoopsHeld;
+    /** true once this press has been acted on. Cleared when the button is let go. */
     private boolean mUsed;
 
     /**
-     * Construct a debouncer
-     * @param trueAtCount: number of times input should be true before returning true
+     * @param loopsNeeded how many loops in a row the button must be held to count
      */
-    public Debouncer(int trueAtCount) {
-        mActionCount = trueAtCount;
-        mConsecutiveCount = 0;
+    public Debouncer(int loopsNeeded) {
+        mLoopsNeeded = loopsNeeded;
+        mLoopsHeld = 0;
         mUsed = false;
     }
 
     /**
-     * Call with the current state of the input to debounce
-     * @param state: the current state of the input
+     * Give the debouncer this loop's button reading.
+     *
+     * @param pressed true if the button is down right now
      */
-    public void In(boolean state) {
-        if (state) {
-            // increment without overflow
-            if (mConsecutiveCount < mActionCount) {
-                ++mConsecutiveCount;
+    public void In(boolean pressed) {
+        if (pressed) {
+            // Count up, but stop at mLoopsNeeded so the number can't grow forever.
+            if (mLoopsHeld < mLoopsNeeded) {
+                mLoopsHeld++;
             }
         } else {
-            // reset count
-            mConsecutiveCount = 0;
-            // reset used to prepare for the next event
+            // Button let go: start over, and get ready for the next press.
+            mLoopsHeld = 0;
             mUsed = false;
         }
     }
 
     /**
-     * Returns debounced input
-     * @return true when debounced input is true and has not been consumed, false otherwise
+     * @return true when the button has been held long enough and this press hasn't been used yet
      */
     public boolean Out() {
-        return !mUsed && (mConsecutiveCount >= mActionCount);
+        boolean heldLongEnough = mLoopsHeld >= mLoopsNeeded;
+        return heldLongEnough && !mUsed;
     }
 
-    /**
-     * Call to force output to false until the input condition goes false again
-     */
+    /** Mark this press as handled. {@link #Out()} stays false until the button is let go. */
     public void Used() {
         mUsed = true;
     }
 
-    /**
-     * Force debouncer to be triggered
-     */
+    /** Act as if the button was just pressed and held long enough. */
     public void Force() {
-        mConsecutiveCount = mActionCount;
+        mLoopsHeld = mLoopsNeeded;
         mUsed = false;
     }
 }

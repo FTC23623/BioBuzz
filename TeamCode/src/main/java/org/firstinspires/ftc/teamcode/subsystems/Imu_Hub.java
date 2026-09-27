@@ -19,17 +19,17 @@ import org.firstinspires.ftc.teamcode.types.Constants;
 public class Imu_Hub implements Imu {
     private final HydraOpMode mOp;
     private final IMU mImu;
-    private boolean mTried;
+    private boolean mStartAttempted;
     private boolean mReady;
     /** Heading read this loop, so every reader in the loop sees the same number. */
-    private double mYawDeg;
+    private double mYawDegrees;
 
     public Imu_Hub(HydraOpMode op) {
         mOp = op;
         mImu = op.mHardwareMap.get(IMU.class, Constants.cfgHubImu);
-        mTried = false;
+        mStartAttempted = false;
         mReady = false;
-        mYawDeg = 0;
+        mYawDegrees = 0;
     }
 
     /**
@@ -38,17 +38,22 @@ public class Imu_Hub implements Imu {
      */
     @Override
     public boolean Init() {
-        if (!mTried) {
-            mTried = true;
-            mReady = mImu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
-                    Constants.hubLogoFacing, Constants.hubUsbFacing)));
+        if (!mStartAttempted) {
+            mStartAttempted = true;
+            RevHubOrientationOnRobot mounting = new RevHubOrientationOnRobot(
+                    Constants.hubLogoFacing, Constants.hubUsbFacing);
+            mReady = mImu.initialize(new IMU.Parameters(mounting));
             if (mReady) {
                 mImu.resetYaw();
-                mYawDeg = 0;
+                mYawDegrees = 0;
             }
         }
-        mOp.mTelemetry.addLine(mReady ? "Hub IMU ready"
-                : "Hub IMU FAULT: did not start. Field-centric will act robot-centric.");
+
+        if (mReady) {
+            mOp.mTelemetry.addLine("Hub IMU ready");
+        } else {
+            mOp.mTelemetry.addLine("Hub IMU FAULT: did not start. Field-centric will act robot-centric.");
+        }
         return true;
     }
 
@@ -60,7 +65,7 @@ public class Imu_Hub implements Imu {
     @Override
     public void Process() {
         if (mReady) {
-            mYawDeg = mImu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+            mYawDegrees = mImu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
         }
     }
 
@@ -71,12 +76,12 @@ public class Imu_Hub implements Imu {
 
     @Override
     public double GetYaw() {
-        return mYawDeg;
+        return mYawDegrees;
     }
 
     @Override
     public void ResetYaw() {
         mImu.resetYaw();
-        mYawDeg = 0;
+        mYawDegrees = 0;
     }
 }

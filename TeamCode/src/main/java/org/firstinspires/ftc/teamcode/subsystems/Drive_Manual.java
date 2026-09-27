@@ -24,23 +24,21 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  */
 public class Drive_Manual extends Drive {
     private final Gamepad mGamepad;
-    private final Debouncer mCircle;
-    private final MecanumMath.WheelPowers mPowers;
+    private final Debouncer mResetHeadingButton;
 
     // Read from the gamepad in HandleUserInput, used in Process.
     private double mDrive;
     private double mStrafe;
     private double mRotate;
-    private double mMaxPower;
+    private double mSpeedLimit;
 
     public Drive_Manual(HydraOpMode op, Imu imu) {
         super(op, imu);
         mGamepad = mOp.mDriverGamepad;
         SetAllMotorPower(0.0);
         SetAllMotorMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        mCircle = new Debouncer(Constants.debounce);
-        mPowers = new MecanumMath.WheelPowers();
-        mMaxPower = Constants.driveNormal;
+        mResetHeadingButton = new Debouncer(Constants.debounce);
+        mSpeedLimit = Constants.driveNormal;
     }
 
     @Override
@@ -50,43 +48,49 @@ public class Drive_Manual extends Drive {
         mRotate = -mGamepad.right_stick_x;
 
         // Circle resets which way is forward. Rumble so the driver feels it happen.
-        mCircle.In(mGamepad.circle);
-        if (mCircle.Out() && Constants.fieldCentricDrive) {
-            mCircle.Used();
+        mResetHeadingButton.In(mGamepad.circle);
+        if (mResetHeadingButton.Out() && Constants.fieldCentricDrive) {
+            mResetHeadingButton.Used();
             mGamepad.rumbleBlips(1);
             mImu.ResetYaw();
         }
 
         if (mGamepad.left_trigger > Constants.trgBtnThresh) {
-            mMaxPower = Constants.driveSlow;
+            mSpeedLimit = Constants.driveSlow;
         } else if (mGamepad.right_trigger > Constants.trgBtnThresh) {
-            mMaxPower = Constants.driveBoosted;
+            mSpeedLimit = Constants.driveBoosted;
         } else {
-            mMaxPower = Constants.driveNormal;
+            mSpeedLimit = Constants.driveNormal;
         }
     }
 
     @Override
     public void Process() {
         // No heading yet? Drive as if facing forward, like Decode did.
-        double yaw = mImu.Ready() ? mImu.GetYaw() : 0;
-        if (Constants.fieldCentricDrive) {
-            MecanumMath.FieldCentric(mDrive, mStrafe, mRotate, yaw, mPowers);
-        } else {
-            MecanumMath.RobotCentric(mDrive, mStrafe, mRotate, mPowers);
+        double yaw = 0;
+        if (mImu.Ready()) {
+            yaw = mImu.GetYaw();
         }
-        SetMotorPower(mMotDrBkLt, mPowers.backLeft * mMaxPower);
-        SetMotorPower(mMotDrBkRt, mPowers.backRight * mMaxPower);
-        SetMotorPower(mMotDrFrLt, mPowers.frontLeft * mMaxPower);
-        SetMotorPower(mMotDrFrRt, mPowers.frontRight * mMaxPower);
+
+        MecanumMath.WheelPowers powers;
+        if (Constants.fieldCentricDrive) {
+            powers = MecanumMath.FieldCentric(mDrive, mStrafe, mRotate, yaw);
+        } else {
+            powers = MecanumMath.RobotCentric(mDrive, mStrafe, mRotate);
+        }
+
+        SetMotorPower(mFrontLeftMotor, powers.frontLeft * mSpeedLimit);
+        SetMotorPower(mFrontRightMotor, powers.frontRight * mSpeedLimit);
+        SetMotorPower(mBackLeftMotor, powers.backLeft * mSpeedLimit);
+        SetMotorPower(mBackRightMotor, powers.backRight * mSpeedLimit);
 
         if (mOp.mSafeMode) {
             mOp.mTelemetry.addLine("SAFE MODE: drive limited");
         }
         mOp.mTelemetry.addData("Yaw", yaw);
-        mOp.mTelemetry.addData("Power FL", mMotDrFrLt.getPower());
-        mOp.mTelemetry.addData("Power FR", mMotDrFrRt.getPower());
-        mOp.mTelemetry.addData("Power BL", mMotDrBkLt.getPower());
-        mOp.mTelemetry.addData("Power BR", mMotDrBkRt.getPower());
+        mOp.mTelemetry.addData("Power FL", mFrontLeftMotor.getPower());
+        mOp.mTelemetry.addData("Power FR", mFrontRightMotor.getPower());
+        mOp.mTelemetry.addData("Power BL", mBackLeftMotor.getPower());
+        mOp.mTelemetry.addData("Power BR", mBackRightMotor.getPower());
     }
 }

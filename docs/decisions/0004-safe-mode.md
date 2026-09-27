@@ -21,9 +21,9 @@ setting at the Driver Station.
 - **Anything missing means SAFE**, with a warning on the Driver Station: no `safeMode`
   device in the robot configuration, or an OpMode that never reads the switch.
   `HydraOpMode.mSafeMode` starts as true.
-- The cap lives in one place, `Drive.SetMotorPower` and `Drive.SetAllMotorPower`, which
-  run every drive power through `DrivePowerLimit.Apply`. Future Auto code must drive the
-  motors through those two methods, not by calling `setPower` directly.
+- The limit lives in one place, `Drive.LimitPower`. `Drive.SetMotorPower` and
+  `Drive.SetAllMotorPower` run every drive power through it. Future Auto code must drive
+  the motors through those two methods, not by calling `setPower` directly.
 - In Safe Mode the power is **scaled** (times 0.25) and then **clamped** to ±0.25. Scaling
   keeps the stick smooth from zero to full; clamping catches field-centric's 1.41 and
   anything else out of range. The cap is `Constants.safeModeMaxPower`.
@@ -45,7 +45,7 @@ that port. Label the switch positions SAFE and FULL on the robot.
   ground on the port and configure it as `safeMode`.
 - Only the drive is limited. Future mechanisms (intake, launcher, lift) are not. If they
   need a bench limit, extend this decision rather than inventing a second switch.
-- Tests: `DrivePowerLimitTest` and `DrivePowerLimitProperties` cover the math;
+- Tests: `DriveLimitPowerTest` and `DriveLimitPowerProperties` cover the math;
   `SafeModeSwitchTest` covers every switch state; `DriveSafeModeTest` drives the real
   `Drive_Manual` with a slammed stick, boost, and a 45° heading and checks no motor passes
   0.25. Removing the cap from `Drive` makes `DriveSafeModeTest` fail.

@@ -12,6 +12,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0003](0003-quality-gates.md) | Tests and checks from day one, aimed at the coach | Accepted, partly built |
 | [0004](0004-safe-mode.md) | Safe Mode: drive limited to 25% unless a robot switch says FULL | Accepted, switch not wired yet |
 | [0005](0005-hub-imu-fallback.md) | Use the Control Hub IMU when there is no Pinpoint | Accepted, mounting not checked yet |
+| [0006](0006-code-for-students.md) | Write the code for students to read | Accepted |
 
 ## Template
 

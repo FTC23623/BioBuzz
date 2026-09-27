@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import org.firstinspires.ftc.teamcode.objects.DrivePowerLimit;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.MotorSlewRate;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
@@ -12,6 +11,9 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  * The four mecanum drive motors. Sets them up; does not decide how to move.
  * {@link Drive_Manual} adds driver control on top.
  *
+ * <p>Every drive power goes through {@link #SetMotorPower} or {@link #SetAllMotorPower},
+ * so Safe Mode applies everywhere: TeleOp and Auto (docs/decisions/0004).
+ *
  * <p>Ported from Decode subsystems/Drive.java. Left out on purpose: the {@code if (false)}
  * PID block (PORT-PLAN P6 cut list), the encoder ramp fields nothing read, and the
  * RUN_TO_POSITION tolerance (the drive never runs in that mode).
@@ -19,29 +21,32 @@ import org.firstinspires.ftc.teamcode.types.Constants;
 public class Drive implements Subsystem {
     protected final HydraOpMode mOp;
     protected final Imu mImu;
-    protected final DcMotorEx mMotDrFrLt;
-    protected final DcMotorEx mMotDrFrRt;
-    protected final DcMotorEx mMotDrBkLt;
-    protected final DcMotorEx mMotDrBkRt;
+    protected final DcMotorEx mFrontLeftMotor;
+    protected final DcMotorEx mFrontRightMotor;
+    protected final DcMotorEx mBackLeftMotor;
+    protected final DcMotorEx mBackRightMotor;
 
     public Drive(HydraOpMode op, Imu imu) {
         mOp = op;
         mImu = imu;
-        mMotDrFrLt = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontLeft);
-        mMotDrFrRt = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontRight);
-        mMotDrBkLt = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackLeft);
-        mMotDrBkRt = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackRight);
+        mFrontLeftMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontLeft);
+        mFrontRightMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontRight);
+        mBackLeftMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackLeft);
+        mBackRightMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackRight);
+
         // Left side forward, right side reverse. MecanumMath's signs depend on this.
-        mMotDrFrLt.setDirection(DcMotor.Direction.FORWARD);
-        mMotDrBkLt.setDirection(DcMotor.Direction.FORWARD);
-        mMotDrFrRt.setDirection(DcMotor.Direction.REVERSE);
-        mMotDrBkRt.setDirection(DcMotor.Direction.REVERSE);
+        mFrontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
+        mBackLeftMotor.setDirection(DcMotor.Direction.FORWARD);
+        mFrontRightMotor.setDirection(DcMotor.Direction.REVERSE);
+        mBackRightMotor.setDirection(DcMotor.Direction.REVERSE);
+
         SetAllMotorMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         // Hold still instead of coasting when the stick is released.
-        mMotDrFrLt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        mMotDrBkLt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        mMotDrFrRt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        mMotDrBkRt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        mFrontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        mBackLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        mFrontRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        mBackRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
     @Override
@@ -57,29 +62,47 @@ public class Drive implements Subsystem {
     public void Process() {
     }
 
-    /** Set the same power on all four motors. 0 stops the robot. Safe Mode applies. */
-    protected void SetAllMotorPower(double value) {
-        double limited = DrivePowerLimit.Apply(value, mOp.mSafeMode);
-        mMotDrBkLt.setPower(limited);
-        mMotDrBkRt.setPower(limited);
-        mMotDrFrLt.setPower(limited);
-        mMotDrFrRt.setPower(limited);
+    /**
+     * The Safe Mode speed limit. Every drive power passes through here.
+     *
+     * <p>In Safe Mode the power is multiplied by a quarter, so the stick still feels smooth
+     * from 0 to full. Then it is clamped, so nothing can get past the limit, not even
+     * field-centric's 1.41. Outside Safe Mode the power passes through unchanged.
+     *
+     * @return the power to send to the motor. A broken number (NaN) becomes 0, stopped.
+     */
+    public static double LimitPower(double power, boolean safeMode) {
+        if (Double.isNaN(power)) {
+            return 0;
+        }
+        if (!safeMode) {
+            return power;
+        }
+        double limit = Constants.safeModeMaxPower;
+        double scaled = power * limit;
+        return Math.max(-limit, Math.min(scaled, limit));
     }
 
-    /**
-     * Move one drive motor toward a power, no faster than the slew rate. Safe Mode applies.
-     * Every drive power in TeleOp and Auto must go through here or SetAllMotorPower.
-     */
+    /** Set the same power on all four motors. 0 stops the robot. Safe Mode applies. */
+    protected void SetAllMotorPower(double power) {
+        double safePower = LimitPower(power, mOp.mSafeMode);
+        mFrontLeftMotor.setPower(safePower);
+        mFrontRightMotor.setPower(safePower);
+        mBackLeftMotor.setPower(safePower);
+        mBackRightMotor.setPower(safePower);
+    }
+
+    /** Move one drive motor toward a power, a little each loop. Safe Mode applies. */
     protected void SetMotorPower(DcMotorEx motor, double power) {
-        MotorSlewRate.Set(motor, DrivePowerLimit.Apply(power, mOp.mSafeMode),
-                Constants.driveMotorSlewRate);
+        double safePower = LimitPower(power, mOp.mSafeMode);
+        MotorSlewRate.Set(motor, safePower, Constants.driveMotorSlewRate);
     }
 
     /** Set the run mode on all four motors. */
-    protected void SetAllMotorMode(DcMotor.RunMode value) {
-        mMotDrBkLt.setMode(value);
-        mMotDrBkRt.setMode(value);
-        mMotDrFrLt.setMode(value);
-        mMotDrFrRt.setMode(value);
+    protected void SetAllMotorMode(DcMotor.RunMode mode) {
+        mFrontLeftMotor.setMode(mode);
+        mFrontRightMotor.setMode(mode);
+        mBackLeftMotor.setMode(mode);
+        mBackRightMotor.setMode(mode);
     }
 }

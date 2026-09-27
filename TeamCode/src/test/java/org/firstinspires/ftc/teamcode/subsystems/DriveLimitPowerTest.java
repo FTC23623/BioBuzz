@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.objects;
+package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-@DisplayName("DrivePowerLimit")
-class DrivePowerLimitTest {
+@DisplayName("Drive.LimitPower (Safe Mode)")
+class DriveLimitPowerTest {
     private static final double EPS = 1e-12;
 
     @Test
@@ -33,7 +33,7 @@ class DrivePowerLimitTest {
         })
         @DisplayName("scales the stick range down to a quarter")
         void scales(double in, double out) {
-            assertEquals(out, DrivePowerLimit.Apply(in, true), EPS);
+            assertEquals(out, Drive.LimitPower(in, true), EPS);
         }
 
         @ParameterizedTest(name = "{0} -> {1}")
@@ -46,13 +46,13 @@ class DrivePowerLimitTest {
         })
         @DisplayName("clamps anything past full power, like field-centric's 1.41")
         void clamps(double in, double out) {
-            assertEquals(out, DrivePowerLimit.Apply(in, true), EPS);
+            assertEquals(out, Drive.LimitPower(in, true), EPS);
         }
 
         @Test
         @DisplayName("a broken number (NaN) stops the motor")
         void nanStops() {
-            assertEquals(0, DrivePowerLimit.Apply(Double.NaN, true), EPS);
+            assertEquals(0, Drive.LimitPower(Double.NaN, true), EPS);
         }
     }
 
@@ -64,13 +64,13 @@ class DrivePowerLimitTest {
         @CsvSource({"0", "1", "-1", "0.37", "1.41"})
         @DisplayName("passes power through unchanged")
         void passThrough(double in) {
-            assertEquals(in, DrivePowerLimit.Apply(in, false), EPS);
+            assertEquals(in, Drive.LimitPower(in, false), EPS);
         }
 
         @Test
         @DisplayName("a broken number (NaN) still stops the motor")
         void nanStops() {
-            assertEquals(0, DrivePowerLimit.Apply(Double.NaN, false), EPS);
+            assertEquals(0, Drive.LimitPower(Double.NaN, false), EPS);
         }
     }
 }

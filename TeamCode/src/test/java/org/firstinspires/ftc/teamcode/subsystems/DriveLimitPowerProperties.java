@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.objects;
+package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,20 +9,20 @@ import net.jqwik.api.constraints.DoubleRange;
 import org.firstinspires.ftc.teamcode.types.Constants;
 
 /** jqwik only: no JUnit {@code @DisplayName} here, or jqwik silently skips these. */
-@Label("DrivePowerLimit properties")
-class DrivePowerLimitProperties {
+@Label("Drive.LimitPower properties")
+class DriveLimitPowerProperties {
 
     @Property
     @Label("Safe Mode never lets any power past the cap, whatever goes in")
     void neverPastCap(@ForAll double power) {
-        double out = DrivePowerLimit.Apply(power, true);
+        double out = Drive.LimitPower(power, true);
         assertTrue(Math.abs(out) <= Constants.safeModeMaxPower, power + " -> " + out);
     }
 
     @Property
     @Label("Safe Mode never flips direction")
     void keepsDirection(@ForAll double power) {
-        double out = DrivePowerLimit.Apply(power, true);
+        double out = Drive.LimitPower(power, true);
         assertTrue(out * power >= 0, power + " -> " + out);
     }
 
@@ -33,6 +33,6 @@ class DrivePowerLimitProperties {
             @ForAll @DoubleRange(min = -2, max = 2) double b) {
         double lo = Math.min(a, b);
         double hi = Math.max(a, b);
-        assertTrue(DrivePowerLimit.Apply(lo, true) <= DrivePowerLimit.Apply(hi, true));
+        assertTrue(Drive.LimitPower(lo, true) <= Drive.LimitPower(hi, true));
     }
 }

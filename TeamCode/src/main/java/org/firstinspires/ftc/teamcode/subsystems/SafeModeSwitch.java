@@ -31,14 +31,19 @@ public class SafeModeSwitch implements Subsystem {
 
     /** Read the switch and show the result on the Driver Station. Call only before START. */
     public void Read() {
-        int percent = (int) Math.round(Constants.safeModeMaxPower * 100);
+        int limitPercent = (int) Math.round(Constants.safeModeMaxPower * 100);
         if (mSwitch == null) {
             mOp.mSafeMode = true;
             mOp.mTelemetry.addLine("SAFE MODE: no '" + Constants.cfgSafeModeSwitch
-                    + "' switch in the robot configuration. Drive limited to " + percent + "%.");
-        } else if (mSwitch.getState()) {
+                    + "' switch in the robot configuration. Drive limited to " + limitPercent + "%.");
+            return;
+        }
+
+        // An open switch reads true (high). See the note at the top of this class.
+        boolean switchIsOpen = mSwitch.getState();
+        if (switchIsOpen) {
             mOp.mSafeMode = true;
-            mOp.mTelemetry.addLine("SAFE MODE: switch is open. Drive limited to " + percent + "%.");
+            mOp.mTelemetry.addLine("SAFE MODE: switch is open. Drive limited to " + limitPercent + "%.");
         } else {
             mOp.mSafeMode = false;
             mOp.mTelemetry.addLine("FULL SPEED: Safe Mode switch is closed.");

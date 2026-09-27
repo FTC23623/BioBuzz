@@ -19,10 +19,10 @@ public class Imu_Pinpoint implements Imu {
     private final HydraOpMode mOp;
     private final GoBildaPinpointDriver mPinpoint;
     private boolean mReady;
-    /** Raw Pinpoint heading that counts as 0. Changed by {@link #ResetYaw()}. */
-    private double mYawZeroDeg;
+    /** Raw Pinpoint heading at the last reset. That direction counts as 0. */
+    private double mHeadingAtReset;
     /** Heading read this loop, so every reader in the loop sees the same number. */
-    private double mYawDeg;
+    private double mYawDegrees;
 
     public Imu_Pinpoint(HydraOpMode op) {
         mOp = op;
@@ -30,16 +30,17 @@ public class Imu_Pinpoint implements Imu {
 
         // Same setup as Decode's PinpointLocalizer constructor.
         double mmPerTick = Constants.pinpointInPerTick * 25.4;
+        double forwardPodOffsetMm = mmPerTick * Constants.pinpointParYTicks;
+        double sidewaysPodOffsetMm = mmPerTick * Constants.pinpointPerpXTicks;
         mPinpoint.setEncoderResolution(1 / mmPerTick, DistanceUnit.MM);
-        mPinpoint.setOffsets(mmPerTick * Constants.pinpointParYTicks,
-                mmPerTick * Constants.pinpointPerpXTicks, DistanceUnit.MM);
+        mPinpoint.setOffsets(forwardPodOffsetMm, sidewaysPodOffsetMm, DistanceUnit.MM);
         mPinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
                 GoBildaPinpointDriver.EncoderDirection.FORWARD);
         mPinpoint.resetPosAndIMU();
 
         mReady = false;
-        mYawZeroDeg = 0;
-        mYawDeg = 0;
+        mHeadingAtReset = 0;
+        mYawDegrees = 0;
     }
 
     /**
@@ -94,7 +95,9 @@ public class Imu_Pinpoint implements Imu {
     @Override
     public void Process() {
         mPinpoint.update();
-        mYawDeg = AngleUnit.normalizeDegrees(mPinpoint.getHeading(AngleUnit.DEGREES) - mYawZeroDeg);
+        double rawHeading = mPinpoint.getHeading(AngleUnit.DEGREES);
+        // Keep the answer between -180 and 180.
+        mYawDegrees = AngleUnit.normalizeDegrees(rawHeading - mHeadingAtReset);
     }
 
     @Override
@@ -104,12 +107,12 @@ public class Imu_Pinpoint implements Imu {
 
     @Override
     public double GetYaw() {
-        return mYawDeg;
+        return mYawDegrees;
     }
 
     @Override
     public void ResetYaw() {
-        mYawZeroDeg = mPinpoint.getHeading(AngleUnit.DEGREES);
-        mYawDeg = 0;
+        mHeadingAtReset = mPinpoint.getHeading(AngleUnit.DEGREES);
+        mYawDegrees = 0;
     }
 }

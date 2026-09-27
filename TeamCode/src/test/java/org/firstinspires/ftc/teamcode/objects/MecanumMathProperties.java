@@ -24,8 +24,7 @@ class MecanumMathProperties {
             @ForAll @DoubleRange(min = -1, max = 1) double drive,
             @ForAll @DoubleRange(min = -1.1, max = 1.1) double strafe,
             @ForAll @DoubleRange(min = -1, max = 1) double rotate) {
-        MecanumMath.WheelPowers p = new MecanumMath.WheelPowers();
-        MecanumMath.RobotCentric(drive, strafe, rotate, p);
+        MecanumMath.WheelPowers p = MecanumMath.RobotCentric(drive, strafe, rotate);
         for (double w : new double[] {p.frontLeft, p.frontRight, p.backLeft, p.backRight}) {
             assertTrue(Math.abs(w) <= 1 + EPS, "power " + w);
         }
@@ -38,8 +37,7 @@ class MecanumMathProperties {
             @ForAll @DoubleRange(min = -1.1, max = 1.1) double strafe,
             @ForAll @DoubleRange(min = -1, max = 1) double rotate,
             @ForAll @DoubleRange(min = -360, max = 360) double yaw) {
-        MecanumMath.WheelPowers p = new MecanumMath.WheelPowers();
-        MecanumMath.FieldCentric(drive, strafe, rotate, yaw, p);
+        MecanumMath.WheelPowers p = MecanumMath.FieldCentric(drive, strafe, rotate, yaw);
         for (double w : new double[] {p.frontLeft, p.frontRight, p.backLeft, p.backRight}) {
             assertTrue(Math.abs(w) <= Math.sqrt(2) + EPS, "power " + w + " at yaw " + yaw);
         }
@@ -52,8 +50,7 @@ class MecanumMathProperties {
             @ForAll @DoubleRange(min = -1.1, max = 1.1) double strafe,
             @ForAll @DoubleRange(min = -1, max = 1) double rotate,
             @ForAll double yaw) {
-        MecanumMath.WheelPowers p = new MecanumMath.WheelPowers();
-        MecanumMath.FieldCentric(drive, strafe, rotate, yaw, p);
+        MecanumMath.WheelPowers p = MecanumMath.FieldCentric(drive, strafe, rotate, yaw);
         for (double w : new double[] {p.frontLeft, p.frontRight, p.backLeft, p.backRight}) {
             assertTrue(Double.isFinite(w) || !Double.isFinite(yaw), "power " + w);
         }
@@ -66,10 +63,8 @@ class MecanumMathProperties {
             @ForAll @DoubleRange(min = -1.1, max = 1.1) double strafe,
             @ForAll @DoubleRange(min = -1, max = 1) double rotate,
             @ForAll @DoubleRange(min = -180, max = 180) double yaw) {
-        MecanumMath.WheelPowers a = new MecanumMath.WheelPowers();
-        MecanumMath.WheelPowers b = new MecanumMath.WheelPowers();
-        MecanumMath.FieldCentric(drive, strafe, rotate, yaw, a);
-        MecanumMath.FieldCentric(-drive, -strafe, -rotate, yaw, b);
+        MecanumMath.WheelPowers a = MecanumMath.FieldCentric(drive, strafe, rotate, yaw);
+        MecanumMath.WheelPowers b = MecanumMath.FieldCentric(-drive, -strafe, -rotate, yaw);
         assertEquals(-a.frontLeft, b.frontLeft, EPS);
         assertEquals(-a.frontRight, b.frontRight, EPS);
         assertEquals(-a.backLeft, b.backLeft, EPS);

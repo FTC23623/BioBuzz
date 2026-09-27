@@ -22,7 +22,7 @@ package org.firstinspires.ftc.teamcode.objects;
  */
 public final class MecanumMath {
 
-    /** Four wheel powers. Reuse one instance every loop so the loop does not create objects. */
+    /** The four wheel powers, one per motor. */
     public static final class WheelPowers {
         public double frontLeft;
         public double frontRight;
@@ -36,39 +36,45 @@ public final class MecanumMath {
     /**
      * Robot-centric: "forward" means the way the robot is facing.
      */
-    public static void RobotCentric(double drive, double strafe, double rotate, WheelPowers out) {
-        Mix(drive, strafe, drive, strafe, rotate, out);
+    public static WheelPowers RobotCentric(double drive, double strafe, double rotate) {
+        // If the inputs add up to more than 1, shrink every wheel by the same amount
+        // so no wheel is asked for more than full power.
+        double total = Math.abs(drive) + Math.abs(strafe) + Math.abs(rotate);
+        double divideBy = Math.max(total, 1);
+
+        WheelPowers powers = new WheelPowers();
+        powers.frontLeft = (drive + strafe + rotate) / divideBy;
+        powers.backLeft = (drive - strafe + rotate) / divideBy;
+        powers.frontRight = (drive - strafe - rotate) / divideBy;
+        powers.backRight = (drive + strafe - rotate) / divideBy;
+        return powers;
     }
 
     /**
      * Field-centric: "forward" means away from the driver, whichever way the robot faces.
      *
+     * <p>Known issue, kept from Decode on purpose: {@code divideBy} uses the stick values
+     * before they are turned, not after. At some headings a wheel can be asked for up to
+     * about 1.41, and the motor controller cuts it to 1. See docs/decisions/0002-drive-port.md.
+     *
      * @param yawDegrees how far the robot has turned from the driver's forward, counter-clockwise
      */
-    public static void FieldCentric(double drive, double strafe, double rotate, double yawDegrees,
-                                    WheelPowers out) {
-        // Turn the stick direction by -yaw so it points the same way on the field.
-        double yawRadians = -yawDegrees / 180 * Math.PI;
-        double rotX = strafe * Math.cos(yawRadians) - drive * Math.sin(yawRadians);
-        double rotY = strafe * Math.sin(yawRadians) + drive * Math.cos(yawRadians);
-        Mix(drive, strafe, rotY, rotX, rotate, out);
-    }
+    public static WheelPowers FieldCentric(double drive, double strafe, double rotate,
+                                           double yawDegrees) {
+        // Turn the stick direction backward by the robot's heading, so pushing the stick
+        // "up" always means "away from the driver" on the field.
+        double turnRadians = -yawDegrees / 180 * Math.PI;
+        double fieldStrafe = strafe * Math.cos(turnRadians) - drive * Math.sin(turnRadians);
+        double fieldDrive = strafe * Math.sin(turnRadians) + drive * Math.cos(turnRadians);
 
-    /**
-     * Combine the inputs into wheel powers and scale them down if they add up past 1.
-     *
-     * <p>Known issue, kept from Decode on purpose: the scale uses the stick values before
-     * the field-centric turn ({@code drive}, {@code strafe}), not after it ({@code forward},
-     * {@code sideways}). At some headings a wheel can be asked for up to about 1.41, and the
-     * motor controller cuts it to 1. See docs/decisions/0002-drive-port.md.
-     */
-    private static void Mix(double drive, double strafe, double forward, double sideways,
-                            double rotate, WheelPowers out) {
-        double sum = Math.abs(drive) + Math.abs(strafe) + Math.abs(rotate);
-        double max = Math.max(sum, 1);
-        out.frontLeft = (forward + sideways + rotate) / max;
-        out.backLeft = (forward - sideways + rotate) / max;
-        out.frontRight = (forward - sideways - rotate) / max;
-        out.backRight = (forward + sideways - rotate) / max;
+        double total = Math.abs(drive) + Math.abs(strafe) + Math.abs(rotate);
+        double divideBy = Math.max(total, 1);
+
+        WheelPowers powers = new WheelPowers();
+        powers.frontLeft = (fieldDrive + fieldStrafe + rotate) / divideBy;
+        powers.backLeft = (fieldDrive - fieldStrafe + rotate) / divideBy;
+        powers.frontRight = (fieldDrive - fieldStrafe - rotate) / divideBy;
+        powers.backRight = (fieldDrive + fieldStrafe - rotate) / divideBy;
+        return powers;
     }
 }
