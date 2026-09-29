@@ -1,8 +1,8 @@
 name: Build
 
 on:
+  # Every pull request, whatever branch it targets, so stacked PRs get checked too.
   pull_request:
-    branches: [master]
   push:
     branches: [master]
   workflow_dispatch:
