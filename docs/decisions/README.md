@@ -15,6 +15,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0006](0006-code-for-students.md) | Write the code for students to read | Accepted |
 | [0007](0007-safe-mode-key.md) | Safe Mode input: magnetic key, checked once at INIT | Accepted; touch sensor stands in |
 | [0008](0008-pedro-pathing-autos.md) | Autonomous uses Pedro Pathing 3, odometry pods on the hub | Accepted, not tuned yet |
+| [0009](0009-launcher-velocity-control.md) | The launcher holds a speed with our own control loop | Accepted, not tuned yet |
 
 ## Template
 

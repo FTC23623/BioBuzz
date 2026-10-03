@@ -94,4 +94,40 @@ public final class Constants {
     public static final String cfgForwardPodPort = "leftFront";
     /** Motor port whose encoder jack has the pod that rolls when the robot drives SIDEWAYS. */
     public static final String cfgStrafePodPort = "rightBack";
+
+    // ---- Nectar launcher (docs/decisions/0009-launcher-velocity-control.md) ---------------
+    // The launcher holds a SPEED (RPM), not a power. Each loop it measures the wheel's
+    // speed and picks the power that gets it to the target. Starting numbers are Decode's
+    // (Decode subsystems/Launcher.java lines 36-48, types/Constants.java lines 17-18).
+
+    /** The launcher motor. Must match the robot configuration on the Driver Station. */
+    public static final String cfgLaunchNectar = "nectarLauncher";
+    /**
+     * Encoder ticks for one turn of the launcher motor's shaft. 28 = a motor with the
+     * encoder on the bare motor shaft (no gearbox), like Decode's. CHECK THIS: a geared
+     * motor has a different number, and every RPM on the screen will be wrong.
+     */
+    public static final double launcherTicksPerRev = 28;
+    /** Target speed when the OpMode starts. */
+    public static final double launcherStartRpm = 1000;
+    /** How much one shoulder-button press changes the target speed. */
+    public static final double launcherRpmStep = 50;
+    /** The target speed never goes above this. */
+    public static final double launcherMaxRpm = 6000;
+    /** How often the launcher measures its speed and picks a new power, in milliseconds. */
+    public static final double launcherUpdateMs = 50;
+    /** "At speed" means the measured RPM is within this much of the target. */
+    public static final double launcherAtSpeedRpm = 50;
+
+    // Speed control gains. Tune on the robot: kF first, then kP, then kI (see 0009).
+    /** Feed forward: power per RPM of target. Does most of the work. 0.000242 x 2475 = 0.60. */
+    public static final double launcherKF = 0.000242;
+    /** Proportional: extra power per RPM the wheel is too slow. */
+    public static final double launcherKP = 0.003;
+    /**
+     * Integral: extra power for being too slow for a long time. Starts at 0: Decode's was
+     * 0.0001, but FTCLib capped it so hard it never added more than 0.0001 power. Raise it
+     * only if the wheel settles a little below the target and stays there.
+     */
+    public static final double launcherKI = 0;
 }
