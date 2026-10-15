@@ -20,6 +20,11 @@ Safety, every time:
 | [5. Pedro AutoTune](#5-pedro-autotune-on-the-floor-full-power) | Everything Pedro needs to follow a path | `pedro/PedroConstants.java` | 1 to 2 hours |
 | [6. First auto](#6-first-auto) | Proves it all | Nothing | 15 min |
 
+**Watching it live.** Join the robot's Wi-Fi with a laptop and open
+`http://192.168.43.1:8080/dash` (FTC Dashboard, [decision 0012](decisions/0012-ftc-dashboard.md)).
+Every number HyDrive shows on the Driver Station is also a live graph there: `Yaw` for
+step 2, `LoopTime` and `Power FL` to `Power BR` for step 4.
+
 ---
 
 ## 1. Wiring (wheels off the ground)
