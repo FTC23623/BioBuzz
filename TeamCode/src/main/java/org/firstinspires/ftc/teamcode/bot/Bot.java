@@ -1,11 +1,14 @@
 package org.firstinspires.ftc.teamcode.bot;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.pedropathing.follower.Follower;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
@@ -73,7 +76,8 @@ public class Bot {
     public Bot(LinearOpMode opMode, BotProperties properties) {
         mLinearOpMode = opMode;
         mProperties = properties;
-        mOp = new HydraOpMode(opMode.telemetry, opMode.hardwareMap, opMode.gamepad1, opMode.gamepad2);
+        Telemetry telemetry = WithDashboard(opMode.telemetry);
+        mOp = new HydraOpMode(telemetry, opMode.hardwareMap, opMode.gamepad1, opMode.gamepad2);
 
         // The Safe Mode key is checked here, one time, before any other part is built. No
         // OpMode can forget it, and it is never read again (docs/decisions/0007).
@@ -104,6 +108,21 @@ public class Bot {
         }
 
         mLoopTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+    }
+
+    /**
+     * The Driver Station's telemetry, plus the FTC Dashboard's while the dashboard is
+     * running. Every addData line then also draws a live graph on a laptop at
+     * http://192.168.43.1:8080/dash (docs/decisions/0012). The dashboard is not running in
+     * unit tests, and can be switched off in the Robot Controller app's menu; then the
+     * Driver Station gets the telemetry alone, as before.
+     */
+    static Telemetry WithDashboard(Telemetry driverStation) {
+        FtcDashboard dashboard = FtcDashboard.getInstance();
+        if (dashboard == null) {
+            return driverStation;
+        }
+        return new MultipleTelemetry(driverStation, dashboard.getTelemetry());
     }
 
     /**

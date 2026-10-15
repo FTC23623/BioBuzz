@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.bot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -264,6 +265,12 @@ class BotTest {
     @Nested
     @DisplayName("the loop")
     class Loop {
+
+        @Test
+        @DisplayName("no dashboard running (as here): telemetry goes to the Driver Station alone")
+        void noDashboardNoWrapper() {
+            assertSame(telemetry, Bot.WithDashboard(telemetry));
+        }
 
         @Test
         @DisplayName("hubs are read in one trip per loop, and StartLoop throws the old readings away")
