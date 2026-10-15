@@ -17,6 +17,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Imu;
 import org.firstinspires.ftc.teamcode.subsystems.ImuSelector;
 import org.firstinspires.ftc.teamcode.subsystems.Launcher;
 import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
+import org.firstinspires.ftc.teamcode.subsystems.Vision;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSelector;
+import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
 
 /**
  * This season's robot, as one object.
@@ -49,6 +52,9 @@ import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
  * <p>To leave a part of the robot out of one OpMode, switch it off in
  * {@link BotProperties} before building the Bot. See docs/decisions/0010.
  *
+ * <p>Hold the left bumper in TeleOp and the drive turns to face the nearest AprilTag the
+ * camera can see. Which camera is decided from the robot configuration, like the heading.
+ *
  * <p><b>Adding a new part</b> (an intake, say): write its {@link Subsystem} class, give it
  * a "disabled" setting in BotProperties, and build it in the constructor below the same
  * way the launcher is built.
@@ -64,6 +70,7 @@ public class Bot {
 
     // The parts of the robot. A part that is disabled in BotProperties stays null.
     private final SafeModeKey mSafeModeKey;
+    private final Vision mVision;
     private final Imu mImu;
     private final Launcher mLauncher;
 
@@ -84,12 +91,22 @@ public class Bot {
         mSafeModeKey = new SafeModeKey(mOp);
         mSystems.add(mSafeModeKey);
 
+        // The camera goes before the drive in the list, so each loop the drive aims at what
+        // the camera saw this loop, not last loop.
+        if (mProperties.visionDisabled) {
+            // The drive still needs something to ask. This one never sees a tag.
+            mVision = new Vision_None(mOp, mProperties);
+        } else {
+            mVision = VisionSelector.Pick(mOp, mProperties);
+            mSystems.add(mVision);
+        }
+
         if (mProperties.driveDisabled) {
             mImu = null;
         } else {
             mImu = ImuSelector.Pick(mOp, mProperties);
             mSystems.add(mImu);
-            mSystems.add(new Drive_Manual(mOp, mProperties, mImu));
+            mSystems.add(new Drive_Manual(mOp, mProperties, mImu, mVision));
         }
 
         if (mProperties.launcherDisabled) {
@@ -164,6 +181,13 @@ public class Bot {
             mOp.mTelemetry.addLine("Launcher: OFF in this OpMode");
         } else {
             mOp.mTelemetry.addData("Launcher target RPM", "%.0f", mLauncher.GetTargetRpm());
+        }
+
+        if (mProperties.visionDisabled) {
+            mOp.mTelemetry.addLine("Vision: OFF in this OpMode");
+        } else {
+            // Keep looking, so the camera can be checked against a tag before START.
+            mVision.Process();
         }
     }
 

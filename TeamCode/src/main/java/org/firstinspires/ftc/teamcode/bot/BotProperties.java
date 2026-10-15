@@ -39,6 +39,8 @@ public class BotProperties {
     public boolean driveDisabled = false;
     /** true: the Bot never touches the launcher motor. */
     public boolean launcherDisabled = false;
+    /** true: the Bot never looks for a camera. Aim assist is off. */
+    public boolean visionDisabled = false;
 
     // ---- Drive ------------------------------------------------------------------------------
 
@@ -133,6 +135,32 @@ public class BotProperties {
      * only if the wheel settles a little below the target and stays there.
      */
     public double launcherKI = 0;
+
+    // ---- Vision: AprilTags and aim assist (docs/decisions/0011) ----------------------------
+    // The Bot looks for a Limelight first, then a webcam. With neither, aim assist is off
+    // and everything else still works.
+
+    /** The Limelight 3A, if the robot has one. Configure it as a "Limelight 3A". */
+    public String cfgLimelight = "limelight";
+    /** The USB webcam, if the robot has one instead. Configure it as a "Webcam". */
+    public String cfgWebcam = "Webcam 1";
+    /** How many times a second the Limelight is asked for a new result. */
+    public int limelightPollRateHz = 100;
+    /** Which of the Limelight's pipelines (0 to 9) is set up for AprilTags. */
+    public int limelightAprilTagPipeline = 0;
+    /** A tag last seen longer ago than this is treated as gone. Keeps the robot from chasing a ghost. */
+    public double visionMaxAgeMs = 250;
+
+    // Aim assist: hold the left bumper and the robot turns to face the nearest tag.
+    /**
+     * Turn power per degree the tag is off center. 0.02 x 20 degrees = 0.4 power.
+     * CHECK ON THE ROBOT: if the robot turns away from the tag, make this negative.
+     */
+    public double aimKP = 0.02;
+    /** Aim assist never turns harder than this, either way. */
+    public double aimMaxRotate = 0.6;
+    /** Within this many degrees of center, aim assist stops turning. Stops the wobble. */
+    public double aimDoneDegrees = 1.0;
 
     // ---- Safe Mode: LOCKED (docs/decisions/0004 and 0007) --------------------------------
     // Safe Mode protects the people standing next to the robot, so these three are not

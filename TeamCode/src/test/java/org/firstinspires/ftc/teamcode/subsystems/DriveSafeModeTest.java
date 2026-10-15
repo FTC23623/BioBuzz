@@ -89,7 +89,7 @@ class DriveSafeModeTest {
     void safeModeCapsEveryMotor() {
         op.mSafeMode = true;
         slamEverything();
-        Drive_Manual drive = new Drive_Manual(op, properties, imu);
+        Drive_Manual drive = new Drive_Manual(op, properties, imu, mock(Vision.class));
         for (int i = 0; i < 50; i++) {
             drive.HandleUserInput();
             drive.Process();
@@ -104,7 +104,7 @@ class DriveSafeModeTest {
         op.mSafeMode = true;
         gamepad.left_stick_y = -1;
         gamepad.right_trigger = 1;
-        runLoops(new Drive_Manual(op, properties, imu));
+        runLoops(new Drive_Manual(op, properties, imu, mock(Vision.class)));
         for (double[] p : power.values()) {
             assertEquals(BotProperties.safeModeMaxPower, Math.abs(p[0]), EPS);
         }
@@ -116,7 +116,7 @@ class DriveSafeModeTest {
         op.mSafeMode = false;
         gamepad.left_stick_y = -1;
         gamepad.right_trigger = 1;
-        runLoops(new Drive_Manual(op, properties, imu));
+        runLoops(new Drive_Manual(op, properties, imu, mock(Vision.class)));
         assertTrue(maxAbsPower() > BotProperties.safeModeMaxPower, "max " + maxAbsPower());
     }
 }
