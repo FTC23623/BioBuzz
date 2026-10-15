@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.LLStatus;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.ArrayList;
@@ -39,6 +40,8 @@ public class Vision_Limelight implements Vision {
     private double mBearing = 0;
     private double mRange = 0;
     private double mArea = 0;
+    /** What the newest result looked like, for the Driver Station. */
+    private String mResultState = "none yet";
 
     public Vision_Limelight(HydraOpMode op, BotProperties properties) {
         mOp = op;
@@ -70,6 +73,13 @@ public class Vision_Limelight implements Vision {
         mCount = 0;
         mInView = new ArrayList<>();
         LLResult result = mLimelight.getLatestResult();
+        if (result == null) {
+            mResultState = "none yet: is the Limelight running?";
+        } else if (!result.isValid()) {
+            mResultState = "no target in the picture";
+        } else {
+            mResultState = "target found, " + result.getStaleness() + " ms old";
+        }
         if (result != null && result.isValid()) {
             List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
             mInView = tags;
@@ -157,6 +167,16 @@ public class Vision_Limelight implements Vision {
     }
 
     private void ShowStatus() {
+        // The Limelight's own view of itself. Pipeline type must say apriltag, or no tag will
+        // ever show up, whatever the camera sees.
+        LLStatus status = mLimelight.getStatus();
+        if (status == null) {
+            mOp.mTelemetry.addLine("Limelight: no status");
+        } else {
+            mOp.mTelemetry.addData("Limelight", "pipeline %d is %s, %.0f fps, %.0f C",
+                    status.getPipelineIndex(), status.getPipelineType(), status.getFps(), status.getTemp());
+        }
+        mOp.mTelemetry.addData("Limelight result", mResultState);
         mOp.mTelemetry.addData("Tags in view", mCount);
         // One line per tag, so a test with several tags shows which one was picked and why.
         for (LLResultTypes.FiducialResult tag : mInView) {
