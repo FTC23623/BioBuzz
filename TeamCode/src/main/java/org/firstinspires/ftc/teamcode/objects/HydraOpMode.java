@@ -24,7 +24,7 @@ public class HydraOpMode {
     public Alliance mAlliance;
 
     /**
-     * true: drive motors are limited to Constants.safeModeMaxPower. Set once from the Safe
+     * true: drive motors are limited to BotProperties.safeModeMaxPower. Set once from the Safe
      * Mode key at INIT, then never changed. Starts true so that an OpMode that never checks
      * the key is slow, not fast. See docs/decisions/0007-safe-mode-key.md.
      */

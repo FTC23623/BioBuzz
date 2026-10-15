@@ -2,10 +2,10 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.MotorSlewRate;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
-import org.firstinspires.ftc.teamcode.types.Constants;
 
 /**
  * The four mecanum drive motors. Sets them up; does not decide how to move.
@@ -20,19 +20,21 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  */
 public class Drive implements Subsystem {
     protected final HydraOpMode mOp;
+    protected final BotProperties mProperties;
     protected final Imu mImu;
     protected final DcMotorEx mFrontLeftMotor;
     protected final DcMotorEx mFrontRightMotor;
     protected final DcMotorEx mBackLeftMotor;
     protected final DcMotorEx mBackRightMotor;
 
-    public Drive(HydraOpMode op, Imu imu) {
+    public Drive(HydraOpMode op, BotProperties properties, Imu imu) {
         mOp = op;
+        mProperties = properties;
         mImu = imu;
-        mFrontLeftMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontLeft);
-        mFrontRightMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontRight);
-        mBackLeftMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackLeft);
-        mBackRightMotor = mOp.mHardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackRight);
+        mFrontLeftMotor = mOp.mHardwareMap.get(DcMotorEx.class, mProperties.cfgDriveFrontLeft);
+        mFrontRightMotor = mOp.mHardwareMap.get(DcMotorEx.class, mProperties.cfgDriveFrontRight);
+        mBackLeftMotor = mOp.mHardwareMap.get(DcMotorEx.class, mProperties.cfgDriveBackLeft);
+        mBackRightMotor = mOp.mHardwareMap.get(DcMotorEx.class, mProperties.cfgDriveBackRight);
 
         // Left side forward, right side reverse. MecanumMath's signs depend on this.
         mFrontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
@@ -78,7 +80,7 @@ public class Drive implements Subsystem {
         if (!safeMode) {
             return power;
         }
-        double limit = Constants.safeModeMaxPower;
+        double limit = BotProperties.safeModeMaxPower;
         double scaled = power * limit;
         return Math.max(-limit, Math.min(scaled, limit));
     }
@@ -95,7 +97,7 @@ public class Drive implements Subsystem {
     /** Move one drive motor toward a power, a little each loop. Safe Mode applies. */
     protected void SetMotorPower(DcMotorEx motor, double power) {
         double safePower = LimitPower(power, mOp.mSafeMode);
-        MotorSlewRate.Set(motor, safePower, Constants.driveMotorSlewRate);
+        MotorSlewRate.Set(motor, safePower, mProperties.driveMotorSlewRate);
     }
 
     /** Set the run mode on all four motors. */

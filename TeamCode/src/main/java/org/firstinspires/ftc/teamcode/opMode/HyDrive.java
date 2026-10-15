@@ -1,62 +1,44 @@
 package org.firstinspires.ftc.teamcode.opMode;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.util.ElapsedTime;
-import org.firstinspires.ftc.teamcode.objects.Subsystem;
-import org.firstinspires.ftc.teamcode.subsystems.Drive_Manual;
-import org.firstinspires.ftc.teamcode.subsystems.Imu;
-import org.firstinspires.ftc.teamcode.subsystems.ImuSelector;
+import org.firstinspires.ftc.teamcode.bot.Bot;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 
 /**
  * The one TeleOp. There is no red or blue version.
  *
- * <p>Drive only for now. Other mechanisms join {@code mSystems} as they are ported.
- * The loop is Decode's HyDrive loop: clear the hub caches, every subsystem reads the
- * gamepad, every subsystem does its work, send telemetry once.
+ * <p>This OpMode builds the {@link Bot} and runs the loop. The Bot does the rest: each
+ * loop, every part of the robot reads the gamepads, then every part does its work.
  *
  * <p>At INIT, point the robot away from the driver. That direction becomes "forward"
  * for field-centric drive. Press circle during the match to re-set it.
  */
 @TeleOp(name = "HyDrive")
-public class HyDrive extends OpMode_Base {
+public class HyDrive extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        ElapsedTime loopTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-        CreateHydraOpMode();
+        BotProperties properties = new BotProperties();
+        // The launcher is not part of HyDrive yet (docs/decisions/0009).
+        properties.launcherDisabled = true;
 
-        Imu imu = ImuSelector.Pick(mOpMode);
-        mSystems.add(imu);
-        mSystems.add(new Drive_Manual(mOpMode, imu));
+        Bot bot = new Bot(this, properties);
+        bot.Init();
 
-        SetLynxHubsManual();
-        InitializeAllSystems();
-
-        while (!isStarted() && !isStopRequested()) {
-            ClearLynxHubCaches();
-            // Show whether Safe Mode is on. The key was checked once, at INIT; not read again.
-            mSafeModeKey.ShowStatus();
-            imu.Process();
-            telemetry.addData("Heading ready", imu.Ready());
-            telemetry.addData("Yaw", imu.GetYaw());
-            telemetry.update();
-            idle();
+        // Waiting for START. Shows Safe Mode and the heading, so they can be checked.
+        while (opModeInInit()) {
+            bot.StartLoop();
+            bot.ShowStatus();
+            bot.EndLoop();
         }
 
-        loopTimer.reset();
+        // START was pressed. This loop runs about 50 times a second until STOP.
         while (opModeIsActive()) {
-            ClearLynxHubCaches();
-            mOpMode.mLoopTime = loopTimer.milliseconds();
-            loopTimer.reset();
-            telemetry.addData("LoopTime", mOpMode.mLoopTime);
-            for (Subsystem system : mSystems) {
-                system.HandleUserInput();
-            }
-            for (Subsystem system : mSystems) {
-                system.Process();
-            }
-            telemetry.update();
-            idle();
+            bot.StartLoop();
+            bot.HandleUserInput();
+            bot.Process();
+            bot.EndLoop();
         }
     }
 }

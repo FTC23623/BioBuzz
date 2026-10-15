@@ -6,14 +6,14 @@ import com.pedropathing.revhub.drivetrains.MecanumConfig;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import org.firstinspires.ftc.teamcode.types.Constants;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 
 /**
  * Pedro's mecanum drivetrain, with the team's Safe Mode speed limit added (decision 0004).
  *
  * <p>Pedro sends power straight to the motors, so it never passes through
  * {@code Drive.LimitPower}. This class catches every drive command Pedro makes and, in Safe
- * Mode, shrinks it so no wheel goes past {@code Constants.safeModeMaxPower}.
+ * Mode, shrinks it so no wheel goes past {@code BotProperties.safeModeMaxPower}.
  *
  * <p>How the shrink works: Pedro asks for forward, strafe, and turn. First we work out the
  * four wheel powers that would make. If the biggest one is 2.0, and the limit is 0.25, we
@@ -52,7 +52,7 @@ public class SafeModeMecanum extends Mecanum {
             biggestWheelPower = Math.max(biggestWheelPower, Math.abs(wheelPower));
         }
 
-        double shrink = Constants.safeModeMaxPower / biggestWheelPower;
+        double shrink = BotProperties.safeModeMaxPower / biggestWheelPower;
         double forward = powers.forward() * shrink;
         double strafe = powers.strafe() * shrink;
         double turn = powers.turn() * shrink;

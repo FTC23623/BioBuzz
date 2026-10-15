@@ -3,8 +3,8 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
-import org.firstinspires.ftc.teamcode.types.Constants;
 
 /**
  * Heading from the IMU built into the REV Control Hub.
@@ -14,19 +14,21 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  * test robot has no Pinpoint right now (docs/decisions/0005).
  *
  * <p>The hub must be told how it is mounted, or "turning left" can read as tilting. The
- * mounting is in Constants.hubLogoFacing and Constants.hubUsbFacing.
+ * mounting is in BotProperties: hubLogoFacing and hubUsbFacing.
  */
 public class Imu_Hub implements Imu {
     private final HydraOpMode mOp;
+    private final BotProperties mProperties;
     private final IMU mImu;
     private boolean mStartAttempted;
     private boolean mReady;
     /** Heading read this loop, so every reader in the loop sees the same number. */
     private double mYawDegrees;
 
-    public Imu_Hub(HydraOpMode op) {
+    public Imu_Hub(HydraOpMode op, BotProperties properties) {
         mOp = op;
-        mImu = op.mHardwareMap.get(IMU.class, Constants.cfgHubImu);
+        mProperties = properties;
+        mImu = op.mHardwareMap.get(IMU.class, mProperties.cfgHubImu);
         mStartAttempted = false;
         mReady = false;
         mYawDegrees = 0;
@@ -41,7 +43,7 @@ public class Imu_Hub implements Imu {
         if (!mStartAttempted) {
             mStartAttempted = true;
             RevHubOrientationOnRobot mounting = new RevHubOrientationOnRobot(
-                    Constants.hubLogoFacing, Constants.hubUsbFacing);
+                    mProperties.hubLogoFacing, mProperties.hubUsbFacing);
             mReady = mImu.initialize(new IMU.Parameters(mounting));
             if (mReady) {
                 mImu.resetYaw();

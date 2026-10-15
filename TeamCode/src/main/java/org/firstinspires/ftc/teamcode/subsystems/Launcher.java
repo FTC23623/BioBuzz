@@ -2,13 +2,14 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.objects.VelocityController;
-import org.firstinspires.ftc.teamcode.types.Constants;
 
 /**
  * The nectar launcher: one wheel, held at a target speed.
@@ -19,8 +20,9 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  *   <li><b>Right bumper</b>: target speed up 50 RPM. <b>Left bumper</b>: down 50 RPM.
  * </ul>
  *
- * <p>The target starts at 1000 RPM. Every 50 ms (while the trigger is held), the launcher
- * measures the wheel's speed and asks the {@link VelocityController} for a new power.
+ * <p>The target normally starts at 1000 RPM. Every 50 ms (while the trigger is held), the
+ * launcher measures the wheel's speed and asks the {@link VelocityController} for a new
+ * power. Every number here is a launcher setting in BotProperties.
  * See docs/decisions/0009-launcher-velocity-control.md.
  *
  * <p>Ported from Decode subsystems/Launcher.java and objects/LaunchMotor.java: the speed
@@ -28,6 +30,7 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  */
 public class Launcher implements Subsystem {
     private final HydraOpMode mOp;
+    private final BotProperties mProperties;
     private final Gamepad mGamepad;
     private final DcMotorEx mMotor;
     private final VelocityController mSpeedControl;
@@ -40,12 +43,13 @@ public class Launcher implements Subsystem {
     private double mMeasuredRpm = 0;
     private double mPower = 0;
 
-    public Launcher(HydraOpMode op, Gamepad gamepad) {
+    public Launcher(HydraOpMode op, BotProperties properties, Gamepad gamepad) {
         mOp = op;
+        mProperties = properties;
         mGamepad = gamepad;
-        mMotor = op.mHardwareMap.get(DcMotorEx.class, Constants.cfgLaunchNectar);
+        mMotor = op.mHardwareMap.get(DcMotorEx.class, mProperties.cfgLaunchNectar);
         // Same set-up as Decode: our code picks the power, the encoder only measures speed.
-        mMotor.setDirection(DcMotor.Direction.FORWARD);
+        mMotor.setDirection(DcMotor.Direction.REVERSE);
         mMotor.setPower(0);
         mMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         mMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -53,10 +57,10 @@ public class Launcher implements Subsystem {
         mMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         mSpeedControl = new VelocityController(
-                Constants.launcherKF, Constants.launcherKP, Constants.launcherKI);
-        mSpeedControl.SetTargetRpm(Constants.launcherStartRpm);
-        mFasterButton = new Debouncer(Constants.debounce);
-        mSlowerButton = new Debouncer(Constants.debounce);
+                mProperties.launcherKF, mProperties.launcherKP, mProperties.launcherKI);
+        mSpeedControl.SetTargetRpm(mProperties.launcherStartRpm);
+        mFasterButton = new Debouncer(mProperties.debounce);
+        mSlowerButton = new Debouncer(mProperties.debounce);
         mTimeSinceUpdate = new ElapsedTime();
     }
 
@@ -74,12 +78,12 @@ public class Launcher implements Subsystem {
         mFasterButton.In(mGamepad.right_bumper);
         if (mFasterButton.Out()) {
             mFasterButton.Used();
-            ChangeTargetRpm(Constants.launcherRpmStep);
+            ChangeTargetRpm(mProperties.launcherRpmStep);
         }
         mSlowerButton.In(mGamepad.left_bumper);
         if (mSlowerButton.Out()) {
             mSlowerButton.Used();
-            ChangeTargetRpm(-Constants.launcherRpmStep);
+            ChangeTargetRpm(-mProperties.launcherRpmStep);
         }
     }
 
@@ -87,7 +91,7 @@ public class Launcher implements Subsystem {
     public void Process() {
         // Update every 50 ms, like Decode. Measuring more often than that gives noisy speeds.
         double secondsPassed = mTimeSinceUpdate.seconds();
-        if (secondsPassed * 1000 >= Constants.launcherUpdateMs) {
+        if (secondsPassed * 1000 >= mProperties.launcherUpdateMs) {
             mTimeSinceUpdate.reset();
             Update(secondsPassed);
         }
@@ -114,7 +118,7 @@ public class Launcher implements Subsystem {
     /** Raise or lower the target speed, staying between 0 and the maximum. */
     public void ChangeTargetRpm(double change) {
         double newTarget = mSpeedControl.GetTargetRpm() + change;
-        newTarget = Math.max(0, Math.min(newTarget, Constants.launcherMaxRpm));
+        newTarget = Math.max(0, Math.min(newTarget, mProperties.launcherMaxRpm));
         mSpeedControl.SetTargetRpm(newTarget);
     }
 
@@ -129,13 +133,13 @@ public class Launcher implements Subsystem {
     /** true when the wheel is spinning within 50 RPM of the target. */
     public boolean AtSpeed() {
         double difference = Math.abs(GetTargetRpm() - mMeasuredRpm);
-        return difference <= Constants.launcherAtSpeedRpm;
+        return difference <= mProperties.launcherAtSpeedRpm;
     }
 
     /** The encoder counts ticks per second. Turn that into turns per minute (RPM). */
     private double ReadRpm() {
         double ticksPerSecond = mMotor.getVelocity();
-        double turnsPerSecond = ticksPerSecond / Constants.launcherTicksPerRev;
+        double turnsPerSecond = ticksPerSecond / mProperties.launcherTicksPerRev;
         return turnsPerSecond * 60;
     }
 

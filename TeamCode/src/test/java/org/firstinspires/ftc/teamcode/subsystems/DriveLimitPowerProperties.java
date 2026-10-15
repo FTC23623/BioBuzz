@@ -6,7 +6,7 @@ import net.jqwik.api.ForAll;
 import net.jqwik.api.Label;
 import net.jqwik.api.Property;
 import net.jqwik.api.constraints.DoubleRange;
-import org.firstinspires.ftc.teamcode.types.Constants;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 
 /** jqwik only: no JUnit {@code @DisplayName} here, or jqwik silently skips these. */
 @Label("Drive.LimitPower properties")
@@ -16,7 +16,7 @@ class DriveLimitPowerProperties {
     @Label("Safe Mode never lets any power past the cap, whatever goes in")
     void neverPastCap(@ForAll double power) {
         double out = Drive.LimitPower(power, true);
-        assertTrue(Math.abs(out) <= Constants.safeModeMaxPower, power + " -> " + out);
+        assertTrue(Math.abs(out) <= BotProperties.safeModeMaxPower, power + " -> " + out);
     }
 
     @Property

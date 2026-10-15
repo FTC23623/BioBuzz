@@ -1,9 +1,10 @@
 package org.firstinspires.ftc.teamcode.opMode;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import org.firstinspires.ftc.teamcode.types.Constants;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 
 /**
  * Bench check for the drive wiring. WHEELS OFF THE GROUND. HAND ON STOP.
@@ -14,17 +15,22 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  * the wrong wheel moves, fix the wiring or the configuration before running HyDrive.
  *
  * <p>Always runs at the Safe Mode speed, key or no key.
+ *
+ * <p>This test does not use the Bot. It talks to each motor directly, one at a time,
+ * which is the whole point of a wiring check. It still gets the motor names from
+ * {@link BotProperties}, so it checks the same names the Bot uses.
  */
 @TeleOp(name = "Test: Drive Motors", group = "Test")
-public class DriveMotorTest extends OpMode_Base {
-    private static final double TEST_POWER = Constants.safeModeMaxPower;
+public class DriveMotorTest extends LinearOpMode {
+    private static final double TEST_POWER = BotProperties.safeModeMaxPower;
 
     @Override
     public void runOpMode() {
-        DcMotorEx frontLeft = hardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontLeft);
-        DcMotorEx frontRight = hardwareMap.get(DcMotorEx.class, Constants.cfgDriveFrontRight);
-        DcMotorEx backLeft = hardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackLeft);
-        DcMotorEx backRight = hardwareMap.get(DcMotorEx.class, Constants.cfgDriveBackRight);
+        BotProperties properties = new BotProperties();
+        DcMotorEx frontLeft = hardwareMap.get(DcMotorEx.class, properties.cfgDriveFrontLeft);
+        DcMotorEx frontRight = hardwareMap.get(DcMotorEx.class, properties.cfgDriveFrontRight);
+        DcMotorEx backLeft = hardwareMap.get(DcMotorEx.class, properties.cfgDriveBackLeft);
+        DcMotorEx backRight = hardwareMap.get(DcMotorEx.class, properties.cfgDriveBackRight);
         // Same directions as Drive, so "forward" here matches "forward" in HyDrive.
         frontLeft.setDirection(DcMotor.Direction.FORWARD);
         backLeft.setDirection(DcMotor.Direction.FORWARD);

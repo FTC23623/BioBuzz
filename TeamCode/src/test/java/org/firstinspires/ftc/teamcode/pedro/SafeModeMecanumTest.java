@@ -14,7 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.HashMap;
 import java.util.Map;
-import org.firstinspires.ftc.teamcode.types.Constants;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,14 +29,15 @@ import org.junit.jupiter.params.provider.CsvSource;
 class SafeModeMecanumTest {
     private final Map<String, DcMotorEx> motors = new HashMap<>();
     private final Map<String, Double> lastPower = new HashMap<>();
+    private final BotProperties properties = new BotProperties();
     private HardwareMap hardwareMap;
 
     @BeforeEach
     void setUp() {
         hardwareMap = mock(HardwareMap.class);
         String[] names = {
-                Constants.cfgDriveFrontLeft, Constants.cfgDriveFrontRight,
-                Constants.cfgDriveBackLeft, Constants.cfgDriveBackRight};
+                properties.cfgDriveFrontLeft, properties.cfgDriveFrontRight,
+                properties.cfgDriveBackLeft, properties.cfgDriveBackRight};
         for (String name : names) {
             DcMotorEx motor = mock(DcMotorEx.class);
             lastPower.put(name, 0.0);
@@ -58,7 +59,7 @@ class SafeModeMecanumTest {
     }
 
     private SafeModeMecanum drivetrain(boolean safeMode) {
-        return new SafeModeMecanum(hardwareMap, PedroConstants.DriveConfig(), safeMode);
+        return new SafeModeMecanum(hardwareMap, PedroConstants.DriveConfig(properties), safeMode);
     }
 
     @ParameterizedTest(name = "forward {0}, strafe {1}, turn {2}")
@@ -73,7 +74,7 @@ class SafeModeMecanumTest {
     @DisplayName("Safe Mode: no wheel ever goes past 0.25")
     void safeModeCaps(double forward, double strafe, double turn) {
         drivetrain(true).drive(new DrivePowers(forward, strafe, turn), false);
-        assertTrue(biggestPower() <= Constants.safeModeMaxPower + 1e-9,
+        assertTrue(biggestPower() <= BotProperties.safeModeMaxPower + 1e-9,
                 "biggest wheel power was " + biggestPower());
     }
 
@@ -82,7 +83,7 @@ class SafeModeMecanumTest {
     void safeModeFullForward() {
         drivetrain(true).drive(new DrivePowers(1, 0, 0), false);
         for (Map.Entry<String, Double> wheel : lastPower.entrySet()) {
-            assertEquals(Constants.safeModeMaxPower, Math.abs(wheel.getValue()), 1e-9, wheel.getKey());
+            assertEquals(BotProperties.safeModeMaxPower, Math.abs(wheel.getValue()), 1e-9, wheel.getKey());
         }
     }
 
@@ -94,7 +95,7 @@ class SafeModeMecanumTest {
         Map<String, Double> fullSpeed = new HashMap<>(lastPower);
 
         drivetrain(true).drive(diagonal, false);
-        double ratio = lastPower.get(Constants.cfgDriveFrontLeft) / fullSpeed.get(Constants.cfgDriveFrontLeft);
+        double ratio = lastPower.get(properties.cfgDriveFrontLeft) / fullSpeed.get(properties.cfgDriveFrontLeft);
         for (String name : lastPower.keySet()) {
             assertEquals(fullSpeed.get(name) * ratio, lastPower.get(name), 1e-9, name);
         }

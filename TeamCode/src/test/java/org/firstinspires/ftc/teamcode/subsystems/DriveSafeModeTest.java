@@ -13,8 +13,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
-import org.firstinspires.ftc.teamcode.types.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 class DriveSafeModeTest {
     private static final double EPS = 1e-9;
     private final Map<String, double[]> power = new LinkedHashMap<>();
+    private final BotProperties properties = new BotProperties();
     private HydraOpMode op;
     private Gamepad gamepad;
     private Imu imu;
@@ -47,8 +48,8 @@ class DriveSafeModeTest {
     void setUp() {
         HardwareMap hardwareMap = mock(HardwareMap.class);
         for (String name : new String[] {
-                Constants.cfgDriveFrontLeft, Constants.cfgDriveFrontRight,
-                Constants.cfgDriveBackLeft, Constants.cfgDriveBackRight}) {
+                properties.cfgDriveFrontLeft, properties.cfgDriveFrontRight,
+                properties.cfgDriveBackLeft, properties.cfgDriveBackRight}) {
             DcMotorEx m = motor(name);
             when(hardwareMap.get(DcMotorEx.class, name)).thenReturn(m);
         }
@@ -88,11 +89,11 @@ class DriveSafeModeTest {
     void safeModeCapsEveryMotor() {
         op.mSafeMode = true;
         slamEverything();
-        Drive_Manual drive = new Drive_Manual(op, imu);
+        Drive_Manual drive = new Drive_Manual(op, properties, imu);
         for (int i = 0; i < 50; i++) {
             drive.HandleUserInput();
             drive.Process();
-            assertTrue(maxAbsPower() <= Constants.safeModeMaxPower + EPS,
+            assertTrue(maxAbsPower() <= BotProperties.safeModeMaxPower + EPS,
                     "loop " + i + ": " + maxAbsPower());
         }
     }
@@ -103,9 +104,9 @@ class DriveSafeModeTest {
         op.mSafeMode = true;
         gamepad.left_stick_y = -1;
         gamepad.right_trigger = 1;
-        runLoops(new Drive_Manual(op, imu));
+        runLoops(new Drive_Manual(op, properties, imu));
         for (double[] p : power.values()) {
-            assertEquals(Constants.safeModeMaxPower, Math.abs(p[0]), EPS);
+            assertEquals(BotProperties.safeModeMaxPower, Math.abs(p[0]), EPS);
         }
     }
 
@@ -115,7 +116,7 @@ class DriveSafeModeTest {
         op.mSafeMode = false;
         gamepad.left_stick_y = -1;
         gamepad.right_trigger = 1;
-        runLoops(new Drive_Manual(op, imu));
-        assertTrue(maxAbsPower() > Constants.safeModeMaxPower, "max " + maxAbsPower());
+        runLoops(new Drive_Manual(op, properties, imu));
+        assertTrue(maxAbsPower() > BotProperties.safeModeMaxPower, "max " + maxAbsPower());
     }
 }

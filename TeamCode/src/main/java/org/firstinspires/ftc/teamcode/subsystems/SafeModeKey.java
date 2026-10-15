@@ -1,9 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.TouchSensor;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
-import org.firstinspires.ftc.teamcode.types.Constants;
 
 /**
  * Checks the Safe Mode key ONE time, when INIT is pressed, and sets
@@ -21,7 +21,7 @@ import org.firstinspires.ftc.teamcode.types.Constants;
  *
  * <p>Hardware: a REV Magnetic Limit Switch and a 3D printed key with a magnet in it. For
  * bench testing now, a touch sensor stands in: pressing it pretends the key is removed.
- * {@code Constants.keyPressedMeansKeyIn} says which one is on the robot.
+ * {@code BotProperties.keyPressedMeansKeyIn} says which one is on the robot.
  * See docs/decisions/0007-safe-mode-key.md.
  */
 public class SafeModeKey implements Subsystem {
@@ -31,18 +31,18 @@ public class SafeModeKey implements Subsystem {
 
     public SafeModeKey(HydraOpMode op) {
         mOp = op;
-        int limitPercent = (int) Math.round(Constants.safeModeMaxPower * 100);
+        int limitPercent = (int) Math.round(BotProperties.safeModeMaxPower * 100);
 
         // The sensor is a local variable on purpose: we read it here, once, and never again.
-        TouchSensor keySensor = op.mHardwareMap.tryGet(TouchSensor.class, Constants.cfgSafeModeKey);
+        TouchSensor keySensor = op.mHardwareMap.tryGet(TouchSensor.class, BotProperties.cfgSafeModeKey);
         if (keySensor == null) {
             mOp.mSafeMode = true;
-            mStatus = "SAFE MODE: no REV Touch Sensor named '" + Constants.cfgSafeModeKey
+            mStatus = "SAFE MODE: no REV Touch Sensor named '" + BotProperties.cfgSafeModeKey
                     + "' in the robot configuration. Drive limited to " + limitPercent + "%.";
             return;
         }
 
-        boolean keyIsIn = KeyIsIn(keySensor.isPressed(), Constants.keyPressedMeansKeyIn);
+        boolean keyIsIn = KeyIsIn(keySensor.isPressed(), BotProperties.keyPressedMeansKeyIn);
         if (keyIsIn) {
             mOp.mSafeMode = true;
             mStatus = "SAFE MODE: key is in. Drive limited to " + limitPercent + "%.";
@@ -68,10 +68,10 @@ public class SafeModeKey implements Subsystem {
     /** Put the Safe Mode line on the Driver Station. Call every loop while waiting for START. */
     public void ShowStatus() {
         mOp.mTelemetry.addLine(mStatus);
-        if (Constants.keyPressedMeansKeyIn) {
+        if (BotProperties.keyPressedMeansKeyIn) {
             mOp.mTelemetry.addLine("(An unplugged key sensor also reads as key removed.)");
         } else {
-            mOp.mTelemetry.addLine("(Test sensor '" + Constants.cfgSafeModeKey
+            mOp.mTelemetry.addLine("(Test sensor '" + BotProperties.cfgSafeModeKey
                     + "': pressed = key removed = full speed.)");
         }
     }

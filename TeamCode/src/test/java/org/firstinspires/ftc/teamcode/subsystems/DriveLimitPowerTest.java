@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.firstinspires.ftc.teamcode.types.Constants;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ class DriveLimitPowerTest {
     @Test
     @DisplayName("Safe Mode cap is one quarter")
     void capIsAQuarter() {
-        assertEquals(0.25, Constants.safeModeMaxPower, EPS);
+        assertEquals(0.25, BotProperties.safeModeMaxPower, EPS);
     }
 
     @Nested

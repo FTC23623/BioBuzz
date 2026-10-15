@@ -14,8 +14,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
-import org.firstinspires.ftc.teamcode.types.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,10 +27,12 @@ import org.junit.jupiter.api.Test;
 @DisplayName("Launcher")
 class LauncherTest {
     private static final double EPS = 1e-9;
-    private static final double UPDATE_SECONDS = Constants.launcherUpdateMs / 1000;
+    private final BotProperties properties = new BotProperties();
+    private final double UPDATE_SECONDS = properties.launcherUpdateMs / 1000;
 
     private DcMotorEx motor;
     private Gamepad gamepad;
+    private HydraOpMode op;
     private Launcher launcher;
     private final double[] lastPower = {0};
     private final double[] ticksPerSecond = {0};
@@ -45,15 +47,15 @@ class LauncherTest {
         when(motor.getVelocity()).thenAnswer(inv -> ticksPerSecond[0]);
 
         HardwareMap hardwareMap = mock(HardwareMap.class);
-        when(hardwareMap.get(DcMotorEx.class, Constants.cfgLaunchNectar)).thenReturn(motor);
+        when(hardwareMap.get(DcMotorEx.class, properties.cfgLaunchNectar)).thenReturn(motor);
         gamepad = mock(Gamepad.class);
-        HydraOpMode op = new HydraOpMode(mock(Telemetry.class), hardwareMap, gamepad, gamepad);
-        launcher = new Launcher(op, gamepad);
+        op = new HydraOpMode(mock(Telemetry.class), hardwareMap, gamepad, gamepad);
+        launcher = new Launcher(op, properties, gamepad);
     }
 
     /** Press a bumper and hold it long enough for the debouncer, then let go. */
     private void tapBumper(boolean right) {
-        for (int loop = 0; loop < Constants.debounce + 2; loop++) {
+        for (int loop = 0; loop < properties.debounce + 2; loop++) {
             gamepad.right_bumper = right;
             gamepad.left_bumper = !right;
             launcher.HandleUserInput();
@@ -65,7 +67,7 @@ class LauncherTest {
 
     /** Pretend the wheel is spinning at this RPM. */
     private void wheelSpinsAt(double rpm) {
-        ticksPerSecond[0] = rpm / 60 * Constants.launcherTicksPerRev;
+        ticksPerSecond[0] = rpm / 60 * properties.launcherTicksPerRev;
     }
 
     @Test
@@ -79,6 +81,16 @@ class LauncherTest {
     @DisplayName("target starts at 1000 RPM")
     void startsAt1000() {
         assertEquals(1000, launcher.GetTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("an OpMode's own start speed is used, and the normal one is left alone")
+    void startSpeedOverride() {
+        BotProperties fasterStart = new BotProperties();
+        fasterStart.launcherStartRpm = 4000;
+        Launcher fastLauncher = new Launcher(op, fasterStart, gamepad);
+        assertEquals(4000, fastLauncher.GetTargetRpm(), EPS);
+        assertEquals(1000, new BotProperties().launcherStartRpm, EPS);
     }
 
     @Test
@@ -97,8 +109,8 @@ class LauncherTest {
     void targetLimits() {
         launcher.ChangeTargetRpm(-5000);
         assertEquals(0, launcher.GetTargetRpm(), EPS);
-        launcher.ChangeTargetRpm(Constants.launcherMaxRpm + 1000);
-        assertEquals(Constants.launcherMaxRpm, launcher.GetTargetRpm(), EPS);
+        launcher.ChangeTargetRpm(properties.launcherMaxRpm + 1000);
+        assertEquals(properties.launcherMaxRpm, launcher.GetTargetRpm(), EPS);
     }
 
     @Test
@@ -118,8 +130,8 @@ class LauncherTest {
         wheelSpinsAt(900);
         launcher.HandleUserInput();
         launcher.Update(UPDATE_SECONDS);
-        double expected = Constants.launcherKF * 1000 + Constants.launcherKP * 100
-                + Constants.launcherKI * 100 * UPDATE_SECONDS;
+        double expected = properties.launcherKF * 1000 + properties.launcherKP * 100
+                + properties.launcherKI * 100 * UPDATE_SECONDS;
         assertEquals(Math.min(expected, 1), lastPower[0], EPS);
     }
 
@@ -140,7 +152,7 @@ class LauncherTest {
     @Test
     @DisplayName("RPM: 28 ticks per second on a 28-tick motor is 60 RPM")
     void rpmMath() {
-        ticksPerSecond[0] = Constants.launcherTicksPerRev;
+        ticksPerSecond[0] = properties.launcherTicksPerRev;
         launcher.Update(UPDATE_SECONDS);
         assertEquals(60, launcher.GetMeasuredRpm(), EPS);
     }

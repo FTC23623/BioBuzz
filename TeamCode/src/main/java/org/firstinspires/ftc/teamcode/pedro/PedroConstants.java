@@ -12,7 +12,7 @@ import com.pedropathing.revhub.localizers.TwoWheelLocalizer;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import org.firstinspires.ftc.teamcode.types.Constants;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 
 // Pedro's AutoTune prints Foresight settings that use these three. They are imported now so
 // the pasted lines compile without hunting for imports.
@@ -25,9 +25,9 @@ import com.pedropathing.math.Vector2D;
  *
  * <p>Pedro needs three things (docs/decisions/0008):
  * <ol>
- *   <li><b>Drivetrain</b>: which motors, and which way they spin. {@link #DriveConfig()}
+ *   <li><b>Drivetrain</b>: which motors, and which way they spin. {@link #DriveConfig}
  *   <li><b>Localizer</b>: how the robot knows where it is. Two odometry pods plus the Control
- *       Hub IMU. {@link #LocalizerConfig()}
+ *       Hub IMU. {@link #LocalizerConfig}
  *   <li><b>Foresight</b>: how hard to push to stay on the path and stop on time. These numbers
  *       only come from running AutoTune on the real robot. {@link #ForesightConfig()}
  * </ol>
@@ -36,6 +36,9 @@ import com.pedropathing.math.Vector2D;
  * Mecanum Tuner, then Two Wheel Tuner, then Foresight Tuner. After each one, copy the lines
  * from AutoTune's Java tab into the matching method below. They all start with {@code c.},
  * which is why the settings variable below is named {@code c}.
+ *
+ * <p>The motor names, pod ports, and hub mounting are the robot's, not Pedro's, so they come
+ * from {@link BotProperties}. Only Pedro's own numbers live in this file.
  */
 public final class PedroConstants {
     private PedroConstants() {
@@ -48,14 +51,14 @@ public final class PedroConstants {
     public static final boolean foresightTuned = false;
 
     /** The four drive motors. Names and directions match {@code subsystems/Drive.java}. */
-    public static MecanumConfig DriveConfig() {
+    public static MecanumConfig DriveConfig(BotProperties properties) {
         // Pedro wants its settings handed over inside a "settings -> { }" block. We give it an
         // empty one, then fill the settings in one line at a time.
         MecanumConfig c = new MecanumConfig(settings -> { });
-        c.frontLeftName.set(Constants.cfgDriveFrontLeft);
-        c.frontRightName.set(Constants.cfgDriveFrontRight);
-        c.backLeftName.set(Constants.cfgDriveBackLeft);
-        c.backRightName.set(Constants.cfgDriveBackRight);
+        c.frontLeftName.set(properties.cfgDriveFrontLeft);
+        c.frontRightName.set(properties.cfgDriveFrontRight);
+        c.backLeftName.set(properties.cfgDriveBackLeft);
+        c.backRightName.set(properties.cfgDriveBackRight);
         // Left side forward, right side reverse: the same as Drive.java. The Mecanum Tuner
         // checks these; if it disagrees, fix Drive.java too.
         c.frontLeftDirection.set(DcMotorSimple.Direction.FORWARD);
@@ -72,19 +75,19 @@ public final class PedroConstants {
      * tick is Decode's measured value for these same pods. Offsets 0 and FORWARD directions
      * are placeholders.
      */
-    public static TwoWheelConfig LocalizerConfig() {
+    public static TwoWheelConfig LocalizerConfig(BotProperties properties) {
         TwoWheelConfig c = new TwoWheelConfig(settings -> { });
-        c.xPodName.set(Constants.cfgForwardPodPort);
-        c.yPodName.set(Constants.cfgStrafePodPort);
-        c.imuName.set(Constants.cfgHubImu);
-        c.forwardTicksToInches.set(Constants.pinpointInPerTick);
-        c.strafeTicksToInches.set(Constants.pinpointInPerTick);
+        c.xPodName.set(properties.cfgForwardPodPort);
+        c.yPodName.set(properties.cfgStrafePodPort);
+        c.imuName.set(properties.cfgHubImu);
+        c.forwardTicksToInches.set(properties.pinpointInPerTick);
+        c.strafeTicksToInches.set(properties.pinpointInPerTick);
         c.xPodDirection.set(Encoder.FORWARD);
         c.yPodDirection.set(Encoder.FORWARD);
         c.xPodOffset.set(0.0);
         c.yPodOffset.set(0.0);
         RevHubOrientationOnRobot hubMounting =
-                new RevHubOrientationOnRobot(Constants.hubLogoFacing, Constants.hubUsbFacing);
+                new RevHubOrientationOnRobot(properties.hubLogoFacing, properties.hubUsbFacing);
         c.imu.set(new RevHubIMU(hubMounting));
         return c;
     }
@@ -100,13 +103,16 @@ public final class PedroConstants {
     }
 
     /**
-     * Build a Follower: the part of Pedro that drives the robot along a path.
+     * Build a Follower: the part of Pedro that drives the robot along a path. OpModes get
+     * theirs from {@code Bot.CreateFollower()}, which fills these in.
      *
+     * @param properties the robot's settings: motor names, pod ports, hub mounting
      * @param safeMode true: every drive power is limited to the Safe Mode speed (decision 0004)
      */
-    public static Follower CreateFollower(HardwareMap hardwareMap, boolean safeMode) {
-        TwoWheelLocalizer localizer = new TwoWheelLocalizer(hardwareMap, LocalizerConfig());
-        Mecanum drivetrain = new SafeModeMecanum(hardwareMap, DriveConfig(), safeMode);
+    public static Follower CreateFollower(HardwareMap hardwareMap, BotProperties properties,
+                                          boolean safeMode) {
+        TwoWheelLocalizer localizer = new TwoWheelLocalizer(hardwareMap, LocalizerConfig(properties));
+        Mecanum drivetrain = new SafeModeMecanum(hardwareMap, DriveConfig(properties), safeMode);
         Foresight algorithm = new Foresight(ForesightConfig());
         return new Follower(localizer, drivetrain, algorithm);
     }

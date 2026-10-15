@@ -3,7 +3,10 @@ package org.firstinspires.ftc.teamcode.opMode;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import java.util.List;
+import org.firstinspires.ftc.teamcode.bot.Bot;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
 import org.firstinspires.ftc.teamcode.pedro.ShapePaths;
 
@@ -16,14 +19,20 @@ import org.firstinspires.ftc.teamcode.pedro.ShapePaths;
  * is done, the follower stops "following" and holds the robot in place, and we start the
  * next path. See docs/decisions/0008.
  */
-public abstract class PedroAuto extends OpMode_Base {
+public abstract class PedroAuto extends LinearOpMode {
 
     /** The paths this auto drives, in order. */
     protected abstract List<Path> BuildPaths();
 
     @Override
     public void runOpMode() {
-        CreateHydraOpMode();
+        BotProperties properties = new BotProperties();
+        // In an auto, Pedro Pathing drives the wheels, so driver control is switched off.
+        properties.driveDisabled = true;
+        // No auto uses the launcher yet.
+        properties.launcherDisabled = true;
+
+        Bot bot = new Bot(this, properties);
 
         if (!PedroConstants.foresightTuned) {
             // Without tuned numbers, Pedro does not know how hard to push or when to brake.
@@ -37,24 +46,24 @@ public abstract class PedroAuto extends OpMode_Base {
             return;
         }
 
-        Follower follower = PedroConstants.CreateFollower(hardwareMap, mOpMode.mSafeMode);
+        Follower follower = bot.CreateFollower();
         follower.setPose(ShapePaths.startPose);
         List<Path> paths = BuildPaths();
-        SetLynxHubsManual();
+        bot.Init();
 
-        while (!isStarted() && !isStopRequested()) {
-            mSafeModeKey.ShowStatus();
+        while (opModeInInit()) {
+            bot.StartLoop();
+            bot.ShowStatus();
             telemetry.addLine("Put the robot on its start spot, facing forward.");
             telemetry.addData("Paths to drive", paths.size());
-            telemetry.update();
-            idle();
+            bot.EndLoop();
         }
 
         int pathNumber = 0;
         follower.follow(paths.get(pathNumber));
 
         while (opModeIsActive()) {
-            ClearLynxHubCaches();
+            bot.StartLoop();
             follower.update();
 
             boolean pathFinished = !follower.following();
@@ -64,13 +73,16 @@ public abstract class PedroAuto extends OpMode_Base {
                 follower.follow(paths.get(pathNumber));
             }
 
+            // An auto has no gamepads, so there is no HandleUserInput() here.
+            bot.Process();
+
             Pose where = follower.pose();
             telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
             telemetry.addData("Done", pathFinished && !morePathsLeft);
             telemetry.addData("x (forward, in)", where.x());
             telemetry.addData("y (left, in)", where.y());
             telemetry.addData("Heading (deg)", Math.toDegrees(where.heading()));
-            telemetry.update();
+            bot.EndLoop();
         }
 
         follower.stop();

@@ -12,8 +12,8 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
-import org.firstinspires.ftc.teamcode.types.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
  * Key in = Safe Mode. Key removed = full speed ("Remove Before Flight").
  *
  * <p>These tests talk about "key in" and "key removed", not "pressed". So they stay correct
- * when Constants.keyPressedMeansKeyIn changes from the touch stand-in to the magnetic key.
+ * when BotProperties.keyPressedMeansKeyIn changes from the touch stand-in to the magnetic key.
  */
 @DisplayName("SafeModeKey")
 class SafeModeKeyTest {
@@ -39,7 +39,7 @@ class SafeModeKeyTest {
 
     /** What the configured sensor reads when the key is in or out. */
     private boolean sensorReading(boolean keyIn) {
-        if (Constants.keyPressedMeansKeyIn) {
+        if (BotProperties.keyPressedMeansKeyIn) {
             return keyIn;
         }
         return !keyIn;
@@ -48,7 +48,7 @@ class SafeModeKeyTest {
     private TouchSensor keySensor(boolean keyIn) {
         TouchSensor sensor = mock(TouchSensor.class);
         when(sensor.isPressed()).thenReturn(sensorReading(keyIn));
-        when(hardwareMap.tryGet(TouchSensor.class, Constants.cfgSafeModeKey)).thenReturn(sensor);
+        when(hardwareMap.tryGet(TouchSensor.class, BotProperties.cfgSafeModeKey)).thenReturn(sensor);
         return sensor;
     }
 
@@ -83,7 +83,7 @@ class SafeModeKeyTest {
         op.mSafeMode = false;
         new SafeModeKey(op).ShowStatus();
         assertTrue(op.mSafeMode);
-        verify(telemetry).addLine(contains("no REV Touch Sensor named '" + Constants.cfgSafeModeKey));
+        verify(telemetry).addLine(contains("no REV Touch Sensor named '" + BotProperties.cfgSafeModeKey));
     }
 
     @Test

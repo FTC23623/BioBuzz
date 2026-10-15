@@ -3,8 +3,8 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
-import org.firstinspires.ftc.teamcode.types.Constants;
 
 /**
  * Heading from the goBILDA Pinpoint odometry computer.
@@ -24,14 +24,14 @@ public class Imu_Pinpoint implements Imu {
     /** Heading read this loop, so every reader in the loop sees the same number. */
     private double mYawDegrees;
 
-    public Imu_Pinpoint(HydraOpMode op) {
+    public Imu_Pinpoint(HydraOpMode op, BotProperties properties) {
         mOp = op;
-        mPinpoint = op.mHardwareMap.get(GoBildaPinpointDriver.class, Constants.cfgPinpoint);
+        mPinpoint = op.mHardwareMap.get(GoBildaPinpointDriver.class, properties.cfgPinpoint);
 
         // Same setup as Decode's PinpointLocalizer constructor.
-        double mmPerTick = Constants.pinpointInPerTick * 25.4;
-        double forwardPodOffsetMm = mmPerTick * Constants.pinpointParYTicks;
-        double sidewaysPodOffsetMm = mmPerTick * Constants.pinpointPerpXTicks;
+        double mmPerTick = properties.pinpointInPerTick * 25.4;
+        double forwardPodOffsetMm = mmPerTick * properties.pinpointParYTicks;
+        double sidewaysPodOffsetMm = mmPerTick * properties.pinpointPerpXTicks;
         mPinpoint.setEncoderResolution(1 / mmPerTick, DistanceUnit.MM);
         mPinpoint.setOffsets(forwardPodOffsetMm, sidewaysPodOffsetMm, DistanceUnit.MM);
         mPinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
