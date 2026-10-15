@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -34,6 +35,8 @@ public class Vision_Webcam implements Vision {
     private final ElapsedTime mSinceSeen;
 
     private boolean mEverSeen = false;
+    /** Every tag in the newest picture, so the Driver Station can list them. */
+    private List<AprilTagDetection> mInView = new ArrayList<>();
     private int mCount = 0;
     private int mTagId = 0;
     private String mTagName = "";
@@ -75,6 +78,7 @@ public class Vision_Webcam implements Vision {
     @Override
     public void Process() {
         List<AprilTagDetection> detections = mAprilTag.getDetections();
+        mInView = detections;
         mCount = detections.size();
         AprilTagSingleDetection nearest = Nearest(detections);
         if (nearest != null) {
@@ -152,6 +156,24 @@ public class Vision_Webcam implements Vision {
 
     private void ShowStatus() {
         mOp.mTelemetry.addData("Tags in view", "%d (camera %.0f fps)", mCount, mPortal.getFps());
+        // One line per tag, so a test with several tags shows which one was picked and why.
+        for (AprilTagDetection detection : mInView) {
+            if (!(detection instanceof AprilTagSingleDetection)) {
+                continue;
+            }
+            AprilTagSingleDetection tag = (AprilTagSingleDetection) detection;
+            String line;
+            if (tag.ftcPose == null) {
+                line = String.format("  tag %d: size unknown, no range", tag.id);
+            } else {
+                line = String.format("  tag %d: %.0f in, %.1f deg to the %s",
+                        tag.id, tag.ftcPose.range, Math.abs(tag.ftcPose.bearing), Side(tag.ftcPose.bearing));
+            }
+            if (tag.id == mTagId && SeesTag()) {
+                line = line + "  <- nearest";
+            }
+            mOp.mTelemetry.addLine(line);
+        }
         if (SeesTag()) {
             mOp.mTelemetry.addData("Nearest tag", "id %d %s", mTagId, mTagName);
             mOp.mTelemetry.addData("Bearing", "%.1f deg to the %s", Math.abs(mBearing), Side(mBearing));

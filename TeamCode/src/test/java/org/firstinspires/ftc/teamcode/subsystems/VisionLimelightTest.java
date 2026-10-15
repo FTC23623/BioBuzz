@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.endsWith;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -32,6 +35,7 @@ class VisionLimelightTest {
     private static final double EPS = 1e-9;
     private final BotProperties properties = new BotProperties();
     private Limelight3A limelight;
+    private Telemetry telemetry;
     private Vision_Limelight vision;
 
     @BeforeEach
@@ -39,7 +43,8 @@ class VisionLimelightTest {
         HardwareMap hardwareMap = mock(HardwareMap.class);
         limelight = mock(Limelight3A.class);
         when(hardwareMap.get(Limelight3A.class, properties.cfgLimelight)).thenReturn(limelight);
-        HydraOpMode op = new HydraOpMode(mock(Telemetry.class), hardwareMap, mock(Gamepad.class), mock(Gamepad.class));
+        telemetry = mock(Telemetry.class);
+        HydraOpMode op = new HydraOpMode(telemetry, hardwareMap, mock(Gamepad.class), mock(Gamepad.class));
         vision = new Vision_Limelight(op, properties);
     }
 
@@ -98,6 +103,17 @@ class VisionLimelightTest {
         assertTrue(vision.SeesTag());
         assertEquals(24, vision.GetTagId());
         assertEquals(3, vision.CountTags());
+    }
+
+    @Test
+    @DisplayName("lists every tag in view on the Driver Station, and marks the nearest one")
+    void listsEveryTag() {
+        limelightSees(tag(21, 10, 2.0), tag(24, -5, 5.0));
+        vision.Process();
+        verify(telemetry).addLine(contains("tag 21: fills 2.0%"));
+        verify(telemetry).addLine(contains("tag 24: fills 5.0%"));
+        verify(telemetry).addLine(endsWith("<- nearest"));
+        verify(telemetry, never()).addLine(contains("tag 21: fills 2.0%, 10.0 deg to the right  <- nearest"));
     }
 
     @Test

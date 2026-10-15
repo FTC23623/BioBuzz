@@ -4,6 +4,7 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
@@ -31,6 +32,8 @@ public class Vision_Limelight implements Vision {
 
     private boolean mStarted = false;
     private boolean mEverSeen = false;
+    /** Every tag in the newest picture, so the Driver Station can list them. */
+    private List<LLResultTypes.FiducialResult> mInView = new ArrayList<>();
     private int mCount = 0;
     private int mTagId = 0;
     private double mBearing = 0;
@@ -65,9 +68,11 @@ public class Vision_Limelight implements Vision {
     @Override
     public void Process() {
         mCount = 0;
+        mInView = new ArrayList<>();
         LLResult result = mLimelight.getLatestResult();
         if (result != null && result.isValid()) {
             List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+            mInView = tags;
             mCount = tags.size();
             LLResultTypes.FiducialResult nearest = Biggest(tags);
             if (nearest != null) {
@@ -153,6 +158,16 @@ public class Vision_Limelight implements Vision {
 
     private void ShowStatus() {
         mOp.mTelemetry.addData("Tags in view", mCount);
+        // One line per tag, so a test with several tags shows which one was picked and why.
+        for (LLResultTypes.FiducialResult tag : mInView) {
+            String line = String.format("  tag %d: fills %.1f%%, %.1f deg to the %s",
+                    tag.getFiducialId(), tag.getTargetArea(),
+                    Math.abs(tag.getTargetXDegrees()), Side(-tag.getTargetXDegrees()));
+            if (tag.getFiducialId() == mTagId && SeesTag()) {
+                line = line + "  <- nearest";
+            }
+            mOp.mTelemetry.addLine(line);
+        }
         if (SeesTag()) {
             mOp.mTelemetry.addData("Nearest tag", "id %d, %.1f deg to the %s, %.0f in away",
                     mTagId, Math.abs(mBearing), Side(mBearing), mRange);

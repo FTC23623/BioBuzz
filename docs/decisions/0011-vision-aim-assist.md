@@ -36,8 +36,10 @@ USB webcam read by the SDK's own AprilTag processor.
   Safe Mode still limits every wheel.
 - **The Bot builds the camera** unless `visionDisabled` is true, before the drive, so the
   drive always aims at this loop's picture. It hands the drive a `Vision`.
-- **Debug on the Driver Station, every loop:** tags in view, nearest id, bearing with
-  left or right spelled out, range, how long since it was seen, and the aim assist's turn.
+- **Debug on the Driver Station, every loop:** tags in view, one line per tag (id, range
+  or size, bearing) with the nearest marked `<- nearest`, then the nearest tag's id,
+  bearing with left or right spelled out, range, how long since it was seen, and the aim
+  assist's turn. Several tags in view is the test, not a problem.
   `Test: Vision` runs the camera alone, with the drive and launcher off.
 - **Signs.** The Limelight counts right as positive (`tx`); `Vision_Limelight` flips it.
   The SDK's bearing already counts left as positive. In `Drive_Manual`, a positive rotate
