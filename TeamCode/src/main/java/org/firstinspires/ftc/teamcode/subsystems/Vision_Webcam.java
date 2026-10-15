@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,9 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
  *
  * <p><b>Nearest tag:</b> the one with the smallest range. A tag the SDK does not know the
  * size of has no pose, and is skipped.
+ *
+ * <p>The picture also streams to the FTC Dashboard (0012), so the laptop shows what the
+ * camera sees; the Driver Station's Camera Stream does too.
  *
  * <p>The camera takes a moment to start. {@link #Init()} says not ready until it is
  * streaming, so the Bot waits for it.
@@ -56,6 +60,11 @@ public class Vision_Webcam implements Vision {
                 .setCamera(camera)
                 .addProcessor(mAprilTag)
                 .build();
+        // Show the camera's picture on the FTC Dashboard too, while it is running (0012).
+        FtcDashboard dashboard = FtcDashboard.getInstance();
+        if (dashboard != null) {
+            dashboard.startCameraStream(mPortal, 15);
+        }
         mSinceSeen = new ElapsedTime();
     }
 
