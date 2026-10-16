@@ -1,12 +1,15 @@
 # Setting up a team laptop (Windows)
 
-One laptop per subteam, one branch per laptop. Do steps 1 to 4 once, at home or anywhere
-with internet. Steps 5 to 7 are every practice.
+One laptop per subteam, both on the same branch. Do steps 1 to 4 once, at home or
+anywhere with internet. Steps 5 to 7 are every practice.
 
 | Laptop | Branch | Subteam |
 |---|---|---|
-| Drive laptop | `u/bryanculver-autopathing` | Drive and auton |
-| Launcher laptop | `u/bryanculver-vision-assist` | Launcher and aim assist |
+| Drive laptop | `u/bryanculver-bot` | Drive and auton |
+| Launcher laptop | `u/bryanculver-bot` | Launcher and aim assist |
+
+Both subteams work on different files, so sharing a branch is fine. Pull (Update Project)
+before you start, push when you finish, and the other laptop sees your work next pull.
 
 ## 1. Install (once, needs internet)
 
@@ -78,7 +81,7 @@ Android Studio's own "Pair Devices Using Wi-Fi" never works with the hub. It nee
 
 ## Rules
 
-- **Your laptop, your branch.** Do not check out the other team's branch on your laptop.
+- **Stay on `u/bryanculver-bot`.** Do not make new branches from a laptop; the coach does that.
 - **Only the coach merges** into `u/bryanculver-bot` and `master`.
 - **Every number has a name** in `BotProperties.java`. A test OpMode that needs a different
   number sets it at the top of its `runOpMode()`, like `Test: Launcher` does.
