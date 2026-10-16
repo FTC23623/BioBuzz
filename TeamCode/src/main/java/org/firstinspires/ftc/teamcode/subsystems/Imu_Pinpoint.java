@@ -27,20 +27,27 @@ public class Imu_Pinpoint implements Imu {
     public Imu_Pinpoint(HydraOpMode op, BotProperties properties) {
         mOp = op;
         mPinpoint = op.mHardwareMap.get(GoBildaPinpointDriver.class, properties.cfgPinpoint);
-
-        // Same setup as Decode's PinpointLocalizer constructor.
-        double mmPerTick = properties.pinpointInPerTick * 25.4;
-        double forwardPodOffsetMm = mmPerTick * properties.pinpointParYTicks;
-        double sidewaysPodOffsetMm = mmPerTick * properties.pinpointPerpXTicks;
-        mPinpoint.setEncoderResolution(1 / mmPerTick, DistanceUnit.MM);
-        mPinpoint.setOffsets(forwardPodOffsetMm, sidewaysPodOffsetMm, DistanceUnit.MM);
-        mPinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
-                GoBildaPinpointDriver.EncoderDirection.FORWARD);
-        mPinpoint.resetPosAndIMU();
+        Configure(mPinpoint, properties);
 
         mReady = false;
         mHeadingAtReset = 0;
         mYawDegrees = 0;
+    }
+
+    /**
+     * Tell the Pinpoint where its pods are and how many ticks make an inch, then zero it.
+     * Same setup as Decode's PinpointLocalizer constructor. {@code Test: Pinpoint} uses this
+     * too, so the test sees exactly what the drive sees.
+     */
+    public static void Configure(GoBildaPinpointDriver pinpoint, BotProperties properties) {
+        double mmPerTick = properties.pinpointInPerTick * 25.4;
+        double forwardPodOffsetMm = mmPerTick * properties.pinpointParYTicks;
+        double sidewaysPodOffsetMm = mmPerTick * properties.pinpointPerpXTicks;
+        pinpoint.setEncoderResolution(1 / mmPerTick, DistanceUnit.MM);
+        pinpoint.setOffsets(forwardPodOffsetMm, sidewaysPodOffsetMm, DistanceUnit.MM);
+        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
+                GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        pinpoint.resetPosAndIMU();
     }
 
     /**

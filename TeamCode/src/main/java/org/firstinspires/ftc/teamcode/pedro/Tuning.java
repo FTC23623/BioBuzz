@@ -1,18 +1,19 @@
 package org.firstinspires.ftc.teamcode.pedro;
 
 import com.pedropathing.algorithm.Foresight;
-import com.pedropathing.revhub.localizers.TwoWheelLocalizer;
 import com.pedropathing.tuning.autotune.Procedure;
 import com.pedropathing.tuning.autotune.Tuner;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.pedro.procedures.ForesightTuner;
 import org.firstinspires.ftc.teamcode.pedro.procedures.MecanumTuner;
+import org.firstinspires.ftc.teamcode.pedro.procedures.PinpointTuner;
 import org.firstinspires.ftc.teamcode.pedro.procedures.Tests;
 import org.firstinspires.ftc.teamcode.pedro.procedures.TwoWheelTuner;
 
 /**
  * The tuners that show up in Pedro's AutoTune web page, http://192.168.43.1:10158 while
- * connected to the robot's Wi-Fi. Run them in this order: Mecanum, Two Wheel, Foresight.
+ * connected to the robot's Wi-Fi. Run them in this order: Mecanum, then Pinpoint (or Two
+ * Wheel on a robot with no Pinpoint), then Foresight.
  *
  * <p><b>SAFETY: the tuners ignore Safe Mode.</b> They have to, to measure the robot's real
  * top speed. The Foresight Tuner drives at FULL POWER for about 4 feet, forward and left.
@@ -37,6 +38,13 @@ public final class Tuning {
         return new MecanumTuner();
     }
 
+    /** For a robot with a goBILDA Pinpoint. Finds the pod directions and offsets. */
+    @Tuner
+    public static Procedure pinpointTuner() {
+        return new PinpointTuner();
+    }
+
+    /** For a robot with two pods plugged into the hub's encoder jacks instead. */
     @Tuner
     public static Procedure twoWheelTuner() {
         return new TwoWheelTuner();
@@ -45,7 +53,7 @@ public final class Tuning {
     @Tuner
     public static Procedure foresightTuner() {
         return new ForesightTuner(
-                hardwareMap -> new TwoWheelLocalizer(hardwareMap, PedroConstants.LocalizerConfig(tunerProperties)),
+                hardwareMap -> PedroConstants.CreateLocalizer(hardwareMap, tunerProperties),
                 hardwareMap -> new SafeModeMecanum(hardwareMap, PedroConstants.DriveConfig(tunerProperties), safeModeForTuners));
     }
 
@@ -55,12 +63,12 @@ public final class Tuning {
         if (PedroConstants.foresightTuned) {
             return new Tests(
                     hardwareMap -> new SafeModeMecanum(hardwareMap, PedroConstants.DriveConfig(tunerProperties), safeModeForTuners),
-                    hardwareMap -> new TwoWheelLocalizer(hardwareMap, PedroConstants.LocalizerConfig(tunerProperties)),
+                    hardwareMap -> PedroConstants.CreateLocalizer(hardwareMap, tunerProperties),
                     () -> new Foresight(PedroConstants.ForesightConfig()));
         }
         return new Tests(
                 hardwareMap -> new SafeModeMecanum(hardwareMap, PedroConstants.DriveConfig(tunerProperties), safeModeForTuners),
-                hardwareMap -> new TwoWheelLocalizer(hardwareMap, PedroConstants.LocalizerConfig(tunerProperties)),
+                hardwareMap -> PedroConstants.CreateLocalizer(hardwareMap, tunerProperties),
                 null);
     }
 }

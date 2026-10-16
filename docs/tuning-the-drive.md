@@ -1,4 +1,4 @@
-# Tuning the drive
+Ok# Tuning the drive
 
 How to get the robot from "the motors spin" to "it drives a path by itself".
 Do the steps in order. Each one has a check, so you know when it worked.
@@ -15,7 +15,7 @@ Safety, every time:
 |---|---|---|---|
 | [1. Wiring](#1-wiring-wheels-off-the-ground) | Each motor spins the right way | Robot configuration, not code | 10 min |
 | [2. Heading](#2-heading-still-off-the-ground) | The hub IMU reads turns the right way | `BotProperties`: `hubLogoFacing`, `hubUsbFacing` | 10 min |
-| [3. Pod ports](#3-pod-ports-still-off-the-ground) | Which port each odometry pod is on | `BotProperties`: `cfgForwardPodPort`, `cfgStrafePodPort` | 10 min |
+| [3. Odometry](#3-odometry-still-off-the-ground) | The pods count the right way | `BotProperties`: the Pinpoint or pod-port lines | 10 min |
 | [4. Drive feel](#4-drive-feel-on-the-floor) | How TeleOp feels to the driver | `BotProperties`: the drive section | 20 min |
 | [5. Pedro AutoTune](#5-pedro-autotune-on-the-floor-full-power) | Everything Pedro needs to follow a path | `pedro/PedroConstants.java` | 1 to 2 hours |
 | [6. First auto](#6-first-auto) | Proves it all | Nothing | 15 min |
@@ -50,22 +50,32 @@ Hub on the robot: which way does the REV logo face, and which way do the USB por
 Put those in `hubLogoFacing` and `hubUsbFacing` in `BotProperties.java`, build, and try
 again. See [decision 0005](decisions/0005-hub-imu-fallback.md).
 
-## 3. Pod ports (still off the ground)
+## 3. Odometry (still off the ground)
 
-The two odometry pods plug into the encoder jacks of two motor ports. Pedro reads a pod
-by the name of the motor on that port. The names in `BotProperties` are guesses until
-someone checks.
+The robot knows where it is from two odometry pods. There are two ways they can be wired,
+and the code picks the right one by itself from the robot configuration.
+
+**With a goBILDA Pinpoint (this robot).** Both pods plug into the Pinpoint, and the Pinpoint
+plugs into the hub as `pinpoint`.
+
+1. Run **Test: Pinpoint**. It says `READY` and shows X and Y ticks.
+2. Roll the **forward** pod wheel with one finger: `X ticks` changes. Roll the **strafe**
+   pod: `Y ticks` changes. If they are swapped, swap the two pod cables on the Pinpoint.
+3. **Check:** a pod whose count never changes is unplugged.
+
+Which way the counts go (up or down) does not matter here. The Pinpoint Tuner in step 5
+works that out. The pod offsets shown at the bottom come from `BotProperties`
+(`pinpointParYTicks`, `pinpointPerpXTicks`) and were measured on last year's robot; step 5
+measures them again for this one.
+
+**Without a Pinpoint.** The pods plug into the encoder jacks of two motor ports, and Pedro
+reads a pod by the name of the motor on that port.
 
 1. Run **Test: Odometry Pods**. It shows a count for each of the four motor ports.
 2. Roll the **forward** pod wheel with one finger. One count changes. That port is the
-   forward pod's port.
-3. Press circle to zero the counts. Roll the **strafe** pod wheel. That port is the strafe
-   pod's port.
-4. **Check:** the ports match `cfgForwardPodPort` and `cfgStrafePodPort` in
+   forward pod's port. Press circle to zero, then roll the **strafe** pod.
+3. **Check:** the ports match `cfgForwardPodPort` and `cfgStrafePodPort` in
    `BotProperties.java`. If not, change them and build.
-
-Which way the count goes (up or down) does not matter here. The Two Wheel Tuner in
-step 5 works that out.
 
 ## 4. Drive feel (on the floor)
 
@@ -98,8 +108,9 @@ AutoTune page runs the tests and prints the lines to paste into
 
 1. Robot on. Join the robot's Wi-Fi with a laptop, the same way the Driver Station does.
 2. In a browser, open `http://192.168.43.1:10158`.
-3. The page lists the four tuners from `pedro/Tuning.java`: Mecanum Tuner, Two Wheel
-   Tuner, Foresight Tuner, and Tests. Run them in that order. The page walks through each
+3. The page lists the tuners from `pedro/Tuning.java`: Mecanum Tuner, Pinpoint Tuner, Two
+   Wheel Tuner, Foresight Tuner, and Tests. Run Mecanum, then **one** of Pinpoint or Two
+   Wheel, then Foresight. The page walks through each
    step and shows the result in a Java tab. Every result line starts with `c.`.
 
 **5a. Mecanum Tuner (wheels off the ground is fine)**
@@ -111,14 +122,24 @@ AutoTune page runs the tests and prints the lines to paste into
 - **Check:** left motors `FORWARD`, right motors `REVERSE`, the same as `Drive.java`. If
   the tuner says otherwise, step 1 was not finished.
 
-**5b. Two Wheel Tuner (on the floor, you push the robot)**
+**5b. Pinpoint Tuner (on the floor, you push the robot). This robot.**
+
+- It asks for the Pinpoint's name (`pinpoint`) and the pod type. goBILDA 4-bar pods are the
+  default; pick what is on the robot. "Custom" has you push 48 inches to measure the pods.
+- Then it has you push the robot forward and stop, push it left and stop, and spin it in
+  place half a turn to the left and stop. It works out the pod directions and offsets.
+- **Paste** the result lines into `PinpointLocalizerConfig()`. The offsets it prints are in
+  inches from the robot's center; they replace the Decode numbers that `BotProperties`
+  turns into the same thing.
+
+**5b, without a Pinpoint: Two Wheel Tuner**
 
 - It asks for the forward pod's motor name and the strafe pod's motor name (step 3), the
   IMU name (`imu`), and the hub's logo and USB directions (step 2).
 - It asks how far you will push: 48 inches is two tiles. Measure it with tape first.
 - Then it has you push the robot forward 48 inches exactly, push it left 48 inches exactly,
   push forward again, push left again, and spin it in place half a turn to the left.
-- **Paste** the result lines into `LocalizerConfig()`.
+- **Paste** the result lines into `TwoWheelLocalizerConfig()`.
 - **Check:** after pasting, run the Tests tuner's Localization Test: push the robot
   forward and the x number grows, push left and y grows, turn left and the heading grows.
 
@@ -158,8 +179,9 @@ a list of paths in `pedro/ShapePaths.java` and a 15-line OpMode.
 | What you see | Likely cause | Try |
 |---|---|---|
 | `PEDRO IS NOT TUNED YET` on the Driver Station | `foresightTuned` is still `false` | Step 5c |
-| The auto drives the mirror image of the shape | A pod direction is flipped | Run the Two Wheel Tuner again, paste, build |
+| The auto drives the mirror image of the shape | A pod direction is flipped | Run the Pinpoint (or Two Wheel) Tuner again, paste, build |
 | The auto turns the wrong way or spins | Hub mounting is wrong | Step 2 |
-| The Localization Test's x and y are swapped | The pod ports are swapped | Step 3 |
+| The Localization Test's x and y are swapped | The pod cables are swapped | Step 3 |
+| `Test: Pinpoint` never says `READY` | Pinpoint cable, or the robot moved while it calibrated | Reseat the cable, press circle, hold still |
 | One wheel does not move in the Mecanum Tuner | Wrong port or a loose cable | Step 1 |
 | The robot fights itself in the tuners | A drive motor is in `RUN_USING_ENCODER` with a pod on its port | `SafeModeMecanum` sets `RUN_WITHOUT_ENCODER`; check nothing else changed it |
