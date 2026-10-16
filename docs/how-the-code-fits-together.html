@@ -224,6 +224,10 @@
               <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Drive.java"><code>Drive</code></a></th><td><code>subsystems/</code></td><td>Owns the four drive motors. Applies the Safe Mode limit.</td></tr>
               <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Drive_Manual.java"><code>Drive_Manual</code></a></th><td><code>subsystems/</code></td><td><code>Drive</code>, plus driver control from the gamepad.</td></tr>
               <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Launcher.java"><code>Launcher</code></a></th><td><code>subsystems/</code></td><td>The launcher wheel, held at a target speed.</td></tr>
+              <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Vision.java"><code>Vision</code></a></th><td><code>subsystems/</code></td><td>The rule for "something that sees AprilTags": is there a tag, which way, how far.</td></tr>
+              <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Vision_Limelight.java"><code>Vision_Limelight</code></a><br><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Vision_Webcam.java"><code>Vision_Webcam</code></a><br><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Vision_None.java"><code>Vision_None</code></a></th><td><code>subsystems/</code></td><td>Three parts that follow the <code>Vision</code> rule: a Limelight, a webcam, or no camera at all.</td></tr>
+              <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/VisionSelector.java"><code>VisionSelector</code></a></th><td><code>subsystems/</code></td><td>Picks which of the three to use.</td></tr>
+              <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/objects/AimAssist.java"><code>AimAssist</code></a></th><td><code>objects/</code></td><td>The turn that points the robot at a tag. Math only.</td></tr>
               <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/objects/MecanumMath.java"><code>MecanumMath</code></a></th><td><code>objects/</code></td><td>Turns "drive, strafe, rotate" into four wheel powers. Math only.</td></tr>
               <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/objects/Debouncer.java"><code>Debouncer</code></a></th><td><code>objects/</code></td><td>Turns a held button into one clean press.</td></tr>
               <tr><th><a href="../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/objects/MotorSlewRate.java"><code>MotorSlewRate</code></a></th><td><code>objects/</code></td><td>Changes a motor's power a little at a time, so the robot does not jerk.</td></tr>
@@ -249,6 +253,7 @@
         <ul class="points">
           <li><strong>a and b always happen.</strong> No OpMode can forget to check the Safe Mode key.</li>
           <li><strong>c and d are left out</strong> when <code>properties.driveDisabled</code> is true.</li>
+          <li><strong>The camera is built too</strong>, before the drive, unless <code>properties.visionDisabled</code> is true. It is not in the picture yet.</li>
           <li><strong>e is left out</strong> when <code>properties.launcherDisabled</code> is true. <code>HyDrive</code> sets this today: the launcher is not part of HyDrive yet (<a href="decisions/0009-launcher-velocity-control.md">decision 0009</a>).</li>
           <li><strong>A part that is left out is never built.</strong> Its motors do not even have to be in the robot configuration.</li>
           <li><strong>The order matters.</strong> Parts run each loop in the order they were built. The <code>Imu</code> is built before <code>Drive_Manual</code>, so the drive always sees this loop's heading.</li>
@@ -321,6 +326,7 @@
           <li><strong>Every drive power goes through <code>Drive.LimitPower()</code>.</strong> That is the one place Safe Mode is applied to driver control.</li>
           <li><strong>No heading yet?</strong> <code>Drive_Manual</code> uses 0, so the robot drives as if it faces forward.</li>
           <li><strong>Circle</strong> (B on an Xbox pad) makes the way the robot faces now count as forward.</li>
+          <li><strong>Left bumper, held:</strong> aim assist. The turn comes from <code>AimAssist</code> and the nearest tag the <code>Vision</code> sees, instead of the right stick. See <a href="decisions/0011-vision-aim-assist.md">decision 0011</a>.</li>
         </ul>
 
         <h3>The launcher's loop</h3>
@@ -427,6 +433,7 @@
             <thead><tr><th>What you want to swap</th><th>Where the switch is</th><th>What stays the same</th></tr></thead>
             <tbody>
               <tr><td>Pinpoint or hub IMU for the heading</td><td>The robot configuration: is there a <code>pinpoint</code>?</td><td><code>Drive_Manual</code></td></tr>
+              <tr><td>Limelight, webcam or no camera for the tags</td><td>The robot configuration: is there a <code>limelight</code>, or a <code>Webcam 1</code>?</td><td><code>Drive_Manual</code> and aim assist</td></tr>
               <tr><td>Driver control or path following</td><td><code>driveDisabled</code> in the OpMode</td><td>The 4 motors, their names, Safe Mode</td></tr>
               <tr><td>Field-centric or robot-centric driving</td><td><code>fieldCentricDrive</code> in <code>BotProperties</code></td><td>Everything after <code>MecanumMath</code></td></tr>
               <tr><td>Leave the drive out of an OpMode</td><td><code>driveDisabled</code> in the OpMode</td><td>The other parts</td></tr>

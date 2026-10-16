@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -28,6 +29,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.junit.jupiter.api.BeforeEach;
@@ -175,6 +177,40 @@ class BotTest {
             bot.Process();
             bot.EndLoop();
             verify(hardwareMap, never()).get(eq(DcMotorEx.class), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("the camera")
+    class Camera {
+
+        @Test
+        @DisplayName("visionDisabled: the Bot never looks for a camera, and the drive still works")
+        void visionOff() {
+            addDrive();
+            properties.launcherDisabled = true;
+            properties.visionDisabled = true;
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            bot.ShowStatus();
+            teleOpLoop(bot);
+            verify(hardwareMap, never()).tryGet(eq(Limelight3A.class), anyString());
+            verify(hardwareMap, never()).tryGet(eq(WebcamName.class), anyString());
+            verify(telemetry).addLine(contains("Vision: OFF"));
+        }
+
+        @Test
+        @DisplayName("normal settings: looks for a Limelight, then a webcam, and runs without either")
+        void looksForACamera() {
+            addDrive();
+            properties.launcherDisabled = true;
+            Bot bot = new Bot(opMode, properties);
+            verify(hardwareMap).tryGet(Limelight3A.class, properties.cfgLimelight);
+            verify(hardwareMap).tryGet(WebcamName.class, properties.cfgWebcam);
+            verify(telemetry).addLine(contains("Camera: none"));
+            bot.Init();
+            bot.ShowStatus();
+            teleOpLoop(bot);
         }
     }
 

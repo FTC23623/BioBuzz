@@ -17,6 +17,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0008](0008-pedro-pathing-autos.md) | Autonomous uses Pedro Pathing 3, odometry pods on the hub | Accepted, not tuned yet |
 | [0009](0009-launcher-velocity-control.md) | The launcher holds a speed with our own control loop | Accepted, not tuned yet |
 | [0010](0010-bot-and-bot-properties.md) | OpModes talk to a Bot; settings live in BotProperties | Accepted, not on the robot yet |
+| [0011](0011-vision-aim-assist.md) | Aim assist: hold the left bumper, face the nearest AprilTag | Accepted, turn direction unchecked |
 | [0012](0012-ftc-dashboard.md) | FTC Dashboard mirrors the telemetry as live graphs | Accepted, not on the robot yet |
 
 ## Template
