@@ -60,6 +60,7 @@ public class Vision_Limelight implements Vision {
             mLimelight.start();
         }
         mOp.mTelemetry.addData("Camera", "Limelight, pipeline " + mProperties.limelightAprilTagPipeline);
+        mOp.mTelemetry.addLine("Limelight web page: http://192.168.43.1:5801 (laptop on the robot's Wi-Fi)");
         return true;
     }
 
@@ -73,9 +74,11 @@ public class Vision_Limelight implements Vision {
         mCount = 0;
         mInView = new ArrayList<>();
         LLResult result = mLimelight.getLatestResult();
-        if (result == null) {
-            mResultState = "none yet: is the Limelight running?";
-        } else if (!result.isValid()) {
+        if (!mLimelight.isConnected()) {
+            mResultState = "NOT CONNECTED: check the USB cable to the hub";
+        } else if (result == null || !result.isValid()) {
+            // The SDK hands back a result even before the Limelight has said anything; it is
+            // just not valid yet. Valid and empty means the picture has no tag in it.
             mResultState = "no target in the picture";
         } else {
             mResultState = "target found, " + result.getStaleness() + " ms old";

@@ -69,3 +69,19 @@ USB webcam read by the SDK's own AprilTag processor.
   That is one `if` in `Process()` when the tag ids are known.
 - Tests: `AimAssistTest` (6), `DriveAimTest` (6), `VisionLimelightTest` (7),
   `VisionSelectorTest` (2), two more in `BotTest`.
+
+## Added 2026-10-16: the Limelight's web page through the hub
+
+The first robot test found the pipeline's ID filter dropping every tag. Fixing it meant
+unplugging the Limelight from the hub and plugging it into a laptop, every time.
+
+- **`tools/LimelightWebProxy`** starts when the Robot Controller app starts and passes
+  ports 5800 to 5807 through from the hub's Wi-Fi to the Limelight's USB network. On a
+  laptop joined to the robot's Wi-Fi, `http://192.168.43.1:5801` is the Limelight's page.
+  The same trick WPILib's PortForwarder does on an FRC robot. Not yet tried on the robot.
+- **The Driver Station says whether the Limelight is connected** and prints that address
+  during INIT.
+- **Next, if the filter bites again:** keep the AprilTag pipeline as a JSON file in the
+  repo and have the robot upload it with `Limelight3A.uploadPipeline()`. The SDK added
+  that so teams can version-control their pipelines. Then the setting lives in git, not
+  in the camera.
