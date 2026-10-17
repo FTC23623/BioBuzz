@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,15 +27,30 @@ import org.junit.jupiter.api.Test;
  */
 @DisplayName("SafeModeKey")
 class SafeModeKeyTest {
+    private final BotProperties properties = new BotProperties();
     private HardwareMap hardwareMap;
     private Telemetry telemetry;
     private HydraOpMode op;
 
     @BeforeEach
     void setUp() {
+        // These tests are about the key, so Safe Mode is on whatever the current default is.
+        properties.safeModeEnabled = true;
         hardwareMap = mock(HardwareMap.class);
         telemetry = mock(Telemetry.class);
         op = new HydraOpMode(telemetry, hardwareMap, mock(Gamepad.class), mock(Gamepad.class));
+    }
+
+    @Test
+    @DisplayName("Safe Mode switched off in BotProperties: full speed, the key is never read, and it says so")
+    void switchedOff() {
+        properties.safeModeEnabled = false;
+        TouchSensor sensor = keySensor(true);   // key IN, which would mean Safe Mode
+        SafeModeKey key = new SafeModeKey(op, properties);
+        key.ShowStatus();
+        assertFalse(op.mSafeMode, "switched off must mean full speed even with the key in");
+        verify(sensor, never()).isPressed();
+        verify(telemetry).addLine(contains("SAFE MODE IS OFF"));
     }
 
     /** What the configured sensor reads when the key is in or out. */
@@ -63,7 +79,7 @@ class SafeModeKeyTest {
     void keyInIsSafe() {
         op.mSafeMode = false;
         keySensor(true);
-        new SafeModeKey(op).ShowStatus();
+        new SafeModeKey(op, properties).ShowStatus();
         assertTrue(op.mSafeMode);
         verify(telemetry).addLine(contains("key is in"));
     }
@@ -72,7 +88,7 @@ class SafeModeKeyTest {
     @DisplayName("key removed: FULL speed (touch sensor pressed)")
     void keyRemovedIsFull() {
         keySensor(false);
-        new SafeModeKey(op).ShowStatus();
+        new SafeModeKey(op, properties).ShowStatus();
         assertFalse(op.mSafeMode);
         verify(telemetry).addLine(contains("FULL SPEED"));
     }
@@ -81,7 +97,7 @@ class SafeModeKeyTest {
     @DisplayName("sensor missing from the robot configuration: SAFE, with a warning")
     void missingIsSafe() {
         op.mSafeMode = false;
-        new SafeModeKey(op).ShowStatus();
+        new SafeModeKey(op, properties).ShowStatus();
         assertTrue(op.mSafeMode);
         verify(telemetry).addLine(contains("no REV Touch Sensor named '" + BotProperties.cfgSafeModeKey));
     }
@@ -90,7 +106,7 @@ class SafeModeKeyTest {
     @DisplayName("the key is read exactly once, at INIT, and a mid-match change is ignored")
     void readOnlyOnce() {
         TouchSensor sensor = keySensor(false);
-        SafeModeKey key = new SafeModeKey(op);
+        SafeModeKey key = new SafeModeKey(op, properties);
         assertFalse(op.mSafeMode);
 
         // A fluke mid-match: the sensor suddenly says "key in".

@@ -23,15 +23,27 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * bench testing now, a touch sensor stands in: pressing it pretends the key is removed.
  * {@code BotProperties.keyPressedMeansKeyIn} says which one is on the robot.
  * See docs/decisions/0007-safe-mode-key.md.
+ *
+ * <p>While {@code safeModeEnabled} in BotProperties is false, the key is not read at all:
+ * full speed, and the Driver Station says SAFE MODE IS OFF (docs/decisions/0014).
  */
 public class SafeModeKey implements Subsystem {
     private final HydraOpMode mOp;
     /** What the Driver Station shows. Worked out once, at INIT. */
     private final String mStatus;
+    /** false while Safe Mode is switched off in BotProperties. */
+    private final boolean mEnabled;
 
-    public SafeModeKey(HydraOpMode op) {
+    public SafeModeKey(HydraOpMode op, BotProperties properties) {
         mOp = op;
+        mEnabled = properties.safeModeEnabled;
         int limitPercent = (int) Math.round(BotProperties.safeModeMaxPower * 100);
+
+        if (!mEnabled) {
+            mOp.mSafeMode = false;
+            mStatus = "SAFE MODE IS OFF (safeModeEnabled = false in BotProperties). FULL SPEED, key or no key.";
+            return;
+        }
 
         // The sensor is a local variable on purpose: we read it here, once, and never again.
         TouchSensor keySensor = op.mHardwareMap.tryGet(TouchSensor.class, BotProperties.cfgSafeModeKey);
@@ -68,6 +80,9 @@ public class SafeModeKey implements Subsystem {
     /** Put the Safe Mode line on the Driver Station. Call every loop while waiting for START. */
     public void ShowStatus() {
         mOp.mTelemetry.addLine(mStatus);
+        if (!mEnabled) {
+            return;
+        }
         if (BotProperties.keyPressedMeansKeyIn) {
             mOp.mTelemetry.addLine("(An unplugged key sensor also reads as key removed.)");
         } else {

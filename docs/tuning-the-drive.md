@@ -3,6 +3,10 @@ Ok# Tuning the drive
 How to get the robot from "the motors spin" to "it drives a path by itself".
 Do the steps in order. Each one has a check, so you know when it worked.
 
+**Right now Safe Mode is OFF in code** (`safeModeEnabled = false` in `BotProperties`,
+[decision 0014](decisions/0014-safe-mode-off-for-foresight.md)). Every step below runs at
+full speed, key or no key, until it is turned back on. The Driver Station says so.
+
 Safety, every time:
 
 - **Wheels off the ground** for steps 1, 2 and 3. Hand on STOP.

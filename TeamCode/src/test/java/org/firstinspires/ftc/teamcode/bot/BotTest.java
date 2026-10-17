@@ -243,10 +243,27 @@ class BotTest {
     class SafeMode {
 
         @Test
+        @DisplayName("Safe Mode switched off (today's default): the stick goes past 0.25 with no key at all")
+        void switchedOffIsFullSpeed() {
+            addDrive();
+            properties.launcherDisabled = true;
+            properties.safeModeEnabled = false;
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            gamepad1.left_stick_y = -1;
+            for (int loop = 0; loop < 50; loop++) {
+                teleOpLoop(bot);
+            }
+            assertTrue(Math.abs(power.get(properties.cfgDriveFrontLeft)[0]) > BotProperties.safeModeMaxPower);
+            verify(telemetry).addLine(contains("SAFE MODE IS OFF"));
+        }
+
+        @Test
         @DisplayName("no key sensor: the stick on gamepad 1 drives, and no wheel passes 0.25")
         void driveIsLimited() {
             addDrive();
             properties.launcherDisabled = true;
+            properties.safeModeEnabled = true;
             Bot bot = new Bot(opMode, properties);
             bot.Init();
 
@@ -264,6 +281,7 @@ class BotTest {
         void keyRemovedIsFullSpeed() {
             addDrive();
             properties.launcherDisabled = true;
+            properties.safeModeEnabled = true;
             TouchSensor keySensor = mock(TouchSensor.class);
             // "Key removed" on whichever sensor is configured: see SafeModeKey.KeyIsIn.
             when(keySensor.isPressed()).thenReturn(!BotProperties.keyPressedMeansKeyIn);
@@ -284,6 +302,7 @@ class BotTest {
         void keyReadOnce() {
             addDrive();
             addLauncher();
+            properties.safeModeEnabled = true;
             TouchSensor keySensor = mock(TouchSensor.class);
             when(hardwareMap.tryGet(TouchSensor.class, BotProperties.cfgSafeModeKey)).thenReturn(keySensor);
             Bot bot = new Bot(opMode, properties);

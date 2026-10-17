@@ -20,6 +20,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0011](0011-vision-aim-assist.md) | Aim assist: hold the left bumper, face the nearest AprilTag | Accepted, turn direction unchecked |
 | [0012](0012-ftc-dashboard.md) | FTC Dashboard mirrors the telemetry as live graphs | Accepted, not on the robot yet |
 | [0013](0013-pinpoint-for-pedro.md) | Pedro uses the Pinpoint when the robot has one | Accepted, not tuned yet |
+| [0014](0014-safe-mode-off-for-foresight.md) | Safe Mode switched off while Foresight is tested | Accepted, temporary |
 
 ## Template
 

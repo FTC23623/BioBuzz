@@ -176,6 +176,13 @@ public class BotProperties {
     // LATER (the real key): REV Magnetic Limit Switch. Change the name below to the magnetic
     //   switch's name, and change keyPressedMeansKeyIn to true.
 
+    /**
+     * TEMPORARY, 2026-10-17: Safe Mode is switched OFF while Pedro's Foresight numbers are
+     * tested at the speed they were measured at. The robot runs at full speed, key or no
+     * key, and the Driver Station says so in capitals. Set this back to true when the
+     * autos are proven (docs/decisions/0014).
+     */
+    public boolean safeModeEnabled = false;
     /** Fastest any drive motor may go in Safe Mode. 0.25 is one quarter of full power. */
     public static final double safeModeMaxPower = 0.25;
     /** The key sensor. Configure it as a "REV Touch Sensor" (the magnetic switch too). */

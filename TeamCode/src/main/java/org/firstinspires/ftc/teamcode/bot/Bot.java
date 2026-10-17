@@ -88,7 +88,7 @@ public class Bot {
 
         // The Safe Mode key is checked here, one time, before any other part is built. No
         // OpMode can forget it, and it is never read again (docs/decisions/0007).
-        mSafeModeKey = new SafeModeKey(mOp);
+        mSafeModeKey = new SafeModeKey(mOp, mProperties);
         mSystems.add(mSafeModeKey);
 
         // The camera goes before the drive in the list, so each loop the drive aims at what
