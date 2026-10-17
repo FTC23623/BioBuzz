@@ -20,24 +20,27 @@ class PedroConstantsTest {
     private final BotProperties properties = new BotProperties();
 
     @Test
-    @DisplayName("the Pinpoint config uses the drive's pod offsets, in inches")
-    void pinpointOffsetsMatchTheDrive() {
+    @DisplayName("the Pinpoint config names the configured Pinpoint and measures in inches")
+    void pinpointConfigBasics() {
         PinpointConfig c = PedroConstants.PinpointLocalizerConfig(properties);
         assertEquals(properties.cfgPinpoint, c.name.get());
         assertEquals(DistanceUnit.INCH, c.offsetUnits.get());
-        // Decode's numbers: -1209.2 ticks x 0.00195 in/tick = -2.36 in; -2661.4 x 0.00195 = -5.20 in.
-        assertEquals(-2.3612, c.xPodOffset.get(), 0.001);
-        assertEquals(-5.1968, c.yPodOffset.get(), 0.001);
+        assertEquals(DistanceUnit.INCH, c.globalDistanceUnit.get());
+        // The pod offsets are whatever the Pinpoint Tuner printed for this robot, so they are
+        // not checked against BotProperties here. See decision 0013.
+        assertTrue(Math.abs(c.xPodOffset.get()) < 12, "a pod sits within a foot of the center");
+        assertTrue(Math.abs(c.yPodOffset.get()) < 12, "a pod sits within a foot of the center");
     }
 
     @Test
-    @DisplayName("ticks per inch is the drive's inches per tick, turned over")
-    void ticksPerInch() {
+    @DisplayName("Pedro uses the pod type the tuner chose, and the drive uses the same ticks per inch")
+    void podTypeAndResolutionAgree() {
         PinpointConfig c = PedroConstants.PinpointLocalizerConfig(properties);
-        assertEquals(DistanceUnit.INCH, c.encoderResolutionUnit.get());
-        assertTrue(c.ticksPerUnit.get().isPresent());
-        assertEquals(1 / properties.pinpointInPerTick, c.ticksPerUnit.get().getAsDouble(), 1e-9);
-        assertEquals(512.1, c.ticksPerUnit.get().getAsDouble(), 0.1);
+        assertEquals(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD, c.podType.get());
+        // Pedro takes ticksPerUnit over podType when both are set, so it must stay unset.
+        assertFalse(c.ticksPerUnit.get().isPresent());
+        // 19.894 ticks per mm, as goBILDA says for the 4-bar pod.
+        assertEquals(19.894, 1 / (properties.pinpointInPerTick * 25.4), 0.001);
     }
 
     @Test

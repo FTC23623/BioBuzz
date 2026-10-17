@@ -45,7 +45,7 @@ public class BotProperties {
     // ---- Drive ------------------------------------------------------------------------------
 
     /** true: forward on the stick is always away from the driver. false: the way the robot faces. */
-    public boolean fieldCentricDrive = true;
+    public boolean fieldCentricDrive = false;
     /** How far a trigger has to be pulled before it counts as pressed. */
     public double trgBtnThresh = 0.05;
     /** Top drive power while holding the right trigger. */
@@ -76,7 +76,8 @@ public class BotProperties {
     // alone, so a mistake here will not change how the robot drives. From Decode
     // MecanumDrive.PARAMS.inPerTick and PinpointLocalizer.PARAMS (lines 19-20).
 
-    public double pinpointInPerTick = 0.0019526927633206;
+    /** goBILDA 4-bar pod: 19.894 ticks per mm, the pod type the Pinpoint Tuner was told (2026-10-17). */
+    public double pinpointInPerTick = 1 / (19.89436789 * 25.4);
     public double pinpointParYTicks = -1209.212244933345;
     public double pinpointPerpXTicks = -2661.37617633336;
 
