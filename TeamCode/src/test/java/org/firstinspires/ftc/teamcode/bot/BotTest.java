@@ -24,6 +24,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -211,6 +212,38 @@ class BotTest {
             bot.Init();
             bot.ShowStatus();
             teleOpLoop(bot);
+        }
+    }
+
+    @Nested
+    @DisplayName("the indicator light")
+    class Light {
+
+        @Test
+        @DisplayName("normal settings: the Bot looks for the light and follows the camera with it")
+        void lightFollowsCamera() {
+            properties.driveDisabled = true;
+            properties.launcherDisabled = true;
+            Servo light = mock(Servo.class);
+            when(hardwareMap.tryGet(Servo.class, properties.cfgIndicator)).thenReturn(light);
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            bot.ShowStatus();   // waiting for START: the light already follows the camera
+            // No camera in this pretend robot, so no tag: red.
+            verify(light).setPosition(properties.indicatorRed);
+            teleOpLoop(bot);
+        }
+
+        @Test
+        @DisplayName("indicatorDisabled: the Bot never looks for the light")
+        void lightOff() {
+            properties.driveDisabled = true;
+            properties.launcherDisabled = true;
+            properties.indicatorDisabled = true;
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            teleOpLoop(bot);
+            verify(hardwareMap, never()).tryGet(eq(Servo.class), anyString());
         }
     }
 

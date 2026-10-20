@@ -41,6 +41,8 @@ public class BotProperties {
     public boolean launcherDisabled = false;
     /** true: the Bot never looks for a camera. Aim assist is off. */
     public boolean visionDisabled = false;
+    /** true: the Bot never touches the indicator light. */
+    public boolean indicatorDisabled = false;
 
     // ---- Drive ------------------------------------------------------------------------------
 
@@ -162,6 +164,24 @@ public class BotProperties {
     public double aimMaxRotate = 0.6;
     /** Within this many degrees of center, aim assist stops turning. Stops the wobble. */
     public double aimDoneDegrees = 1.0;
+
+    // ---- Indicator light (docs/decisions/0015) ---------------------------------------------
+    // A goBILDA RGB indicator light on a servo port. Each color is a servo position, from
+    // goBILDA's table: 0 off, 0.28 red, 0.333 orange, 0.388 yellow, 0.5 green, 0.611 blue,
+    // 0.722 violet, 1 white.
+
+    /** The light. Configure it as a "Servo" on the servo port it is plugged into. */
+    public String cfgIndicator = "led";
+    /** Three or more tags in view. */
+    public double indicatorGreen = 0.5;
+    /** Two tags in view. One tag in view blinks this color. */
+    public double indicatorBlue = 0.611;
+    /** No tag in view. */
+    public double indicatorRed = 0.280;
+    /** The light off: before START, and the dark half of a blink. */
+    public double indicatorOff = 0;
+    /** With one tag in view the light blinks: this long on, this long off, in milliseconds. */
+    public double indicatorBlinkMs = 300;
 
     // ---- Safe Mode: LOCKED (docs/decisions/0004 and 0007) --------------------------------
     // Safe Mode protects the people standing next to the robot, so these three are not

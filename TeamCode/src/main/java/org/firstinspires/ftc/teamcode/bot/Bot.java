@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
 import org.firstinspires.ftc.teamcode.subsystems.Drive_Manual;
 import org.firstinspires.ftc.teamcode.subsystems.Imu;
+import org.firstinspires.ftc.teamcode.subsystems.Indicator;
 import org.firstinspires.ftc.teamcode.subsystems.ImuSelector;
 import org.firstinspires.ftc.teamcode.subsystems.Launcher;
 import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
@@ -73,6 +74,7 @@ public class Bot {
     private final Vision mVision;
     private final Imu mImu;
     private final Launcher mLauncher;
+    private final Indicator mIndicator;
 
     /**
      * Build the robot. Nothing moves.
@@ -115,6 +117,14 @@ public class Bot {
             // The launcher's controls are on gamepad 1 for now (docs/decisions/0009).
             mLauncher = new Launcher(mOp, mProperties, mOp.mDriverGamepad);
             mSystems.add(mLauncher);
+        }
+
+        // The light shows what the camera sees, so it goes after the camera in the list.
+        if (mProperties.indicatorDisabled) {
+            mIndicator = null;
+        } else {
+            mIndicator = new Indicator(mOp, mProperties, mVision);
+            mSystems.add(mIndicator);
         }
 
         // Read every hub's sensors in one trip per loop instead of one trip per sensor.
@@ -188,6 +198,10 @@ public class Bot {
         } else {
             // Keep looking, so the camera can be checked against a tag before START.
             mVision.Process();
+        }
+        if (mIndicator != null) {
+            // The light follows the camera before START too.
+            mIndicator.Process();
         }
     }
 
