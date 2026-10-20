@@ -8,11 +8,19 @@ import java.util.List;
 import org.firstinspires.ftc.teamcode.bot.Bot;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
-import org.firstinspires.ftc.teamcode.pedro.ShapePaths;
 
 /**
- * Everything the Pedro autos share. An auto only has to say which paths to drive; this
- * class drives them one after another, then holds the robot still at the end.
+ * Everything the Pedro autos share. An auto only has to say which paths to drive, in its
+ * own {@link #BuildPaths()}; this class drives them one after another, then holds the robot
+ * still at the end. To write a new auto, copy {@link AutoShapeZ} and change its paths.
+ *
+ * <p><b>How Pedro measures</b>: inches and radians. The robot starts at {@link #StartPose()},
+ * {@code (0, 0)} facing heading 0, unless the auto says otherwise. From there:
+ * <ul>
+ *   <li>x grows as the robot drives FORWARD
+ *   <li>y grows as the robot drives LEFT
+ *   <li>heading grows as the robot turns LEFT. 90 degrees is {@code Math.toRadians(90)}.
+ * </ul>
  *
  * <p>How following works: {@code follower.follow(path)} starts a path. Then, every loop,
  * {@code follower.update()} reads where the robot is and sets the motor powers. When a path
@@ -23,6 +31,11 @@ public abstract class PedroAuto extends LinearOpMode {
 
     /** The paths this auto drives, in order. */
     protected abstract List<Path> BuildPaths();
+
+    /** Where the robot starts: (0, 0), facing forward. An auto may override this. */
+    protected Pose StartPose() {
+        return new Pose(0, 0, 0);
+    }
 
     @Override
     public void runOpMode() {
@@ -47,7 +60,7 @@ public abstract class PedroAuto extends LinearOpMode {
         }
 
         Follower follower = bot.CreateFollower();
-        follower.setPose(ShapePaths.startPose);
+        follower.setPose(StartPose());
         List<Path> paths = BuildPaths();
         bot.Init();
 

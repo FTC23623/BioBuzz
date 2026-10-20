@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.pedro;
+package org.firstinspires.ftc.teamcode.opMode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -10,14 +10,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * Checks each shape goes where its picture says. {@code path.get(t)} asks Pedro "where should
- * the robot be at this point in the path?" t = 0 is the start, 0.5 halfway, 1 the end.
- * Pedro's x is forward, y is left, heading in radians (left turn is positive).
+ * Checks each shape auto goes where its picture says, without a robot. {@code path.get(t)}
+ * asks Pedro "where should the robot be at this point in the path?" t = 0 is the start,
+ * 0.5 halfway, 1 the end. Pedro's x is forward, y is left, heading in radians (left turn
+ * is positive). The shapes are 48 inches, two tiles.
  */
-@DisplayName("ShapePaths")
-class ShapePathsTest {
+@DisplayName("Shape autos")
+class ShapeAutosTest {
     private static final double closeEnough = 1e-6;
-    private static final double size = ShapePaths.shapeSize;
+    private static final double size = 48;
 
     private static void assertPose(double x, double y, double headingDegrees, Pose actual) {
         assertEquals(x, actual.x(), closeEnough, "x (forward) in " + actual);
@@ -26,9 +27,9 @@ class ShapePathsTest {
     }
 
     @Nested
-    @DisplayName("C with turning")
+    @DisplayName("Shape: C (turning)")
     class CTurning {
-        private final List<Path> paths = ShapePaths.CWithTurning();
+        private final List<Path> paths = new AutoShapeCTurning().BuildPaths();
 
         @Test
         @DisplayName("is one curve that starts at the start spot, facing forward")
@@ -52,14 +53,14 @@ class ShapePathsTest {
     }
 
     @Nested
-    @DisplayName("C without turning")
+    @DisplayName("Shape: C (no turning)")
     class CNoTurning {
-        private final List<Path> paths = ShapePaths.CWithoutTurning();
+        private final List<Path> paths = new AutoShapeCNoTurning().BuildPaths();
 
         @Test
         @DisplayName("follows the same curve as the turning C")
         void sameCurve() {
-            Path turning = ShapePaths.CWithTurning().get(0);
+            Path turning = new AutoShapeCTurning().BuildPaths().get(0);
             for (double t = 0; t <= 1.0; t += 0.125) {
                 Pose withTurn = turning.get(t);
                 Pose withoutTurn = paths.get(0).get(t);
@@ -78,9 +79,9 @@ class ShapePathsTest {
     }
 
     @Nested
-    @DisplayName("Z")
+    @DisplayName("Shape: Z")
     class ZShape {
-        private final List<Path> paths = ShapePaths.Z();
+        private final List<Path> paths = new AutoShapeZ().BuildPaths();
 
         @Test
         @DisplayName("is three straight lines: slide left, diagonal forward-right, slide left")
@@ -118,5 +119,11 @@ class ShapePathsTest {
                 }
             }
         }
+    }
+
+    @Test
+    @DisplayName("every auto starts at (0, 0) facing forward unless it says otherwise")
+    void startPose() {
+        assertPose(0, 0, 0, new AutoShapeZ().StartPose());
     }
 }

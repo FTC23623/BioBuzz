@@ -21,6 +21,8 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0012](0012-ftc-dashboard.md) | FTC Dashboard mirrors the telemetry as live graphs | Accepted, not on the robot yet |
 | [0013](0013-pinpoint-for-pedro.md) | Pedro uses the Pinpoint when the robot has one | Accepted, not tuned yet |
 | [0014](0014-safe-mode-off-for-foresight.md) | Safe Mode switched off while Foresight is tested | Accepted, temporary |
+| [0015](0015-indicator-light.md) | Indicator light: red, blinking blue, blue, green for 0, 1, 2, 3+ tags | Accepted, not on the robot yet |
+| [0016](0016-paths-live-in-the-opmode.md) | An auto's paths live in the auto's own file | Accepted |
 
 ## Template
 

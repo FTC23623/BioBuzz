@@ -176,7 +176,8 @@ Run **Shape: C (no turning)**. It drives a C two tiles tall: forward, slide left
 - Then **Shape: C (turning)** and **Shape: Z**.
 
 When the shapes are right, the drive is tuned. Any auto the team writes from here on is
-a list of paths in `pedro/ShapePaths.java` and a 15-line OpMode.
+one file: copy `opMode/AutoShapeZ.java`, rename it, and change the points and lines in
+its `BuildPaths()`.
 
 ## If something goes wrong
 

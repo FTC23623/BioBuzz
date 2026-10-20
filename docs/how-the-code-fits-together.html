@@ -407,7 +407,7 @@
         <figure>
           <div class="fig-scroll">
             <img src="diagrams/09-swap-wheels.svg" width="760" height="330"
-                 alt="Two lanes that end at the same four drive motors. TeleOp, the normal setting: gamepad 1 feeds Drive_Manual, then Drive.LimitPower applies the Safe Mode limit. Auto, with driveDisabled set to true: ShapePaths feeds Pedro Pathing's Follower, which learns where the robot is from TwoWheelLocalizer, two pods and the hub IMU, then SafeModeMecanum applies the Safe Mode limit.">
+                 alt="Two lanes that end at the same four drive motors. TeleOp, the normal setting: gamepad 1 feeds Drive_Manual, then Drive.LimitPower applies the Safe Mode limit. Auto, with driveDisabled set to true: the auto OpMode's own paths feed Pedro Pathing's Follower, which learns where the robot is from TwoWheelLocalizer, two pods and the hub IMU, then SafeModeMecanum applies the Safe Mode limit.">
           </div>
           <figcaption><b>Figure 9.</b> Two ways to drive the same four motors. Safe Mode sits at the end of both.</figcaption>
         </figure>
