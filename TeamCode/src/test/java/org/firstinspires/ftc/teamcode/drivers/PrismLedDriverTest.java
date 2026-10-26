@@ -53,6 +53,14 @@ class PrismLedDriverTest {
     }
 
     @Test
+    @DisplayName("ClearAll: control register 0x06, bit 25 set, lowest byte first")
+    void clearAll() {
+        I2cDeviceSynchSimple port = mock(I2cDeviceSynchSimple.class);
+        new PrismLedDriver(port, true).ClearAll();
+        verify(port).write(eq(0x06), aryEq(new byte[] {0, 0, 0, 2}));
+    }
+
+    @Test
     @DisplayName("ClearLayer: animation 0 on that layer")
     void clearLayer() {
         I2cDeviceSynchSimple port = mock(I2cDeviceSynchSimple.class);

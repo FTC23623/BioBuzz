@@ -29,6 +29,11 @@ device is called `strip`, to keep it apart from `led` (the indicator) and the Li
 - **`stripDisabled`**, `cfgStrip`, `stripLedCount` (12 per 200 mm strip) and
   `stripBrightness` (50 of 100) live in `BotProperties`.
 
+## Seen on the strip
+
+- **The stop pixel is lit.** Start 3, stop 4 lit two LEDs. So stop is the last LED, not
+  one past it. `LightStrip.Show` takes runs of {count, red, green, blue} and does the math.
+
 ## CHECK on the strip
 
 - **Animation numbers.** The guide's example proves Solid Color is 1. Blink (2), Pulse (3)
@@ -46,4 +51,4 @@ device is called `strip`, to keep it apart from `led` (the indicator) and the Li
 - Only layer 0 is used. The Prism has ten layers and saved Artboards; those are the next
   steps once Solid and Off work.
 - `Blink` is untested and may need the two CHECKs above before it does what it says.
-- Tests: `PrismLedDriverTest` (3) and `LightStripTest` (6) pin the exact bytes sent; two in `BotTest`.
+- Tests: `PrismLedDriverTest` (3) and `LightStripTest` (9) pin the exact bytes sent; two in `BotTest`.

@@ -30,6 +30,7 @@ import org.firstinspires.ftc.teamcode.objects.VelocityController;
  */
 public class Launcher implements Subsystem {
     private final HydraOpMode mOp;
+    private final String mLabel;
     private final BotProperties mProperties;
     private final Gamepad mGamepad;
     private final DcMotorEx mMotor;
@@ -43,13 +44,28 @@ public class Launcher implements Subsystem {
     private double mMeasuredRpm = 0;
     private double mPower = 0;
 
+    /** The nectar launcher. */
     public Launcher(HydraOpMode op, BotProperties properties, Gamepad gamepad) {
+        this(op, properties, gamepad, "Launcher", properties.cfgLaunchNectar,
+                properties.launcherStartRpm, true);
+    }
+
+    /**
+     * Any launcher wheel: same speed control and gains, its own motor name, label on the
+     * Driver Station and starting speed. The pollen launcher is built this way.
+     *
+     * @param label    shown before each telemetry line, for example "Pollen launcher"
+     * @param reversed true: the motor spins the other way, as the nectar launcher's does
+     */
+    public Launcher(HydraOpMode op, BotProperties properties, Gamepad gamepad,
+                    String label, String motorName, double startRpm, boolean reversed) {
         mOp = op;
+        mLabel = label;
         mProperties = properties;
         mGamepad = gamepad;
-        mMotor = op.mHardwareMap.get(DcMotorEx.class, mProperties.cfgLaunchNectar);
+        mMotor = op.mHardwareMap.get(DcMotorEx.class, motorName);
         // Same set-up as Decode: our code picks the power, the encoder only measures speed.
-        mMotor.setDirection(DcMotor.Direction.REVERSE);
+        mMotor.setDirection(reversed ? DcMotor.Direction.REVERSE : DcMotor.Direction.FORWARD);
         mMotor.setPower(0);
         mMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         mMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -58,7 +74,7 @@ public class Launcher implements Subsystem {
 
         mSpeedControl = new VelocityController(
                 mProperties.launcherKF, mProperties.launcherKP, mProperties.launcherKI);
-        mSpeedControl.SetTargetRpm(mProperties.launcherStartRpm);
+        mSpeedControl.SetTargetRpm(startRpm);
         mFasterButton = new Debouncer(mProperties.debounce);
         mSlowerButton = new Debouncer(mProperties.debounce);
         mTimeSinceUpdate = new ElapsedTime();
@@ -144,9 +160,9 @@ public class Launcher implements Subsystem {
     }
 
     private void ShowStatus() {
-        mOp.mTelemetry.addData("Launcher target RPM", "%.0f", GetTargetRpm());
-        mOp.mTelemetry.addData("Launcher actual RPM", "%.0f", mMeasuredRpm);
-        mOp.mTelemetry.addData("Launcher power", "%.2f", mPower);
-        mOp.mTelemetry.addData("Launcher at speed", AtSpeed());
+        mOp.mTelemetry.addData(mLabel + " target RPM", "%.0f", GetTargetRpm());
+        mOp.mTelemetry.addData(mLabel + " actual RPM", "%.0f", mMeasuredRpm);
+        mOp.mTelemetry.addData(mLabel + " power", "%.2f", mPower);
+        mOp.mTelemetry.addData(mLabel + " at speed", AtSpeed());
     }
 }

@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
+import java.util.List;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.drivers.PrismLedDriver;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
@@ -28,7 +29,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * The first test on the strip settles both. See docs/decisions/0017.
  */
 public class LightStrip implements Subsystem {
-    /** The one layer used so far. The Prism has ten, 0 to 9, drawn on top of each other. */
+    /** The layer Blink uses. The Prism has ten, 0 to 9, drawn on top of each other. */
     static final int LAYER = 0;
 
     private final HydraOpMode mOp;
@@ -50,23 +51,34 @@ public class LightStrip implements Subsystem {
         mOp = op;
         mProperties = properties;
         mGamepad = gamepad;
-        mStrip = op.mHardwareMap.tryGet(PrismLedDriver.class, properties.cfgStrip);
+        PrismLedDriver named = op.mHardwareMap.tryGet(PrismLedDriver.class, properties.cfgStrip);
+        if (named == null) {
+            // Not under this name? Use the Prism the configuration has, whatever it is called.
+            List<PrismLedDriver> prisms = op.mHardwareMap.getAll(PrismLedDriver.class);
+            named = prisms.isEmpty() ? null : prisms.get(0);
+        }
+        mStrip = named;
         mRedButton = new Debouncer(properties.debounce);
         mGreenButton = new Debouncer(properties.debounce);
         mBlueButton = new Debouncer(properties.debounce);
         mOffButton = new Debouncer(properties.debounce);
     }
 
-    /** Read who is on the other end, once, so the Driver Station can show it. */
+    /**
+     * Once per INIT: clear whatever the last OpMode left on the strip (the Prism keeps
+     * showing it otherwise), and read who is on the other end so the Driver Station can show it.
+     */
     @Override
     public boolean Init() {
         if (mStrip == null) {
             mOp.mTelemetry.addLine("No light strip: nothing named '" + mProperties.cfgStrip
                     + "' in the robot configuration (a goBILDA Prism LED Driver).");
+            mOp.mTelemetry.addLine("Configure Robot: add the Prism on its I2C port, Save, then Activate.");
             return true;
         }
         if (!mStarted) {
             mStarted = true;
+            Off();
             mDeviceId = mStrip.ReadDeviceId();
             mStatus = mStrip.ReadStatus();
         }
@@ -106,10 +118,37 @@ public class LightStrip implements Subsystem {
 
     /** The whole strip one color. Red, green and blue are 0 to 255. */
     public void Solid(int red, int green, int blue) {
-        if (mStrip != null) {
-            mStrip.SolidColor(LAYER, 0, mProperties.stripLedCount, mProperties.stripBrightness, red, green, blue);
-        }
+        Show(new int[][] {{mProperties.stripLedCount, red, green, blue}});
         mShowing = "solid " + red + "," + green + "," + blue;
+    }
+
+    /**
+     * Runs of color along the strip, from the Prism outward. Each row is
+     * {how many LEDs, red, green, blue}, and the rest of the strip is off. For example
+     * {{3, 255, 255, 0}, {1, 255, 0, 0}} is three yellow, then one red, then dark.
+     *
+     * <p>Each row gets its own layer, so at most ten rows; extra rows are left out. Every
+     * call sends a few dozen I2C messages, so call it when the colors change, not every loop.
+     */
+    public void Show(int[][] runs) {
+        int led = 0;
+        for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
+            if (layer >= runs.length || runs[layer][0] < 1) {
+                ClearLayer(layer);
+                continue;
+            }
+            int[] run = runs[layer];
+            // The stop LED is lit too, so a run of 3 from LED 0 stops at LED 2.
+            int lastLed = led + run[0] - 1;
+            if (mStrip != null) {
+                mStrip.SolidColor(layer, led, lastLed, mProperties.stripBrightness, run[1], run[2], run[3]);
+            }
+            led += run[0];
+        }
+        mShowing = runs.length + " runs, " + led + " LEDs lit";
+        if (runs.length > PrismLedDriver.LAYERS) {
+            mShowing += " (only the first " + PrismLedDriver.LAYERS + " runs fit)";
+        }
     }
 
     /**
@@ -120,7 +159,7 @@ public class LightStrip implements Subsystem {
         WriteLayer(PrismLedDriver.SUB_ANIMATION, new byte[] {(byte) PrismLedDriver.ANIMATION_BLINK});
         WriteLayer(PrismLedDriver.SUB_BRIGHTNESS, new byte[] {(byte) mProperties.stripBrightness});
         WriteLayer(PrismLedDriver.SUB_START, new byte[] {0});
-        WriteLayer(PrismLedDriver.SUB_STOP, new byte[] {(byte) mProperties.stripLedCount});
+        WriteLayer(PrismLedDriver.SUB_STOP, new byte[] {(byte) (mProperties.stripLedCount - 1)});
         WriteLayer(PrismLedDriver.SUB_PRIMARY_COLOR, new byte[] {(byte) red, (byte) green, (byte) blue});
         WriteLayer(PrismLedDriver.SUB_SECONDARY_COLOR, new byte[] {(byte) red2, (byte) green2, (byte) blue2});
         WriteLayer(PrismLedDriver.SUB_PERIOD, Bytes32(periodMs));
@@ -129,12 +168,23 @@ public class LightStrip implements Subsystem {
                 + " every " + periodMs + " ms";
     }
 
-    /** No animation on our layer: the strip goes dark. */
+    /** No animation on any layer: the strip goes dark. */
     public void Off() {
         if (mStrip != null) {
-            mStrip.ClearLayer(LAYER);
+            // The Prism's own "clear animations" command. Layer 0 alone does not blank the LEDs.
+            mStrip.ClearAll();
+        }
+        for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
+            ClearLayer(layer);
         }
         mShowing = "off";
+    }
+
+    /** Nothing on one layer, if there is a strip. */
+    private void ClearLayer(int layer) {
+        if (mStrip != null) {
+            mStrip.ClearLayer(layer);
+        }
     }
 
     /** One setting to our layer, if there is a strip. */

@@ -45,6 +45,17 @@ public class BotProperties {
     public boolean indicatorDisabled = false;
     /** true: the Bot never touches the LED strip. */
     public boolean stripDisabled = false;
+    /**
+     * true: the Bot never touches the intake or transfer motors. This one is on by default,
+     * unlike the others, because the intake is not on every robot yet. Only "Test: Intake"
+     * switches it on. When the real TeleOp gets an intake, turn this off for everyone.
+     */
+    public boolean intakeDisabled = true;
+    /**
+     * true: the Bot never touches the pollen launcher motor. On by default like the intake,
+     * because not every robot has it yet. Only "Test: Intake" switches it on.
+     */
+    public boolean pollenLauncherDisabled = true;
 
     // ---- Drive ------------------------------------------------------------------------------
 
@@ -193,6 +204,54 @@ public class BotProperties {
     public int stripLedCount = 12;
     /** Strip brightness, 0 to 100. Start low; 100 is very bright and warm. */
     public int stripBrightness = 50;
+
+    // ---- Intake and transfer: two motors that pull balls in and move them up ------------
+
+    /** The intake motor. Must match the robot configuration on the Driver Station. */
+    public String cfgIntake = "intake";
+    /** The transfer motor. Must match the robot configuration on the Driver Station. */
+    public String cfgTransfer = "transfer";
+    /** Motor power, -1 to 1. Full power for now. */
+    public double intakePower = 1;
+    public double transferPower = 1;
+    /** true: the motor spins the other way. Flip it if the balls go the wrong way. */
+    public boolean intakeReversed = false;
+    public boolean transferReversed = false;
+
+    // ---- Pollen launcher: a second launcher wheel, same speed control as the nectar one ----
+    // It uses the launcher gains and ticks per turn above (launcherKF, launcherKP,
+    // launcherKI, launcherTicksPerRev). CHECK: that is only right if it is the same kind
+    // of motor as the nectar launcher.
+
+    /** The pollen launcher motor. Must match the robot configuration on the Driver Station. */
+    public String cfgLaunchPollen = "pollenLauncher";
+    /** Target speed when the OpMode starts. */
+    public double pollenLauncherStartRpm = 3000;
+    /** true: the motor spins the other way (the nectar launcher's does). Flip it if it spins backward. */
+    public boolean pollenLauncherReversed = true;
+
+    // ---- Pollen sensor: a laser distance sensor on a digital port ------------------------
+
+    /** The laser sensor. Configure it as a "Digital Device" on the port it is plugged into. */
+    public String cfgPollenSensor = "pollenSensor";
+    /**
+     * What the sensor's pin reads when something is in front of it. true: high (getState()
+     * is true). If the Driver Station shows "nothing" with your hand in front, flip this.
+     */
+    public boolean pollenSensorHighWhenNear = true;
+
+    // ---- Alliance sensor: a REV magnetic limit switch on a digital port ------------------
+
+    /** The switch. Configure it as a "Digital Device" on the port it is plugged into. */
+    public String cfgAllianceSensor = "allianceSensor";
+    /**
+     * What the switch's pin reads when a magnet is next to it. false: low (getState() is
+     * false). The Driver Station shows the raw value; if "magnet" and "no magnet" are
+     * swapped, flip this.
+     */
+    public boolean allianceSensorHighWhenMagnet = false;
+    /** true: a magnet on the badge means the BLUE alliance, no magnet means RED. false: swapped. */
+    public boolean allianceMagnetMeansBlue = true;
 
     // ---- Safe Mode: LOCKED (docs/decisions/0004 and 0007) --------------------------------
     // Safe Mode protects the people standing next to the robot, so these three are not

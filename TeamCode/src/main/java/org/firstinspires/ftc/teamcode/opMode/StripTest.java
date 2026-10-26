@@ -2,72 +2,140 @@ package org.firstinspires.ftc.teamcode.opMode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
-import org.firstinspires.ftc.teamcode.drivers.PrismLedDriver;
+import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.subsystems.LightStrip;
 
 /**
- * The LED strip, on its own: the first six LEDs red, orange, yellow, green, blue, purple,
- * the rest dark. Nothing moves. This OpMode talks straight to the Prism driver, so the
- * whole program is in this one file: change the colors in the table below.
+ * The LED strip, on its own. Nothing moves. It shows two things:
+ * <ul>
+ *   <li><b>Pollen:</b> the first LEDs (the table below) light only while the pollen sensor
+ *       sees something.
+ *   <li><b>Alliance:</b> LEDs 6 to 12 show the alliance color, read from the magnetic
+ *       switch on the badge.
+ * </ul>
  *
- * <p>How it works: the Prism has ten layers. Each layer draws one animation on a run of
- * LEDs, from a start LED to a stop LED. Here each LED gets its own layer with a Solid
- * Color animation one LED long. LEDs that no layer paints stay dark.
+ * <p><b>Pollen.</b> Balls fly past the laser, so the table goes on the strip only after the
+ * sensor has seen something for {@code HOLD_SECONDS} in a row. Every {@code RECHECK_SECONDS}
+ * we look again; if it sees nothing, the pollen lights go off.
  *
- * <p>The Driver Station shows what the Prism answered (its device id and status bytes),
- * which is the first thing to check if the strip stays dark.
+ * <p><b>Alliance.</b> During INIT we read the switch every loop, so the color follows the
+ * badge as it is put on. When START is pressed the color is locked for the whole run. A
+ * magnet means one alliance and no magnet the other (BotProperties says which). An unplugged
+ * switch looks like "no magnet", so check the color on the strip before every match.
+ *
+ * <p>The strip is redrawn when something changes and every {@code RECHECK_SECONDS}, because
+ * each message to the Prism takes time. The Driver Station shows the raw sensor values.
  */
 @TeleOp(name = "Test: Light Strip", group = "Test")
 public class StripTest extends LinearOpMode {
 
-    /** One row per LED, from the Prism outward: red, green, blue, each 0 to 255. */
-    private static final int[][] COLORS = {
-            {255, 0, 0},      // LED 0: red
-            {255, 96, 0},     // LED 1: orange
-            {255, 255, 0},    // LED 2: yellow
-            {0, 255, 0},      // LED 3: green
-            {0, 0, 255},      // LED 4: blue
-            {128, 0, 255},    // LED 5: purple
+    /** The sensor must see something this long, without a break, before the lights come on. */
+    private static final double HOLD_SECONDS = 3;
+    /** Look again this often. Also the pause between redraws that nothing asked for. */
+    private static final double RECHECK_SECONDS = 3;
+
+    /** The alliance color fills this many LEDs, starting at this one (the first LED is 0). */
+    private static final int ALLIANCE_FIRST_LED = 6;
+    private static final int ALLIANCE_LEDS = 7;
+
+    /** Pollen lights: one row per run of color: how many LEDs, then red, green, blue (0 to 255). */
+    private static final int[][] RUNS = {
+            {3, 255, 255, 0},   // 3 yellow
+            {1, 255, 0, 0},     // 1 red
     };
 
     @Override
     public void runOpMode() {
         BotProperties properties = new BotProperties();
-        PrismLedDriver strip = hardwareMap.get(PrismLedDriver.class, properties.cfgStrip);
-        int deviceId = strip.ReadDeviceId();
-        byte[] status = strip.ReadStatus();
+        HydraOpMode op = new HydraOpMode(telemetry, hardwareMap, gamepad1, gamepad2);
+        LightStrip strip = new LightStrip(op, properties, gamepad1);
+        DigitalChannel pollenSensor = hardwareMap.get(DigitalChannel.class, properties.cfgPollenSensor);
+        pollenSensor.setMode(DigitalChannel.Mode.INPUT);
+        DigitalChannel allianceSensor = hardwareMap.get(DigitalChannel.class, properties.cfgAllianceSensor);
+        allianceSensor.setMode(DigitalChannel.Mode.INPUT);
+        strip.Init();
 
-        // One layer per LED. Layer n paints LED n only: start at n, stop at n + 1.
-        // CHECK on the strip: if each color covers two LEDs, change "led + 1" to "led".
-//        for (int led = 0; led < COLORS.length; led++) {
-//            int[] color = COLORS[led];
-//            strip.SolidColor(led, led, led + 1, properties.stripBrightness, color[0], color[1], color[2]);
-//        }
-//        strip.SolidColor(0,0,1, properties.stripBrightness, 255, 0, 180);
-//        strip.SolidColor(1,1,2, properties.stripBrightness, 0, 255, 209);
-//        strip.SolidColor(2,2,3, properties.stripBrightness, 255, 149, 0);
-        // The Prism has only 10 layers, so same-colored neighbors share one layer.
-        int b = properties.stripBrightness;
-        strip.SolidColor(0, 0, 3, b, 254, 255, 0);     // LEDs 0-1 yellow
-        strip.SolidColor(1, 3, 4, b, 255, 0, 0);       // LEDs 2-3 red
-//        strip.SolidColor(2, 4, 6, b, 0, 60, 255);      // LEDs 4-5 blue
-//        strip.SolidColor(3, 6, 12, b, 255, 255, 255);  // LEDs 6-11 white
-//        strip.SolidColor(4, 12, 14, b, 254, 255, 0);   // LEDs 12-13 yellow
-//        strip.SolidColor(5, 14, 16, b, 255, 0, 0);     // LEDs 14-15 red
-//        strip.SolidColor(6, 16, 18, b, 0, 60, 255);    // LEDs 16-17 blue
-        // The layers after the colors stay empty.
-        for (int layer = 1; layer < PrismLedDriver.LAYERS; layer++) {
-            strip.ClearLayer(layer);
-        }
+        ElapsedTime nearFor = new ElapsedTime();     // how long the pollen sensor has seen something
+        ElapsedTime sinceDraw = new ElapsedTime();   // time since the strip was last drawn
+        boolean wasNear = false;
+        boolean pollenLit = false;
+        boolean blue = false;
+        boolean drawn = false;                       // has the strip been drawn at all yet?
+        boolean drawnPollenLit = false;
+        boolean drawnBlue = false;
 
         while (opModeInInit() || opModeIsActive()) {
-            telemetry.addData("Strip device id", "0x%02X (register 0x00)", deviceId);
-            telemetry.addData("Strip status bytes", "%02X %02X %02X %02X (LEDs %d if lowest byte first)",
-                    status[0] & 0xFF, status[1] & 0xFF, status[2] & 0xFF, status[3] & 0xFF, status[0] & 0xFF);
-            telemetry.addData("Lit", "%d LEDs: red, orange, yellow, green, blue, purple", COLORS.length);
-            telemetry.addLine("The colors are the table at the top of StripTest.java.");
+            // Sense the alliance. Only during INIT: once START is pressed it stays locked.
+            boolean magnet = allianceSensor.getState() == properties.allianceSensorHighWhenMagnet;
+            if (opModeInInit()) {
+                blue = (magnet == properties.allianceMagnetMeansBlue);
+            }
+
+            // Sense pollen: is something in front of the laser, and for how long?
+            boolean near = pollenSensor.getState() == properties.pollenSensorHighWhenNear;
+            if (near && !wasNear) {
+                nearFor.reset();    // it just started seeing something: start counting
+            }
+            wasNear = near;
+            if (near && nearFor.seconds() >= HOLD_SECONDS) {
+                pollenLit = true;
+            }
+
+            // Re-check: the sensor can say "near" for a moment when nothing is there. If it
+            // sees nothing now, the pollen lights go off.
+            boolean recheckDue = sinceDraw.seconds() >= RECHECK_SECONDS;
+            if (recheckDue && !near) {
+                pollenLit = false;
+            }
+
+            // Draw when something changed, and again at every re-check in case an earlier
+            // message never arrived.
+            boolean changed = !drawn || pollenLit != drawnPollenLit || blue != drawnBlue;
+            if (changed || recheckDue) {
+                strip.Show(Table(pollenLit, blue));
+                sinceDraw.reset();
+                drawn = true;
+                drawnPollenLit = pollenLit;
+                drawnBlue = blue;
+            }
+
+            telemetry.addData("Pollen sensor", near ? "something near" : "nothing");
+            telemetry.addData("Alliance sensor (raw pin)", allianceSensor.getState());
+            telemetry.addData("Alliance sensor", magnet ? "magnet" : "no magnet");
+            telemetry.addData("Alliance", (blue ? "BLUE" : "RED") + (opModeInInit() ? " (follows the badge until START)" : " (locked)"));
+            strip.ShowStatus();
             telemetry.update();
             idle();
         }
+    }
+
+    /**
+     * What the strip shows, as runs of color from LED 0: the pollen lights (or dark), a dark
+     * gap, then the alliance color on its LEDs.
+     */
+    private static int[][] Table(boolean pollenLit, boolean blue) {
+        int[][] pollen = pollenLit ? RUNS : new int[0][];
+        int ledsUsed = 0;
+        for (int[] run : pollen) {
+            ledsUsed += run[0];
+        }
+        int gap = ALLIANCE_FIRST_LED - ledsUsed;
+
+        int rows = pollen.length + (gap > 0 ? 1 : 0) + 1;
+        int[][] table = new int[rows][];
+        int row = 0;
+        for (int[] run : pollen) {
+            table[row++] = run;
+        }
+        if (gap > 0) {
+            table[row++] = new int[] {gap, 0, 0, 0};
+        }
+        table[row] = blue
+                ? new int[] {ALLIANCE_LEDS, 0, 0, 255}
+                : new int[] {ALLIANCE_LEDS, 255, 0, 0};
+        return table;
     }
 }

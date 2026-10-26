@@ -30,6 +30,7 @@ public class PrismLedDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
     public static final int I2C_ADDRESS = 0x38;
     public static final int REG_DEVICE_ID = 0x00;
     public static final int REG_STATUS = 0x05;
+    public static final int REG_CONTROL = 0x06;
     public static final int REG_LAYER_0 = 0x08;
     public static final int LAYERS = 10;
     // ---- Sub-registers every animation has, from the user guide ----
@@ -82,9 +83,8 @@ public class PrismLedDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
 
     /**
      * Paint one color on a run of LEDs, on one layer. Start is the first LED, counting from
-     * 0 at the Prism; stop is where the run ends. CHECK on the strip: the guide's example
-     * uses start 0, stop 10 for the first ten LEDs, so stop is taken as "one past the last".
-     * If each run comes out one LED too long, stop is the last LED itself.
+     * 0 at the Prism; stop is the last LED, and it is lit too (seen on the strip: start 3,
+     * stop 4 lights two LEDs).
      *
      * @param layer      0 to 9. Higher layers draw on top of lower ones.
      * @param brightness 0 to 100
@@ -96,6 +96,20 @@ public class PrismLedDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
         WriteLayer(layer, SUB_START, new byte[] {(byte) startLed});
         WriteLayer(layer, SUB_STOP, new byte[] {(byte) stopLed});
         WriteLayer(layer, SUB_PRIMARY_COLOR, new byte[] {(byte) red, (byte) green, (byte) blue});
+    }
+
+    /**
+     * Remove every animation from the strip. The control register (0x06) is 32 bits and
+     * bit 25 is "Clear Animations", so the message is 1 << 25, lowest byte first. CHECK on
+     * the strip: if the lights do not go out, the byte order is the other way round.
+     */
+    public void ClearAll() {
+        int clearAnimations = 1 << 25;
+        byte[] message = new byte[] {
+                (byte) clearAnimations, (byte) (clearAnimations >> 8),
+                (byte) (clearAnimations >> 16), (byte) (clearAnimations >> 24)};
+        deviceClient.write(REG_CONTROL, message);
+        deviceClient.waitForWriteCompletions(I2cWaitControl.WRITTEN);
     }
 
     /** Nothing on this layer. LEDs no layer paints stay dark. */

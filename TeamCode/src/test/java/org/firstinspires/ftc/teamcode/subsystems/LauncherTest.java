@@ -167,4 +167,20 @@ class LauncherTest {
         launcher.Update(UPDATE_SECONDS);
         assertFalse(launcher.AtSpeed());
     }
+
+    @Test
+    @DisplayName("a second launcher: its own motor, label and start speed")
+    void pollenLauncher() {
+        DcMotorEx pollenMotor = mock(DcMotorEx.class);
+        HardwareMap hardwareMap = mock(HardwareMap.class);
+        when(hardwareMap.get(DcMotorEx.class, properties.cfgLaunchPollen)).thenReturn(pollenMotor);
+        Telemetry telemetry = mock(Telemetry.class);
+        HydraOpMode pollenOp = new HydraOpMode(telemetry, hardwareMap, gamepad, gamepad);
+        Launcher pollen = new Launcher(pollenOp, properties, gamepad, "Pollen launcher",
+                properties.cfgLaunchPollen, properties.pollenLauncherStartRpm, true);
+        assertEquals(3000, pollen.GetTargetRpm(), EPS);
+        verify(pollenMotor).setDirection(DcMotor.Direction.REVERSE);
+        pollen.Init();
+        verify(telemetry).addData("Pollen launcher target RPM", "%.0f", 3000.0);
+    }
 }

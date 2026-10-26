@@ -66,15 +66,57 @@ class LightStripTest {
         properties.stripBrightness = 50;
         LightStrip strip = stripConfigured();
         strip.Solid(255, 0, 0);
-        verify(prism).SolidColor(0, 0, 12, 50, 255, 0, 0);
+        verify(prism).SolidColor(0, 0, 11, 50, 255, 0, 0);
     }
 
     @Test
-    @DisplayName("off: layer 0 gets animation 0")
+    @DisplayName("off: every layer gets animation 0")
     void off() {
         LightStrip strip = stripConfigured();
         strip.Off();
-        verify(prism).ClearLayer(0);
+        for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
+            verify(prism).ClearLayer(layer);
+        }
+    }
+
+    @Test
+    @DisplayName("Init clears the strip once, before anything is shown")
+    void initClears() {
+        LightStrip strip = stripConfigured();
+        strip.Init();
+        strip.Init();
+        for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
+            verify(prism, times(1)).ClearLayer(layer);
+        }
+    }
+
+    @Test
+    @DisplayName("runs: 3 yellow then 1 red, one layer each, the other layers cleared")
+    void runs() {
+        properties.stripBrightness = 50;
+        LightStrip strip = stripConfigured();
+        strip.Show(new int[][] {{3, 255, 255, 0}, {1, 255, 0, 0}});
+        verify(prism).SolidColor(0, 0, 2, 50, 255, 255, 0);
+        verify(prism).SolidColor(1, 3, 3, 50, 255, 0, 0);
+        verify(prism, never()).ClearLayer(0);
+        verify(prism, never()).ClearLayer(1);
+        for (int layer = 2; layer < PrismLedDriver.LAYERS; layer++) {
+            verify(prism).ClearLayer(layer);
+        }
+    }
+
+    @Test
+    @DisplayName("runs: more than ten rows, the extras are left out")
+    void tooManyRuns() {
+        LightStrip strip = stripConfigured();
+        int[][] runs = new int[12][];
+        for (int i = 0; i < runs.length; i++) {
+            runs[i] = new int[] {1, 255, 255, 255};
+        }
+        strip.Show(runs);
+        verify(prism, times(PrismLedDriver.LAYERS))
+                .SolidColor(anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt());
+        verify(prism).SolidColor(9, 9, 9, properties.stripBrightness, 255, 255, 255);
     }
 
     @Test
@@ -85,7 +127,7 @@ class LightStripTest {
         for (int loop = 0; loop < 30; loop++) {
             strip.HandleUserInput();
         }
-        verify(prism, times(1)).SolidColor(0, 0, properties.stripLedCount, properties.stripBrightness, 0, 255, 0);
+        verify(prism, times(1)).SolidColor(0, 0, properties.stripLedCount - 1, properties.stripBrightness, 0, 255, 0);
     }
 
     @Test

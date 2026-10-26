@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
 import org.firstinspires.ftc.teamcode.subsystems.Drive_Manual;
 import org.firstinspires.ftc.teamcode.subsystems.Imu;
 import org.firstinspires.ftc.teamcode.subsystems.Indicator;
+import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.ImuSelector;
 import org.firstinspires.ftc.teamcode.subsystems.Launcher;
 import org.firstinspires.ftc.teamcode.subsystems.LightStrip;
@@ -77,6 +78,8 @@ public class Bot {
     private final Launcher mLauncher;
     private final Indicator mIndicator;
     private final LightStrip mLightStrip;
+    private final Intake mIntake;
+    private final Launcher mPollenLauncher;
 
     /**
      * Build the robot. Nothing moves.
@@ -135,6 +138,24 @@ public class Bot {
         } else {
             mLightStrip = new LightStrip(mOp, mProperties, mOp.mDriverGamepad);
             mSystems.add(mLightStrip);
+        }
+
+        if (mProperties.intakeDisabled) {
+            mIntake = null;
+        } else {
+            mIntake = new Intake(mOp, mProperties);
+            mSystems.add(mIntake);
+        }
+
+        // The pollen launcher's controls are on gamepad 1 too, so a robot with both launchers
+        // would spin them together. Only one is switched on in an OpMode for now.
+        if (mProperties.pollenLauncherDisabled) {
+            mPollenLauncher = null;
+        } else {
+            mPollenLauncher = new Launcher(mOp, mProperties, mOp.mDriverGamepad, "Pollen launcher",
+                    mProperties.cfgLaunchPollen, mProperties.pollenLauncherStartRpm,
+                    mProperties.pollenLauncherReversed);
+            mSystems.add(mPollenLauncher);
         }
 
         // Read every hub's sensors in one trip per loop instead of one trip per sensor.
@@ -201,6 +222,10 @@ public class Bot {
             mOp.mTelemetry.addLine("Launcher: OFF in this OpMode");
         } else {
             mOp.mTelemetry.addData("Launcher target RPM", "%.0f", mLauncher.GetTargetRpm());
+        }
+
+        if (mPollenLauncher != null) {
+            mOp.mTelemetry.addData("Pollen launcher target RPM", "%.0f", mPollenLauncher.GetTargetRpm());
         }
 
         if (mProperties.visionDisabled) {
