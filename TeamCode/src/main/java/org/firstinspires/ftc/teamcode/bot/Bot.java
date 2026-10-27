@@ -249,6 +249,17 @@ public class Bot {
     }
 
     /**
+     * true: blink the indicator light yellow, so the drive team can see a launch happen.
+     * false: turn it off. An auto calls this at a LAUNCH step. Does nothing with no light.
+     */
+    public void ShowLaunching(boolean launching) {
+        if (mIndicator == null) {
+            return;
+        }
+        mIndicator.SetLaunching(launching);
+    }
+
+    /**
      * Build Pedro Pathing's Follower, the thing that drives the robot along a path in an
      * auto. Safe Mode applies to it too.
      *

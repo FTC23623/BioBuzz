@@ -182,7 +182,11 @@ public final class PedroConstants {
                                           boolean safeMode) {
         Localizer localizer = CreateLocalizer(hardwareMap, properties);
         Mecanum drivetrain = new SafeModeMecanum(hardwareMap, DriveConfig(properties), safeMode);
-        Foresight algorithm = new Foresight(ForesightConfig());
+        ForesightConfig config = ForesightConfig();
+        // An auto may drive slower than top speed. Foresight plans for it, so it still brakes
+        // on time. 1 = top speed, 0.5 = half.
+        config.maxPathSpeed.set(properties.autoSpeedScale);
+        Foresight algorithm = new Foresight(config);
         return new Follower(localizer, drivetrain, algorithm);
     }
 }
