@@ -30,6 +30,8 @@ public class Indicator implements Subsystem {
     private int mLastCount = 0;
     private final ElapsedTime mBlinkTimer = new ElapsedTime();
     private boolean mBlinkOn = true;
+    /** true while an auto is launching. Then the light blinks yellow and ignores the camera. */
+    private boolean mLaunching = false;
 
     public Indicator(HydraOpMode op, BotProperties properties, Vision vision) {
         mOp = op;
@@ -54,18 +56,23 @@ public class Indicator implements Subsystem {
     public void HandleUserInput() {
     }
 
-    /** Red for no tag, blinking blue for one, solid blue for two, green for three or more. */
+    /**
+     * Blinking yellow while launching. Otherwise red for no tag, blinking blue for one, solid
+     * blue for two, green for three or more.
+     */
     @Override
     public void Process() {
         if (mVision.CountTags() > 0) {
             mLastCount = mVision.CountTags();
         }
-        if (!mVision.SeesTag()) {
+        if (mLaunching) {
+            Blink(mProperties.indicatorYellow);
+        } else if (!mVision.SeesTag()) {
             SetPosition(mProperties.indicatorRed);
             mBlinkOn = true;
             mBlinkTimer.reset();
         } else if (mLastCount == 1) {
-            Blink();
+            Blink(mProperties.indicatorBlue);
         } else if (mLastCount == 2) {
             SetPosition(mProperties.indicatorBlue);
         } else {
@@ -73,14 +80,30 @@ public class Indicator implements Subsystem {
         }
     }
 
-    /** Blue and off, taking turns every indicatorBlinkMs. */
-    private void Blink() {
+    /**
+     * true: blink yellow, whatever the camera sees. false: turn the light off and go back to
+     * showing tags. An auto calls this at a LAUNCH step.
+     */
+    public void SetLaunching(boolean launching) {
+        if (launching == mLaunching) {
+            return;
+        }
+        mLaunching = launching;
+        mBlinkOn = true;
+        mBlinkTimer.reset();
+        if (!launching) {
+            SetPosition(mProperties.indicatorOff);
+        }
+    }
+
+    /** A color and off, taking turns every indicatorBlinkMs. */
+    private void Blink(double color) {
         if (mBlinkTimer.milliseconds() >= mProperties.indicatorBlinkMs) {
             mBlinkOn = !mBlinkOn;
             mBlinkTimer.reset();
         }
         if (mBlinkOn) {
-            SetPosition(mProperties.indicatorBlue);
+            SetPosition(color);
         } else {
             SetPosition(mProperties.indicatorOff);
         }

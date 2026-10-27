@@ -85,6 +85,17 @@ public class BotProperties {
     public double pinpointParYTicks = -1209.212244933345;
     public double pinpointPerpXTicks = -2661.37617633336;
 
+    // ---- Robot size ------------------------------------------------------------------------
+    // The outside of the frame, bumpers and all. These are the Code bot's. CHANGE THESE for
+    // the competition bot: it is narrower.
+
+    /** Frame length, front to back, in inches. */
+    public double frameLengthIn = 18;
+    /** Frame width, side to side, in inches. */
+    public double frameWidthIn = 18;
+    /** Extra room left between a spinning corner and the wall, in inches. */
+    public double turnClearanceIn = 0.5;
+
     // ---- Control Hub IMU mounting (docs/decisions/0005) ---------------------------------
     // Which way the REV logo and the USB ports point on the robot. Wrong values make
     // turning read as tilting. Decode's robot: logo LEFT, USB UP (Decode Imu_Hub line 28).
@@ -128,6 +139,24 @@ public class BotProperties {
     public double launcherUpdateMs = 50;
     /** "At speed" means the measured RPM is within this much of the target. */
     public double launcherAtSpeedRpm = 50;
+    /**
+     * How fast a Pedro auto drives, as a part of top speed: 1 = full, 0.5 = half. Lower it to
+     * check a new path on the field, then put it back to 1 for matches.
+     */
+    public double autoSpeedScale = 1;
+    // Giving up on a path. Each path gets its own time limit, worked out at INIT from its
+    // length and its turning (PedroAuto.GiveUpSeconds). Past it, the robot stops pushing and
+    // starts the next path, so it does not keep ramming a wall or a stuck ball. If a good
+    // path gets cut short, raise the margin first.
+
+    /** The time limit is the expected time multiplied by this. 1.5 = 50% more. */
+    public double autoGiveUpMargin = 1.5;
+    /** Then this many seconds are added, for speeding up at the start and braking at the end. */
+    public double autoGiveUpExtraSeconds = 1;
+    /** How long a 90-degree turn takes at full speed, in seconds. A guess: CHECK on the robot. */
+    public double autoQuarterTurnSeconds = 1;
+    /** In an auto, how long the robot stops at a LAUNCH step before driving on, in seconds. */
+    public double autoLaunchSeconds = 2;
 
     // Speed control gains. Tune on the robot: kF first, then kP, then kI (see 0009).
     /** Feed forward: power per RPM of target. Does most of the work. 0.000242 x 2475 = 0.60. */
@@ -180,6 +209,8 @@ public class BotProperties {
     public double indicatorBlue = 0.611;
     /** No tag in view. */
     public double indicatorRed = 0.280;
+    /** An auto is at a LAUNCH step. Blinks this color. */
+    public double indicatorYellow = 0.388;
     /** The light off: before START, and the dark half of a blink. */
     public double indicatorOff = 0;
     /** With one tag in view the light blinks: this long on, this long off, in milliseconds. */
