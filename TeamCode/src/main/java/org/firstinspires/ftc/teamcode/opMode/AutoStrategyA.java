@@ -32,6 +32,10 @@ public class AutoStrategyA extends PedroAuto {
     /** How far the robot slides back toward the start while turning, to miss the flower. */
     private static final double flowerClearanceIn = 12;
 
+    double axisIn = distanceIn / Math.sqrt(2);
+
+    double faceForward = 0;
+    private static final double distanceIn = 12;
     @Override
     protected List<Path> BuildPaths() {
         // Half speed while we check this path on the field. Put it back to 1 for matches.
@@ -61,8 +65,9 @@ public class AutoStrategyA extends PedroAuto {
         Pose offWallAgain = new Pose(-distanceFromWall, -collectEndIn);
         // Sliding back toward the start adds to y.
         Pose turnedAgain = new Pose(-distanceFromWall, -collectEndIn + flowerClearanceIn);
-        Pose nearMiddle = new Pose(-distanceFromWall - driveToMiddleIn, -collectEndIn + flowerClearanceIn);
-
+        Pose nearMiddle = new Pose(-distanceFromWall - 100, -collectEndIn + flowerClearanceIn);
+        Pose diagonalRight = new Pose(-distanceFromWall - 105, -collectEndIn + flowerClearanceIn + 6);
+//        Pose nearMiddle = new Pose(axisIn, -axisIn);
         // Step 1: back up off the wall, still facing it.
         Path backUpToLaunch = line(start, launchSpot).constant(faceWall);
         // Step 3: turn right while sliding a little right. Off the wall, so no corner hits.
@@ -77,6 +82,7 @@ public class AutoStrategyA extends PedroAuto {
         Path turnToMiddle = line(offWallAgain, turnedAgain).heading(Interpolator.linear(faceRight, faceMiddle));
         // Step 8: drive forward, toward the middle of the field.
         Path driveToMiddle = line(turnedAgain, nearMiddle).constant(faceMiddle);
+        Path drivetootherhive = line(nearMiddle,diagonalRight).constant(faceMiddle);
 
         List<Path> paths = new ArrayList<>();
         paths.add(backUpToLaunch);
@@ -87,6 +93,7 @@ public class AutoStrategyA extends PedroAuto {
         paths.add(moveOffWall);
         paths.add(turnToMiddle);
         paths.add(driveToMiddle);
+        paths.add(drivetootherhive);
         return paths;
     }
 }
