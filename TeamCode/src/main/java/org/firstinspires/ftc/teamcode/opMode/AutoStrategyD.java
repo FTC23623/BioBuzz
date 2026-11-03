@@ -10,25 +10,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Starts on the far side of the field, facing the hive. Creeps forward a few inches, then
- * waits. The hive's AprilTags only show once its basket tips up, so seeing a tag means it
- * tipped. When the camera sees one, the robot aims at the middle of the hive's tags and
- * launches.
+ * A route recorded with Tool: Pose Recorder (docs/decisions/0024): seven spots and three
+ * LAUNCH stops, driven at full speed.
  *
- * <p>Use this when our alliance partner can't wait: they launch first, and we launch after
- * the hive tips.
+ * <p>The robot backs up off its start spot and launches, drives out to the far side of the
+ * field and launches again, shuffles to a third spot and launches once more, then drives
+ * on to a last spot. Each LAUNCH is a plain stop: the launchers are already spinning from
+ * START, so the gates open as soon as they are at speed (docs/decisions/0030). Nothing
+ * here waits for a tag.
+ *
+ * <p>The numbers are the recording, not a plan: to change the route, drive it again with
+ * the recorder and paste the new spots here. Start the auto on the exact spot, facing the
+ * same way, that the recording started from.
  *
  * <p>Pedro measures in inches: x grows as the robot drives forward, y grows as it drives left.
  * See {@link PedroAuto} for more.
  */
 @Autonomous(name = "Auto: StrategyD", group = "Basic")
 public class AutoStrategyD extends PedroAuto {
-    /** How far the robot creeps forward off the start, in inches. */
-    private static final double creepForwardIn = 3;
 
     @Override
     protected List<Path> BuildPaths() {
-        // Half speed while we check this path on the field. Put it back to 1 for matches.
         Pose spot2 = new Pose(-9.8, -0.2);   // heading 1 deg
         Pose spot3 = new Pose(-28.7, -36.5);   // heading -114 deg
         Pose spot4 = new Pose(-106.4, -33.6);   // heading -145 deg

@@ -46,6 +46,10 @@ class BackupOpModesTest {
         assertEquals(Alliance.BLUE, new AutoStrategyABlue().botProperties.allianceOverride);
         assertEquals(Alliance.RED, new AutoStrategyBRed().botProperties.allianceOverride);
         assertEquals(Alliance.BLUE, new AutoStrategyBBlue().botProperties.allianceOverride);
+        assertEquals(Alliance.RED, new AutoStrategyCRed().botProperties.allianceOverride);
+        assertEquals(Alliance.BLUE, new AutoStrategyCBlue().botProperties.allianceOverride);
+        assertEquals(Alliance.RED, new AutoStrategyDRed().botProperties.allianceOverride);
+        assertEquals(Alliance.BLUE, new AutoStrategyDBlue().botProperties.allianceOverride);
     }
 
     @Test
@@ -53,5 +57,7 @@ class BackupOpModesTest {
     void normalAutosReadTheMagnet() {
         assertEquals(Alliance.UNKNOWN, new AutoStrategyA().botProperties.allianceOverride);
         assertEquals(Alliance.UNKNOWN, new AutoStrategyB().botProperties.allianceOverride);
+        assertEquals(Alliance.UNKNOWN, new AutoStrategyC().botProperties.allianceOverride);
+        assertEquals(Alliance.UNKNOWN, new AutoStrategyD().botProperties.allianceOverride);
     }
 }
