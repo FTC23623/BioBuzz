@@ -16,13 +16,15 @@ import org.firstinspires.ftc.teamcode.objects.MecanumMath;
  *   <li><b>Left stick</b>: drive and strafe. Field-centric in HyDrive: "forward" is away
  *       from the driver, whichever way the robot faces.
  *   <li><b>Right stick X</b>: turn.
- *   <li><b>Right bumper (hold)</b>: slow mode, for lining up.
+ *   <li><b>Left bumper (hold)</b>: slow mode, for lining up. Above the left trigger, which
+ *       is drift: both are "drive carefully" buttons.
  *   <li><b>Left trigger (hold)</b>: drift assist. Turning pivots on the inside back wheel
  *       instead of the middle, like a car drifting.
  *   <li><b>Circle / B</b>: "the way the robot faces now is forward" (field-centric only).
- *   <li><b>Left bumper (hold)</b>: aim assist. The robot turns to face the MIDDLE of our
+ *   <li><b>Right bumper (hold)</b>: aim assist. The robot turns to face the MIDDLE of our
  *       hive's AprilTags (the camera ignores the other alliance's), the same spot the autos
- *       aim at. The sticks still drive and strafe. Let go to turn by hand again.
+ *       aim at. The sticks still drive and strafe. Let go to turn by hand again. Above the
+ *       right trigger, which launches: both are "at the hive" buttons.
  *   <li><b>Right trigger (hold)</b>: launch (see LaunchGates), and aim the same way while it
  *       is held ({@code launchTriggerAims}), so a launch snaps to the hive.
  * </ul>
@@ -37,7 +39,7 @@ import org.firstinspires.ftc.teamcode.objects.MecanumMath;
  * </ul>
  *
  * <p>Ported from Decode subsystems/Drive_Manual.java. The math is unchanged and lives in
- * {@link MecanumMath}. Aim assist is Decode's left-bumper idea, done over: Decode's was
+ * {@link MecanumMath}. Aim assist is Decode's bumper idea, done over: Decode's was
  * overwritten by the next line every loop. Snap-to-heading (square) is still left out;
  * see docs/decisions/0002-drive-port.md and 0011.
  */
@@ -78,9 +80,9 @@ public class Drive_Manual extends Drive {
         mDrive = mGamepad.left_stick_y;
         mStrafe = -strafeStick * mProperties.driveStrafeGain;
         mRotate = -turnStick;
-        // Aim on the left bumper, and on the launch trigger too, so a launch snaps to the hive.
+        // Aim on the right bumper, and on the launch trigger too, so a launch snaps to the hive.
         boolean launchHeld = mGamepad.right_trigger > mProperties.trgBtnThresh;
-        mAimHeld = mGamepad.left_bumper || (mProperties.launchTriggerAims && launchHeld);
+        mAimHeld = mGamepad.right_bumper || (mProperties.launchTriggerAims && launchHeld);
         // Drift only while the trigger is held, and only in an OpMode that has it on.
         mDriftHeld = mProperties.driveDriftAssist && mGamepad.left_trigger > mProperties.trgBtnThresh;
 
@@ -92,8 +94,8 @@ public class Drive_Manual extends Drive {
             mImu.ResetYaw();
         }
 
-        // Right bumper: slow mode while held.
-        if (mGamepad.right_bumper) {
+        // Left bumper: slow mode while held.
+        if (mGamepad.left_bumper) {
             mSpeedLimit = mProperties.driveSlow;
         } else {
             mSpeedLimit = mProperties.driveNormal;

@@ -86,7 +86,7 @@ public class BotProperties {
     public double trgBtnThresh = 0.05;
     /** Top drive power with no trigger held. The right trigger launches, so there is no boost. */
     public double driveNormal = 1;
-    /** Top drive power while holding the right bumper, for careful lining up. */
+    /** Top drive power while holding the left bumper, for careful lining up. */
     public double driveSlow = 0.25;
     /** Mecanum wheels strafe a bit slower than they drive, so strafe gets a small boost. */
     public double driveStrafeGain = 1.1;
@@ -115,7 +115,7 @@ public class BotProperties {
      * true: hold the LEFT TRIGGER while turning and the robot pivots on its inside back
      * corner instead of its middle, like a car drifting. On in HyDrive and the Practice
      * TeleOps (coach, 2026-11-02: it was the right bumper and Practice only; slow mode moved
-     * to the right bumper to make room).
+     * to the right bumper to make room, then to the left bumper on 2026-11-03).
      */
     public boolean driveDriftAssist = true;
     /** Drift pivot, side to side. 0 = the robot's middle, 0.5 = the inside wheels (square robot). */
@@ -460,7 +460,7 @@ public class BotProperties {
      */
     public boolean visionAnyTag = false;
 
-    // Aim assist: hold the left bumper and the robot turns to face the nearest tag.
+    // Aim assist: hold the right bumper and the robot turns to face the middle of our hive.
     /**
      * Turn power per degree the tag is off center. 0.02 x 20 degrees = 0.4 power.
      * CHECK ON THE ROBOT: if the robot turns away from the tag, make this negative.
@@ -473,7 +473,7 @@ public class BotProperties {
     /**
      * true: the driver's launch trigger also turns the robot to face the middle of our hive's
      * tags while it is held, the way an auto aims before LAUNCH_WHEN_TAG_SEEN (coach,
-     * 2026-11-02). false: the trigger only opens the gates; the left bumper still aims.
+     * 2026-11-02). false: the trigger only opens the gates; the right bumper still aims.
      */
     public boolean launchTriggerAims = true;
 

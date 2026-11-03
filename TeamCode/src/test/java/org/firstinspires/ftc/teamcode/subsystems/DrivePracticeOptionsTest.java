@@ -159,13 +159,22 @@ class DrivePracticeOptionsTest {
     }
 
     @Test
-    @DisplayName("right bumper held: slow mode, a quarter of the power")
-    void rightBumperIsSlow() {
-        gamepad.right_bumper = true;
+    @DisplayName("left bumper held: slow mode, a quarter of the power")
+    void leftBumperIsSlow() {
+        gamepad.left_bumper = true;
         gamepad.left_stick_y = -1;    // full forward
         runLoops();
         assertEquals(-properties.driveSlow, frontLeft(), EPS);
         assertEquals(-properties.driveSlow, backRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("the right bumper is aim now, not slow mode")
+    void rightBumperIsNotSlow() {
+        gamepad.right_bumper = true;
+        gamepad.left_stick_y = -1;
+        runLoops();
+        assertEquals(-1, frontLeft(), EPS);
     }
 
     @Test

@@ -103,7 +103,7 @@ class DriveAimTest {
         when(vision.SeesTag()).thenReturn(true);
         when(vision.GetBearing()).thenReturn(20.0);          // nearest tag is to the left...
         when(vision.GetGroupBearing()).thenReturn(-20.0);    // ...but the hive's middle is to the right
-        gamepad.left_bumper = true;
+        gamepad.right_bumper = true;
         runLoops();
         assertEquals(-0.4, frontLeft(), EPS);   // turns right
         assertEquals(0.4, frontRight(), EPS);
@@ -131,9 +131,9 @@ class DriveAimTest {
     }
 
     @Test
-    @DisplayName("left bumper held, tag 20 degrees to the left: the robot turns left by itself")
+    @DisplayName("right bumper held, tag 20 degrees to the left: the robot turns left by itself")
     void turnsLeftTowardTag() {
-        gamepad.left_bumper = true;
+        gamepad.right_bumper = true;
         tagAt(20);
         runLoops();
         // kP 0.02 x 20 degrees = 0.4, with nothing on the sticks.
@@ -146,7 +146,7 @@ class DriveAimTest {
     @Test
     @DisplayName("tag to the right: turns right")
     void turnsRightTowardTag() {
-        gamepad.left_bumper = true;
+        gamepad.right_bumper = true;
         tagAt(-20);
         runLoops();
         assertEquals(-0.4, frontLeft(), EPS);
@@ -162,7 +162,7 @@ class DriveAimTest {
         assertTrue(stickFrontLeft < 0, "stick right should give front left " + stickFrontLeft);
 
         gamepad.right_stick_x = 0;
-        gamepad.left_bumper = true;
+        gamepad.right_bumper = true;
         tagAt(-20);
         runLoops();
         assertTrue(frontLeft() < 0, "tag on the right should turn the same way as stick right");
@@ -171,7 +171,7 @@ class DriveAimTest {
     @Test
     @DisplayName("bumper held but no tag in view: the stick still turns the robot")
     void noTagStickStillWorks() {
-        gamepad.left_bumper = true;
+        gamepad.right_bumper = true;
         when(vision.SeesTag()).thenReturn(false);
         gamepad.right_stick_x = 1;
         runLoops();
@@ -182,7 +182,7 @@ class DriveAimTest {
     @Test
     @DisplayName("bumper not held: the tag is ignored and the robot stays still")
     void notHeldIgnoresTag() {
-        gamepad.left_bumper = false;
+        gamepad.right_bumper = false;
         tagAt(20);
         runLoops();
         assertEquals(0, frontLeft(), EPS);
@@ -192,7 +192,7 @@ class DriveAimTest {
     @Test
     @DisplayName("tag almost centered: no turning, so the robot does not wobble")
     void centeredTagNoTurn() {
-        gamepad.left_bumper = true;
+        gamepad.right_bumper = true;
         tagAt(0.5);
         runLoops();
         assertEquals(0, frontLeft(), EPS);

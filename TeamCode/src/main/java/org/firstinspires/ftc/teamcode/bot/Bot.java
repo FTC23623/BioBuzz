@@ -67,12 +67,12 @@ import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
  * <p>To leave a part of the robot out of one OpMode, switch it off in
  * {@link BotProperties} before building the Bot. See docs/decisions/0010.
  *
- * <p>Hold the left bumper in TeleOp and the drive turns to face the nearest AprilTag of our
- * hive. Which camera is decided from the robot configuration, like the heading.
+ * <p>Hold the right bumper in TeleOp and the drive turns to face the middle of our hive's
+ * AprilTags. Which camera is decided from the robot configuration, like the heading.
  *
  * <p><b>Who drives what in TeleOp</b> (docs/decisions/0023):
  * <ul>
- *   <li><b>Gamepad 1, driver</b>: sticks drive (field-centric), right bumper slow, left
+ *   <li><b>Gamepad 1, driver</b>: sticks drive (field-centric), left bumper slow, right
  *       bumper aim, RIGHT TRIGGER (hold) opens the launch gates, then runs the intake and
  *       transfer to push balls in. Left trigger (hold) is drift assist.
  *   <li><b>Gamepad 2, operator</b>: right bumper turns the launchers off / on (they spin

@@ -19,8 +19,8 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  *
  * <p>The launchers spin up the moment START is pressed, so the first shot is ready.
  *
- * <p>Gamepad 1, driver: sticks drive, right bumper (hold) slow, left trigger (hold) drift
- * assist, left bumper (hold) aims at our hive, <b>right trigger (hold) launches</b>: the
+ * <p>Gamepad 1, driver: sticks drive, left bumper (hold) slow, left trigger (hold) drift
+ * assist, right bumper (hold) aims at our hive, <b>right trigger (hold) launches</b>: the
  * gates open, then the intake and transfer push the balls in.
  * <br>Gamepad 2, operator: right bumper turns the launchers off / on, D-pad up/down pollen
  * speed, right/left nectar speed, cross runs the intake and transfer (on / off), <b>left
