@@ -34,6 +34,28 @@ public final class AimAssist {
     }
 
     /**
+     * The drive that keeps the robot the same distance from the tag while it arcs around
+     * it. Strafing sideways on its own slowly carries the robot away from the tag; this
+     * pulls it back in.
+     *
+     * @param rangeIn  inches to the tag right now. 0 when the camera can't tell.
+     * @param wantedIn inches to hold, measured the moment the arc started. 0 = not known.
+     * @param kP       drive power per inch off
+     * @param maxDrive the drive never goes past this, either way
+     * @return the drive for the robot. Negative is forward (too far away: close in),
+     *     positive is backward (too near: back off). 0 when either distance is unknown.
+     */
+    public static double HoldRange(double rangeIn, double wantedIn, double kP, double maxDrive) {
+        if (rangeIn <= 0 || wantedIn <= 0) {
+            return 0;
+        }
+        double tooFarIn = rangeIn - wantedIn;
+        // Forward is negative drive, so being too far away means a negative number.
+        double drive = -kP * tooFarIn;
+        return Math.max(-maxDrive, Math.min(drive, maxDrive));
+    }
+
+    /**
      * true when a tag id is one we care about.
      *
      * @param id    the tag's id

@@ -198,4 +198,121 @@ class DriveAimTest {
         assertEquals(0, frontLeft(), EPS);
         assertEquals(0, frontRight(), EPS);
     }
+
+    // ---- Arcing around the hive: D-pad left / right while aiming (0039) ----
+
+    /** Aiming at a centered hive this many inches away, with round arc settings. */
+    private void aimingAtHive(double rangeIn) {
+        properties.arcStrafePower = 0.4;
+        properties.arcRangeKP = 0.02;
+        properties.arcMaxDrive = 0.4;
+        gamepad.right_bumper = true;
+        tagAt(0);
+        when(vision.GetRange()).thenReturn(rangeIn);
+    }
+
+    @Test
+    @DisplayName("aiming, D-pad left: the robot strafes left at the arc power, no turn")
+    void arcLeftStrafesLeft() {
+        aimingAtHive(100);
+        gamepad.dpad_left = true;
+        runLoops();
+        // A pure strafe left: front left and back right forward, the other two backward.
+        assertEquals(0.4, frontLeft(), EPS);
+        assertEquals(0.4, backRight(), EPS);
+        assertEquals(-0.4, frontRight(), EPS);
+        assertEquals(-0.4, backLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("aiming, D-pad right: strafes right")
+    void arcRightStrafesRight() {
+        aimingAtHive(100);
+        gamepad.dpad_right = true;
+        runLoops();
+        assertEquals(-0.4, frontLeft(), EPS);
+        assertEquals(0.4, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("the arc holds its starting distance: drifted 10 in farther, it drives in at 0.2")
+    void arcHoldsDistance() {
+        aimingAtHive(100);
+        gamepad.dpad_left = true;
+        runLoops();   // the arc starts at 100 in
+        when(vision.GetRange()).thenReturn(110.0);
+        runLoops();
+        // Strafe 0.4 plus 0.2 forward (negative): front left 0.4 - 0.2, front right -0.4 - 0.2.
+        assertEquals(0.2, frontLeft(), EPS);
+        assertEquals(-0.6, frontRight(), EPS);
+
+        when(vision.GetRange()).thenReturn(90.0);   // now too near: back off
+        runLoops();
+        assertEquals(0.6, frontLeft(), EPS);
+        assertEquals(-0.2, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("let go and press again: the new arc holds the distance it starts at")
+    void newArcNewDistance() {
+        aimingAtHive(100);
+        gamepad.dpad_left = true;
+        runLoops();
+        gamepad.dpad_left = false;
+        runLoops();
+        when(vision.GetRange()).thenReturn(120.0);
+        gamepad.dpad_left = true;
+        runLoops();
+        // 120 is the new distance to hold, so no drive correction: a pure strafe.
+        assertEquals(0.4, frontLeft(), EPS);
+        assertEquals(-0.4, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("D-pad without the aim button: nothing happens")
+    void dpadAloneDoesNothing() {
+        properties.arcStrafePower = 0.4;
+        tagAt(0);
+        when(vision.GetRange()).thenReturn(100.0);
+        gamepad.dpad_left = true;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("aiming with no tag in view: the D-pad does nothing")
+    void arcNeedsATag() {
+        properties.arcStrafePower = 0.4;
+        gamepad.right_bumper = true;
+        when(vision.SeesTag()).thenReturn(false);
+        gamepad.dpad_right = true;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("left and right pressed together: neither")
+    void bothWaysIsNeither() {
+        aimingAtHive(100);
+        gamepad.dpad_left = true;
+        gamepad.dpad_right = true;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("the arc is robot-centric: turned 90 degrees, D-pad left still strafes the robot's left")
+    void arcIsRobotCentric() {
+        Imu turned = mock(Imu.class);
+        when(turned.Ready()).thenReturn(true);
+        when(turned.GetYaw()).thenReturn(90.0);
+        drive = new Drive_Manual(op, properties, turned, vision);
+        aimingAtHive(100);
+        gamepad.dpad_left = true;
+        runLoops();
+        assertEquals(0.4, frontLeft(), EPS);
+        assertEquals(-0.4, frontRight(), EPS);
+    }
 }

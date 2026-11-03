@@ -55,6 +55,33 @@ class AimAssistTest {
         assertEquals(-0.4, AimAssist.RotateToward(20, -0.02, 0.6, 1.0), EPS);
     }
 
+    /** Holding a distance while arcing: kP 0.02 per inch, never past 0.4. */
+    private double hold(double rangeIn, double wantedIn) {
+        return AimAssist.HoldRange(rangeIn, wantedIn, 0.02, 0.4);
+    }
+
+    @Test
+    @DisplayName("hold range: too far away drives forward (negative), too near backs off")
+    void holdRangeDirection() {
+        assertEquals(-0.2, hold(110, 100), EPS);
+        assertEquals(0.2, hold(90, 100), EPS);
+        assertEquals(0, hold(100, 100), EPS);
+    }
+
+    @Test
+    @DisplayName("hold range: never drives harder than the limit")
+    void holdRangeLimited() {
+        assertEquals(-0.4, hold(200, 100), EPS);
+        assertEquals(0.4, hold(10, 100), EPS);
+    }
+
+    @Test
+    @DisplayName("hold range: an unknown distance (0) drives nothing")
+    void holdRangeUnknown() {
+        assertEquals(0, hold(0, 100), EPS);
+        assertEquals(0, hold(100, 0), EPS);
+    }
+
     private static final int[][] HIVES = {{30, 33}, {34, 37}, {38, 41}, {42, 45}};
 
     @Test

@@ -73,8 +73,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
  * <p><b>Who drives what in TeleOp</b> (docs/decisions/0023):
  * <ul>
  *   <li><b>Gamepad 1, driver</b>: sticks drive (field-centric), left bumper slow, right
- *       bumper aim, RIGHT TRIGGER (hold) opens the launch gates, then runs the intake and
- *       transfer to push balls in. Left trigger (hold) is drift assist.
+ *       bumper aim, D-pad left / right while aiming arcs around the hive, RIGHT TRIGGER
+ *       (hold) opens the launch gates, then runs the intake and transfer to push balls in.
+ *       Left trigger (hold) is drift assist.
  *   <li><b>Gamepad 2, operator</b>: the launchers spin from START to the end with no
  *       button, D-pad trims their speeds (pollen follows the tag's distance), left bumper
  *       runs the intake and transfer (on / off),
@@ -119,7 +120,7 @@ public class Bot {
     static final String[] LiveTuningDrive = {
             "driveNormal", "driveSlow", "driveStrafeGain", "driveMotorSlewRate",
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
-            "aimKP", "aimMaxRotate", "aimDoneDegrees"};
+            "aimKP", "aimMaxRotate", "aimDoneDegrees", "arcStrafePower", "arcRangeKP", "arcMaxDrive"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",

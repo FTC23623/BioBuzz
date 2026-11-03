@@ -478,6 +478,20 @@ public class BotProperties {
      */
     public boolean launchTriggerAims = true;
 
+    // Arc around the hive (docs/decisions/0039): while aiming, D-pad left / right slide the
+    // robot sideways. Aim keeps the nose on the hive, and a little drive keeps the distance
+    // the arc started at, so the robot circles the hive instead of sliding away from it.
+    // Without the aim button the D-pad does nothing.
+    /** How hard the robot strafes while arcing. 0.4 is a brisk walk. */
+    public double arcStrafePower = 0.4;
+    /**
+     * Drive power per inch the robot has drifted from the distance the arc started at.
+     * 0.02 x 10 inches = 0.2 power. Too far: drives in. Too near: backs off.
+     */
+    public double arcRangeKP = 0.02;
+    /** The distance correction never drives harder than this, either way. */
+    public double arcMaxDrive = 0.4;
+
     // ---- Alliance (docs/decisions/0021) ---------------------------------------------------
     // A REV Magnetic Limit Switch on the robot. A magnet near it means RED. No magnet, or no
     // sensor at all, means BLUE. Read over and over during INIT, so the drive team can move

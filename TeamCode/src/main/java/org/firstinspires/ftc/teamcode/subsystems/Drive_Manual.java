@@ -27,6 +27,10 @@ import org.firstinspires.ftc.teamcode.objects.MecanumMath;
  *       right trigger, which launches: both are "at the hive" buttons.
  *   <li><b>Right trigger (hold)</b>: launch (see LaunchGates), and aim the same way while it
  *       is held ({@code launchTriggerAims}), so a launch snaps to the hive.
+ *   <li><b>D-pad left / right (hold, while aiming)</b>: arc around the hive. The robot
+ *       strafes that way at {@code arcStrafePower}, aim keeps the nose on the hive, and a
+ *       little drive holds the distance the arc started at ({@code arcRangeKP}). With the
+ *       aim button up, or no tag in view, the D-pad does nothing (docs/decisions/0039).
  * </ul>
  *
  * <p>Practice options, off unless an OpMode turns them on in BotProperties (from Decode's
@@ -55,6 +59,10 @@ public class Drive_Manual extends Drive {
     private double mSpeedLimit;
     private boolean mAimHeld;
     private boolean mDriftHeld;
+    /** Which way the D-pad asks to arc: 1 left, -1 right, 0 neither (or both). */
+    private int mArcDirection;
+    /** Inches to the tag when the arc started, to hold. 0 while not arcing. */
+    private double mArcRangeIn;
 
     public Drive_Manual(HydraOpMode op, BotProperties properties, Imu imu, Vision vision) {
         super(op, properties, imu);
@@ -85,6 +93,14 @@ public class Drive_Manual extends Drive {
         mAimHeld = mGamepad.right_bumper || (mProperties.launchTriggerAims && launchHeld);
         // Drift only while the trigger is held, and only in an OpMode that has it on.
         mDriftHeld = mProperties.driveDriftAssist && mGamepad.left_trigger > mProperties.trgBtnThresh;
+        // D-pad left or right: arc that way around the hive, but only while aiming (below).
+        // Left is positive strafe, like the stick. Both pressed at once means neither.
+        mArcDirection = 0;
+        if (mGamepad.dpad_left && !mGamepad.dpad_right) {
+            mArcDirection = 1;
+        } else if (mGamepad.dpad_right && !mGamepad.dpad_left) {
+            mArcDirection = -1;
+        }
 
         // Circle resets which way is forward. Rumble so the driver feels it happen.
         mResetHeadingButton.In(mGamepad.circle);
@@ -112,7 +128,8 @@ public class Drive_Manual extends Drive {
 
         // Aim assist: the middle of the hive's tag group decides the turn, not one tag, so the
         // robot faces the hive itself. The sticks still drive and strafe.
-        if (mAimHeld && mVision.SeesTag()) {
+        boolean aimingAtHive = mAimHeld && mVision.SeesTag();
+        if (aimingAtHive) {
             double hiveBearing = mVision.GetGroupBearing();
             mRotate = AimAssist.RotateToward(hiveBearing, mProperties.aimKP,
                     mProperties.aimMaxRotate, mProperties.aimDoneDegrees);
@@ -120,6 +137,27 @@ public class Drive_Manual extends Drive {
                     hiveBearing, mVision.GetTagId(), mVision.GetRange(), mRotate);
         } else if (mAimHeld) {
             mOp.mTelemetry.addLine("Aim assist: held, but no tag in view");
+        }
+
+        // D-pad while aiming: arc around the hive. Strafe the way the D-pad points, and hold
+        // the distance the arc started at with a little drive. Aim above keeps the nose on
+        // the hive, so the three together walk the robot around it in a circle.
+        double arcDrive = 0;
+        double arcStrafe = 0;
+        if (aimingAtHive && mArcDirection != 0) {
+            double rangeIn = mVision.GetRange();
+            if (mArcRangeIn <= 0) {
+                // First loop of this arc: this is the distance to keep.
+                mArcRangeIn = rangeIn;
+            }
+            arcStrafe = mArcDirection * mProperties.arcStrafePower;
+            arcDrive = AimAssist.HoldRange(rangeIn, mArcRangeIn, mProperties.arcRangeKP,
+                    mProperties.arcMaxDrive);
+            mOp.mTelemetry.addData("Arc", "holding %.0f in, now %.0f in, drive %.2f",
+                    mArcRangeIn, rangeIn, arcDrive);
+        } else {
+            // Not arcing: the next arc measures its own distance when it starts.
+            mArcRangeIn = 0;
         }
 
         // Left trigger: drift assist. Turn around the inside back corner, not the middle.
@@ -130,12 +168,15 @@ public class Drive_Manual extends Drive {
             driftStrafe = MecanumMath.DriftStrafe(mRotate, mProperties.driveDriftRearGain);
         }
 
+        // The drift pivot and the arc are spots on the robot and the hive, not on the field,
+        // so both stay robot-centric whichever way the sticks are read.
+        double robotDrive = driftDrive + arcDrive;
+        double robotStrafe = driftStrafe + arcStrafe;
         MecanumMath.WheelPowers powers;
         if (mProperties.fieldCentricDrive) {
-            // The pivot is a spot on the robot, so the drift stays robot-centric.
-            powers = MecanumMath.FieldCentric(mDrive, mStrafe, mRotate, yaw, driftDrive, driftStrafe);
+            powers = MecanumMath.FieldCentric(mDrive, mStrafe, mRotate, yaw, robotDrive, robotStrafe);
         } else {
-            powers = MecanumMath.RobotCentric(mDrive + driftDrive, mStrafe + driftStrafe, mRotate);
+            powers = MecanumMath.RobotCentric(mDrive + robotDrive, mStrafe + robotStrafe, mRotate);
         }
 
         SetMotorPower(mFrontLeftMotor, powers.frontLeft * mSpeedLimit);
