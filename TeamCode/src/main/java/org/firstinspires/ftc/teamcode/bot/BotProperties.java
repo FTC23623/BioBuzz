@@ -279,18 +279,22 @@ public class BotProperties {
      * target reached at low power means it is too small.
      */
     public double intakeTicksPerRev = 145.1;
-    // Speeds are in output RPM, out of a 1150 top. 100% when intaking on purpose, half when
-    // feeding a launch (launchFeedScale), about a third backward.
+    // Speeds are in output RPM, out of a 1150 top. 100% when intaking on purpose, a share
+    // of that when feeding a launch (launchFeed...Scale), about a third backward.
     /** Intake target speed, pulling balls in: full speed. Each roller has its own speed. */
     public double intakeRpm = 1150;
     /** Transfer target speed, carrying balls up to the launchers: full speed. */
     public double transferRpm = 1150;
+    // While a launch is being fed (the gates fully open), each roller runs at a fraction of
+    // its speed above, so balls go into the launcher one at a time at a steady rate.
+    // Intaking on purpose is always 100%.
+    /** The intake's share while feeding a launch: 0.5 = half (coach, 2026-11-02). */
+    public double launchFeedIntakeScale = 0.5;
     /**
-     * While a launch is being fed (the gates fully open), the intake and transfer run at
-     * this fraction of their speeds above: 0.5 = half (coach, 2026-11-02), so balls go into
-     * the launcher one at a time at a steady rate. Intaking on purpose is always 100%.
+     * The transfer's share while feeding a launch: 0.3. At half the balls ran into each
+     * other at the launcher (coach, 2026-11-03).
      */
-    public double launchFeedScale = 0.5;
+    public double launchFeedTransferScale = 0.3;
     // Reverse is SLOWER than forward on purpose: at full speed one tap of square emptied the
     // robot. About a third of forward lets the operator let out one ball at a time (coach,
     // 2026-11-02). Both are on the dashboard's Intake group: tune them there, then write the

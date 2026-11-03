@@ -25,9 +25,10 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * still swinging open, the transfer STOPS, even if cross had it running, so no ball is
  * pushed against a half-open gate (docs/decisions/0034). The intake keeps doing what it
  * was. Once the gates are fully open, the intake AND the transfer run forward even if they
- * were off, at {@code launchFeedScale} of their speeds (half), so balls go into the
- * launcher one at a time: the transfer pushes the balls into the launchers, the intake
- * pushes along any ball stuck lower down. Launching wins over the bumper: the feed speed is
+ * were off, each at a share of its speed ({@code launchFeedIntakeScale} half,
+ * {@code launchFeedTransferScale} 30%), so balls go into the launcher one at a time: the
+ * transfer pushes the balls into the launchers, the intake pushes along any ball stuck
+ * lower down. Launching wins over the bumper: the feed speed is
  * about the launcher, not the operator (docs/decisions/0037). Square still wins over both:
  * reverse is for jams.
  *
@@ -100,8 +101,8 @@ public class Intake implements Subsystem {
         } else if (IsLaunching()) {
             // Feeding the launch: slower, so balls go into the launcher one at a time at a
             // steady rate. The transfer feeds, the intake pushes up any ball stuck below it.
-            mIntake.SetRpm(mProperties.intakeRpm * mProperties.launchFeedScale);
-            mTransfer.SetRpm(mProperties.transferRpm * mProperties.launchFeedScale);
+            mIntake.SetRpm(mProperties.intakeRpm * mProperties.launchFeedIntakeScale);
+            mTransfer.SetRpm(mProperties.transferRpm * mProperties.launchFeedTransferScale);
         } else if (IsRunning()) {
             // Intaking on purpose (cross or the left trigger): full speed.
             mIntake.SetRpm(mProperties.intakeRpm);
@@ -149,7 +150,8 @@ public class Intake implements Subsystem {
         } else if (IsGateOpening()) {
             state = "transfer PAUSED while the gate opens";
         } else if (IsLaunching()) {
-            state = String.format("feeding the launch at %.0f%%", mProperties.launchFeedScale * 100);
+            state = String.format("feeding the launch: intake %.0f%%, transfer %.0f%%",
+                    mProperties.launchFeedIntakeScale * 100, mProperties.launchFeedTransferScale * 100);
         } else if (IsRunning()) {
             state = "ON, full speed";
         }

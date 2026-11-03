@@ -201,12 +201,12 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("launching with the rollers off: intake and transfer both run forward, at the feed speed (half)")
+    @DisplayName("launching with the rollers off: intake and transfer both run forward, at their feed shares (intake half, transfer 30%)")
     void launchFeedsBoth() {
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
-        assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedScale), transfer.velocity, EPS);
-        assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedScale), intake.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale), transfer.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedIntakeScale), intake.velocity, EPS);
 
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
@@ -214,14 +214,14 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("launching with the rollers already on: launching wins, both drop to the feed speed")
+    @DisplayName("launching with the rollers already on: launching wins, both drop to their feed shares")
     void launchWhileOn() {
         tap(down -> gamepad.left_bumper = down);
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);   // 100% while intaking
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
-        assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedScale), intake.velocity, EPS);
-        assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedScale), transfer.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedIntakeScale), intake.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale), transfer.velocity, EPS);
         // Gates closed again: back to full speed, since the bumper still has them on.
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
@@ -229,14 +229,15 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top, and the feed is half of it")
+    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top; the launch feed is half of it for the intake and 30% for the transfer")
     void speedsFitTheMotor() {
         assertEquals(1150, properties.intakeMaxRpm, EPS);
         assertTrue(properties.intakeRpm <= properties.intakeMaxRpm);
         assertTrue(properties.transferRpm <= properties.intakeMaxRpm);
         assertTrue(properties.intakeReverseRpm <= properties.intakeMaxRpm);
         assertTrue(properties.transferReverseRpm <= properties.intakeMaxRpm);
-        assertEquals(0.5, properties.launchFeedScale, EPS);
+        assertEquals(0.5, properties.launchFeedIntakeScale, EPS);
+        assertEquals(0.3, properties.launchFeedTransferScale, EPS);
     }
 
     @Test
@@ -273,7 +274,7 @@ class IntakeTest {
         // Gate open: the transfer runs again to feed the launch, at the feed speed.
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
-        assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedScale), transfer.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale), transfer.velocity, EPS);
 
         // Trigger let go: back to what the bumper says.
         when(gates.IsOpen()).thenReturn(false);
