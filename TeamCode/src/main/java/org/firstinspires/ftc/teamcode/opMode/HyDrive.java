@@ -21,12 +21,14 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  *
  * <p>Gamepad 1, driver: sticks drive, left bumper (hold) slow, left trigger (hold) drift
  * assist, right bumper (hold) aims at our hive, D-pad left / right while aiming arcs around
- * the hive, <b>right trigger (hold) launches</b>: the gates open, then the intake and
- * transfer push the balls in.
+ * the hive, <b>right trigger (hold) launches</b>: once the camera is locked on our hive the
+ * gates open, then the intake and transfer push the balls in. No tag in view: the gates
+ * stay shut and the gamepad buzzes.
  * <br>Gamepad 2, operator: the launchers are always on, D-pad up/down pollen speed,
  * right/left nectar speed, left bumper runs the intake and transfer (on / off), <b>left
  * trigger (hold)</b> runs them while held, <b>square (hold)</b> runs them backward, slowly,
- * to spit out extra balls. See docs/decisions/0023, 0032 and 0039.
+ * to spit out extra balls, <b>right trigger (hold)</b> lets a launch through with no camera
+ * lock. See docs/decisions/0023, 0032, 0039 and 0040.
  */
 @TeleOp(name = "HyDrive")
 public class HyDrive extends LinearOpMode {

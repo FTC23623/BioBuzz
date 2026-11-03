@@ -484,6 +484,16 @@ public class BotProperties {
      * 2026-11-02). false: the trigger only opens the gates; the right bumper still aims.
      */
     public boolean launchTriggerAims = true;
+    /**
+     * true: the driver's launch trigger only opens the gates while the camera is LOCKED on
+     * our hive: a tag of ours in view and the hive's middle within aimDoneDegrees. Pulled
+     * with no tag, the gates stay shut and the driver's gamepad buzzes, so a wild launch is
+     * caught (coach, 2026-11-03). The operator's right trigger, held, overrides the lock for
+     * a camera that has died. false: the trigger launches whatever the camera sees.
+     */
+    public boolean launchNeedsLock = true;
+    /** How long the driver's gamepad buzzes when the trigger is pulled with no lock, in milliseconds. */
+    public int launchNoLockRumbleMs = 300;
 
     // Arc around the hive (docs/decisions/0039): while aiming, D-pad left / right slide the
     // robot sideways. Aim keeps the nose on the hive, and a little drive keeps the distance

@@ -10,14 +10,25 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
 /**
  * The pollen and nectar launch servos. A ball launches when its servo opens.
  *
- * <p>Controls (driver, gamepad 1):
+ * <p>Controls:
  * <ul>
- *   <li><b>Right trigger (hold)</b>: BOTH servos open. Let go: both close.
+ *   <li><b>Driver, right trigger (hold)</b>: BOTH servos open. Let go: both close.
+ *   <li><b>Operator, right trigger (hold)</b>: override the camera lock below, for a camera
+ *       that has died.
  * </ul>
  *
  * <p>Hold to open, never a toggle: the moment the driver lets go, the gates close. Both
  * open together for now; nectar is not part of the first competition (docs/decisions/0023).
  * The closed and open spots come from Test: Launch Servo Tuning (docs/decisions/0020).
+ *
+ * <p><b>Camera lock</b> (docs/decisions/0040). The trigger only opens the gates while the
+ * camera is locked on our hive: a tag of ours in view, and the hive's middle within
+ * {@code aimDoneDegrees} of straight ahead. The trigger also aims (0036), so pulling it with
+ * the hive off to one side turns the robot first and opens the gates once it is facing the
+ * hive. Pulling it with NO tag in view is a driver error: the gates stay shut and the
+ * driver's gamepad buzzes once. If the camera has really died, the operator holds their
+ * right trigger and the gates open anyway. {@code launchNeedsLock = false} turns the lock
+ * off. An auto's LAUNCH ({@link #SetOpen}) is not checked here; the auto decides.
  *
  * <p><b>Out of the way first.</b> A servo can't say when it got there, so the time it needs
  * is worked out from its speed and how far it turns ({@link #OpenSeconds}). Until then
@@ -36,7 +47,7 @@ public class LaunchGates implements Subsystem {
     private final HydraOpMode mOp;
     private final BotProperties mProperties;
     private final Gamepad mGamepad;
-    /** The camera, asked once per launch how far the tag is. null when there is none. */
+    /** The camera, asked once per launch how far the tag is, and for the lock. null when there is none. */
     private final Vision mVision;
     /** null when the servo is not in the robot configuration. */
     private final Servo mPollenServo;
@@ -53,8 +64,19 @@ public class LaunchGates implements Subsystem {
     /** Inches to the nearest tag at the last launch, for the dashboard graph. 0 = no tag. */
     private double mLastLaunchRangeIn = 0;
 
+    // Read from the gamepads in HandleUserInput, used in Process. An auto never calls
+    // HandleUserInput, so mFromGamepad stays false there and SetOpen() decides alone.
+    private boolean mFromGamepad = false;
+    private boolean mTriggerHeld = false;
+    private boolean mOverrideHeld = false;
+    /** true once this pull has buzzed the driver, so one pull is one buzz. */
+    private boolean mBuzzedThisPull = false;
+    /** Why the gates are shut while the trigger is held, for the Driver Station. */
+    private String mLockStatus = "";
+
     /**
-     * @param vision the camera, so each launch can note how far the tag was. null for none.
+     * @param vision the camera, for the lock and so each launch can note how far the tag
+     *               was. null for none: then nothing ever locks, and only the override opens.
      */
     public LaunchGates(HydraOpMode op, BotProperties properties, Gamepad gamepad, Vision vision) {
         mOp = op;
@@ -81,11 +103,20 @@ public class LaunchGates implements Subsystem {
 
     @Override
     public void HandleUserInput() {
-        mOpen = mGamepad.right_trigger > mProperties.trgBtnThresh;
+        mFromGamepad = true;
+        mTriggerHeld = mGamepad.right_trigger > mProperties.trgBtnThresh;
+        mOverrideHeld = mOp.mOperatorGamepad.right_trigger > mProperties.trgBtnThresh;
+        if (!mTriggerHeld) {
+            // Let go: the next pull may buzz again.
+            mBuzzedThisPull = false;
+        }
     }
 
     @Override
     public void Process() {
+        if (mFromGamepad) {
+            mOpen = DecideFromTrigger();
+        }
         // Start the clock the loop the open position is first sent, and note what the camera
         // sees right now: this is the distance the launch was made from.
         if (mOpen && !mOpenSent) {
@@ -105,10 +136,54 @@ public class LaunchGates implements Subsystem {
             state = "OPEN (launching)";
         } else if (mOpen) {
             state = String.format("opening, %.2f of %.2f s", mSinceOpened.seconds(), OpenSeconds(mProperties));
+        } else if (mTriggerHeld) {
+            state = mLockStatus;
         }
         mOp.mTelemetry.addData("Launch gates (gamepad 1: hold right trigger)", state);
         mOp.mTelemetry.addData("Last launch (camera)", mLastLaunch);
         mOp.mTelemetry.addData("Last launch range (in)", "%.0f", mLastLaunchRangeIn);
+    }
+
+    /**
+     * TeleOp: should the gates be open this loop? The trigger must be held, and the camera
+     * locked on our hive, unless the operator overrides or the lock is switched off.
+     */
+    private boolean DecideFromTrigger() {
+        if (!mTriggerHeld) {
+            return false;
+        }
+        if (!mProperties.launchNeedsLock) {
+            return true;
+        }
+        if (mOverrideHeld) {
+            mLockStatus = "OVERRIDE: operator's right trigger, camera not checked";
+            return true;
+        }
+        if (mVision == null || !mVision.SeesTag()) {
+            // A driver error: the hive is not in view. Shut, and say so through the gamepad.
+            mLockStatus = "NO LOCK: no tag of ours in view. Face the hive, or operator holds right trigger";
+            if (!mBuzzedThisPull) {
+                mBuzzedThisPull = true;
+                mGamepad.rumble(mProperties.launchNoLockRumbleMs);
+            }
+            return false;
+        }
+        if (!CameraLocked()) {
+            // The hive is in view but off to one side. The trigger is turning the robot
+            // toward it (launchTriggerAims); the gates open once it is facing the hive.
+            mLockStatus = String.format("turning to the hive, %.1f deg off", mVision.GetGroupBearing());
+            return false;
+        }
+        mLockStatus = "";
+        return true;
+    }
+
+    /** true when a tag of ours is in view and the hive's middle is within aimDoneDegrees. */
+    public boolean CameraLocked() {
+        if (mVision == null || !mVision.SeesTag()) {
+            return false;
+        }
+        return Math.abs(mVision.GetGroupBearing()) <= mProperties.aimDoneDegrees;
     }
 
     /** The camera's view the moment the gates were told to open. */
@@ -139,7 +214,10 @@ public class LaunchGates implements Subsystem {
         return mLastLaunchRangeIn;
     }
 
-    /** true: open both gates. false: close them. An auto calls this at a LAUNCH step. */
+    /**
+     * true: open both gates. false: close them. An auto calls this at a LAUNCH step. The
+     * camera lock is not checked here: the auto has already waited for its tag.
+     */
     public void SetOpen(boolean open) {
         mOpen = open;
     }
