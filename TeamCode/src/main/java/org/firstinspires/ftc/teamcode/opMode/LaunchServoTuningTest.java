@@ -28,7 +28,7 @@ public class LaunchServoTuningTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         BotProperties properties = new BotProperties();
-        // Only the servo tuner. The LED strip would fight it for the D-pad.
+        // Only the servo tuner. Nothing but these servos moves in this test.
         properties.launchServoTunerDisabled = false;
         properties.driveDisabled = true;
         properties.launcherDisabled = true;

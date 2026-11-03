@@ -217,19 +217,20 @@ public class Bot {
             mSystems.add(new Headlight(mOp, mProperties));
         }
 
-        // The LED strip's demo controls are on gamepad 1's D-pad, which nothing else uses.
+        // The LED strip reads no gamepad: the alliance underglow and the pollen yellow run
+        // by themselves (0039).
         if (mProperties.stripDisabled) {
             mLightStrip = null;
         } else {
             // The strip turns LEDs yellow while the pollen sensor is pressed.
             PollenSensor pollenSensor = new PollenSensor(mOp, mProperties);
             mSystems.add(pollenSensor);
-            mLightStrip = new LightStrip(mOp, mProperties, mOp.mDriverGamepad, pollenSensor);
+            mLightStrip = new LightStrip(mOp, mProperties, pollenSensor);
             mSystems.add(mLightStrip);
         }
 
-        // The motor tuner shares the launcher's motor and the strip's D-pad. Only
-        // Test: Motor Tuning turns it on, with those two off.
+        // The motor tuner shares the launcher's motor and gamepad 1's D-pad. Only
+        // Test: Motor Tuning turns it on, with the launcher and the drive off.
         if (!mProperties.motorTunerDisabled) {
             mSystems.add(new MotorTuner(mOp, mProperties, mOp.mDriverGamepad));
         }

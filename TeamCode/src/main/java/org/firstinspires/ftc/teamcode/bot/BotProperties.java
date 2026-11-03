@@ -60,12 +60,13 @@ public class BotProperties {
     public boolean stripDisabled = false;
     /**
      * true: no motor tuner. Off in every OpMode except Test: Motor Tuning, because the tuner
-     * uses the same launcher motor as the launcher, and the same D-pad as the LED strip.
+     * uses the same launcher motor as the launcher, and gamepad 1's D-pad, which the drive
+     * uses to arc around the hive.
      */
     public boolean motorTunerDisabled = true;
     /**
      * true: no launch servo tuner. Off in every OpMode except Test: Launch Servo Tuning,
-     * because it uses the same D-pad as the LED strip and the motor tuner.
+     * because it uses the same D-pad as the drive and the motor tuner.
      */
     public boolean launchServoTunerDisabled = true;
     /**

@@ -56,28 +56,30 @@ class LightStripTest {
 
     private LightStrip stripConfigured() {
         when(hardwareMap.tryGet(PrismLedDriver.class, properties.cfgStrip)).thenReturn(prism);
-        return new LightStrip(op, properties, gamepad, pollenSensor);
+        return new LightStrip(op, properties, pollenSensor);
     }
 
     @Test
-    @DisplayName("Init reads the device id and status once, and shows them")
+    @DisplayName("Init reads the device id and status once")
     void initOnce() {
         LightStrip strip = stripConfigured();
         strip.Init();
         strip.Init();
         verify(prism, times(1)).ReadDeviceId();
         verify(prism, times(1)).ReadStatus();
-        verify(telemetry, times(2)).addLine(contains("D-pad: up red"));
     }
 
     @Test
-    @DisplayName("solid red: the LEDs before the underglow, layer 0, at the set brightness")
-    void solidRed() {
-        properties.underglowFirstLed = 12;
-        properties.stripBrightness = 50;
+    @DisplayName("the gamepad does nothing to the strip: the D-pad belongs to the drive now")
+    void noButtons() {
         LightStrip strip = stripConfigured();
-        strip.Solid(255, 0, 0);
-        verify(prism).SolidColor(0, 0, 12, 50, 255, 0, 0);
+        gamepad.dpad_up = true;
+        gamepad.dpad_left = true;
+        for (int loop = 0; loop < 30; loop++) {
+            strip.HandleUserInput();
+        }
+        verify(prism, never()).SolidColor(anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt());
+        verify(prism, never()).ClearLayer(anyInt());
     }
 
     @Test
@@ -169,28 +171,17 @@ class LightStripTest {
     }
 
     @Test
-    @DisplayName("D-pad left (Off): EVERY layer is cleared, not just the D-pad layer, then the underglow comes back")
-    void off() {
+    @DisplayName("a full clear: EVERY layer is cleared, then the underglow comes back")
+    void fullClear() {
         op.mAlliance = Alliance.BLUE;
         LightStrip strip = stripConfigured();
         strip.ShowStatus();
-        strip.Off();
+        strip.ClearEverything();
         for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
             verify(prism, times(1)).ClearLayer(layer);
         }
         strip.ShowStatus();
         verify(prism, times(2)).SolidColor(1, 12, 36, properties.stripBrightness, 0, 0, 255);
-    }
-
-    @Test
-    @DisplayName("a D-pad press sends one color, however long it is held")
-    void dpadSendsOnce() {
-        LightStrip strip = stripConfigured();
-        gamepad.dpad_right = true;
-        for (int loop = 0; loop < 30; loop++) {
-            strip.HandleUserInput();
-        }
-        verify(prism, times(1)).SolidColor(0, 0, properties.underglowFirstLed, properties.stripBrightness, 0, 255, 0);
     }
 
     @Test
@@ -240,9 +231,8 @@ class LightStripTest {
     @Test
     @DisplayName("no strip in the robot configuration: nothing is sent, nothing crashes, INIT says so")
     void noStrip() {
-        LightStrip strip = new LightStrip(op, properties, gamepad, pollenSensor);
+        LightStrip strip = new LightStrip(op, properties, pollenSensor);
         strip.Init();
-        strip.Solid(255, 255, 255);
         strip.Process();
         verify(prism, never()).SolidColor(anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt());
         verify(prism, never()).WriteLayer(anyInt(), anyInt(), any(byte[].class));

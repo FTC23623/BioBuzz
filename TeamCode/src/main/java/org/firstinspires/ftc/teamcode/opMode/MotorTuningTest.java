@@ -27,8 +27,8 @@ public class MotorTuningTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         BotProperties properties = new BotProperties();
-        // Only the tuner. The launcher would fight it for the nectar motor, and the LED
-        // strip would fight it for the D-pad.
+        // Only the tuner. The launcher would fight it for the nectar motor. Nothing but
+        // motors run in this test.
         properties.motorTunerDisabled = false;
         properties.driveDisabled = true;
         properties.launcherDisabled = true;
