@@ -96,16 +96,16 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("cross: both run forward, each at its own speed; cross again: off")
-    void crossToggles() {
+    @DisplayName("left bumper: both run forward, each at its own speed; again: off")
+    void bumperToggles() {
         properties.intakeRpm = 200;
         properties.transferRpm = 300;
-        tap(down -> gamepad.cross = down);
+        tap(down -> gamepad.left_bumper = down);
         assertTrue(rollers.IsOn());
         assertEquals(TicksPerSecond(200), intake.velocity, EPS);
         assertEquals(TicksPerSecond(300), transfer.velocity, EPS);
 
-        tap(down -> gamepad.cross = down);
+        tap(down -> gamepad.left_bumper = down);
         assertEquals(0, intake.power, EPS);
         assertEquals(0, transfer.power, EPS);
     }
@@ -125,7 +125,7 @@ class IntakeTest {
     @Test
     @DisplayName("let go of square: back to forward if it was on")
     void releaseSquareGoesBack() {
-        tap(down -> gamepad.cross = down);
+        tap(down -> gamepad.left_bumper = down);
         gamepad.square = true;
         loop();
         gamepad.square = false;
@@ -190,9 +190,9 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("left trigger let go while cross has them on: they stay on")
-    void triggerDoesNotTurnOffCross() {
-        tap(down -> gamepad.cross = down);
+    @DisplayName("left trigger let go while the bumper has them on: they stay on")
+    void triggerDoesNotTurnOffBumper() {
+        tap(down -> gamepad.left_bumper = down);
         gamepad.left_trigger = 1;
         loop();
         gamepad.left_trigger = 0;
@@ -216,13 +216,13 @@ class IntakeTest {
     @Test
     @DisplayName("launching with the rollers already on: launching wins, both drop to the feed speed")
     void launchWhileOn() {
-        tap(down -> gamepad.cross = down);
+        tap(down -> gamepad.left_bumper = down);
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);   // 100% while intaking
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
         assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedScale), intake.velocity, EPS);
         assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedScale), transfer.velocity, EPS);
-        // Gates closed again: back to full speed, since cross still has them on.
+        // Gates closed again: back to full speed, since the bumper still has them on.
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
@@ -261,7 +261,7 @@ class IntakeTest {
     @Test
     @DisplayName("transfer already running when the trigger is pulled: it STOPS while the gate opens, the intake keeps going")
     void runningTransferPausesForTheGate() {
-        tap(down -> gamepad.cross = down);
+        tap(down -> gamepad.left_bumper = down);
         assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
 
         when(gates.IsOpen()).thenReturn(true);
@@ -275,7 +275,7 @@ class IntakeTest {
         loop();
         assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedScale), transfer.velocity, EPS);
 
-        // Trigger let go: back to what cross says.
+        // Trigger let go: back to what the bumper says.
         when(gates.IsOpen()).thenReturn(false);
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();

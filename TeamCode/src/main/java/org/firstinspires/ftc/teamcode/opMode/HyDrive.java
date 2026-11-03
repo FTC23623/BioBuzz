@@ -23,9 +23,9 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * assist, right bumper (hold) aims at our hive, <b>right trigger (hold) launches</b>: the
  * gates open, then the intake and transfer push the balls in.
  * <br>Gamepad 2, operator: the launchers are always on, D-pad up/down pollen speed,
- * right/left nectar speed, cross runs the intake and transfer (on / off), <b>left trigger
- * (hold)</b> runs them while held, <b>square (hold)</b> runs them backward, slowly, to spit
- * out extra balls. See docs/decisions/0023 and 0032.
+ * right/left nectar speed, left bumper runs the intake and transfer (on / off), <b>left
+ * trigger (hold)</b> runs them while held, <b>square (hold)</b> runs them backward, slowly,
+ * to spit out extra balls. See docs/decisions/0023, 0032 and 0039.
  */
 @TeleOp(name = "HyDrive")
 public class HyDrive extends LinearOpMode {

@@ -12,9 +12,10 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *
  * <p>Controls (operator, gamepad 2):
  * <ul>
- *   <li><b>Cross / A</b>: intake and transfer on. Press again: off.
- *   <li><b>Left trigger (hold)</b>: intake and transfer on while held, the same as cross.
- *       Let go: back to what cross says.
+ *   <li><b>Left bumper</b>: intake and transfer on. Press again: off. It sits above the
+ *       left trigger, which runs the same rollers while held.
+ *   <li><b>Left trigger (hold)</b>: intake and transfer on while held, the same as the
+ *       bumper. Let go: back to what the bumper says.
  *   <li><b>Square / X (hold)</b>: both run BACKWARD, slower than forward, to spit balls out
  *       one at a time when the robot has picked up too many. Let go and they go back to
  *       what they were doing.
@@ -26,7 +27,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * was. Once the gates are fully open, the intake AND the transfer run forward even if they
  * were off, at {@code launchFeedScale} of their speeds (half), so balls go into the
  * launcher one at a time: the transfer pushes the balls into the launchers, the intake
- * pushes along any ball stuck lower down. Launching wins over cross: the feed speed is
+ * pushes along any ball stuck lower down. Launching wins over the bumper: the feed speed is
  * about the launcher, not the operator (docs/decisions/0037). Square still wins over both:
  * reverse is for jams.
  *
@@ -70,7 +71,7 @@ public class Intake implements Subsystem {
 
     @Override
     public void HandleUserInput() {
-        mOnOffButton.In(mGamepad.cross);
+        mOnOffButton.In(mGamepad.left_bumper);
         if (mOnOffButton.Out()) {
             mOnOffButton.Used();
             mOn = !mOn;
@@ -112,7 +113,7 @@ public class Intake implements Subsystem {
         ShowStatus();
     }
 
-    /** true when cross has them on, or the left trigger is held. */
+    /** true when the left bumper has them on, or the left trigger is held. */
     public boolean IsRunning() {
         return mOn || mTriggerHeld;
     }
@@ -152,7 +153,7 @@ public class Intake implements Subsystem {
         } else if (IsRunning()) {
             state = "ON, full speed";
         }
-        mOp.mTelemetry.addData("Intake + transfer (gamepad 2: cross on/off, hold left trigger, hold square reverse)", state);
+        mOp.mTelemetry.addData("Intake + transfer (gamepad 2: left bumper on/off, hold left trigger, hold square reverse)", state);
         mIntake.ShowStatus();
         mTransfer.ShowStatus();
     }
