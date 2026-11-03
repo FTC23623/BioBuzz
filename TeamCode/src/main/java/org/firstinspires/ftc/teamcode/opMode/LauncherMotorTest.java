@@ -8,9 +8,11 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
 /**
  * Launcher speed test. Wheel guard on, hands clear, hand on STOP.
  *
+ * <p>Both launchers spin up the moment START is pressed, like HyDrive, and there is no
+ * button to stop them: press STOP.
+ *
  * <p>Gamepad 2 (operator):
  * <ul>
- *   <li><b>Right bumper</b>: both launchers spin up / off.
  *   <li><b>D-pad up / down</b>: pollen target up / down 50 RPM. <b>Right / left</b>: nectar.
  * </ul>
  * <p>Gamepad 1: <b>hold right trigger</b> to open the launch gates.
@@ -44,10 +46,14 @@ public class LauncherMotorTest extends LinearOpMode {
         while (opModeInInit()) {
             bot.StartLoop();
             bot.ShowStatus();
-            telemetry.addLine("Gamepad 2: right bumper spins. D-pad up/down pollen, right/left nectar.");
+            telemetry.addLine("START spins both launchers up. STOP stops them.");
+            telemetry.addLine("Gamepad 2: D-pad up/down pollen, right/left nectar.");
             telemetry.addLine("Gamepad 1: hold right trigger to open the launch gates.");
             bot.EndLoop();
         }
+
+        // START was pressed. Spin up now, the same as HyDrive: nothing to press.
+        bot.SpinLaunchers(true);
 
         while (opModeIsActive()) {
             bot.StartLoop();

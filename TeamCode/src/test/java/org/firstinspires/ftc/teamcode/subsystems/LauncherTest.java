@@ -240,10 +240,10 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("right bumper spins both up from the speed control; again turns both off")
-    void rightBumperToggles() {
+    @DisplayName("SetSpinning(true), as START does: both get power from the speed control; false: both off")
+    void spinningFromStart() {
         spinsAt(pollen, 900);
-        tap(down -> gamepad.right_bumper = down);
+        launcher.SetSpinning(true);
         assertTrue(launcher.IsSpinning());
         launcher.Update(UPDATE_SECONDS);
         double expected = properties.launcherKF * 1000 + properties.launcherKP * 100
@@ -251,10 +251,21 @@ class LauncherTest {
         assertEquals(Math.min(expected, 1), pollen.power, EPS);
         assertTrue(nectar.power > 0);
 
-        tap(down -> gamepad.right_bumper = down);
+        launcher.SetSpinning(false);
         launcher.Update(UPDATE_SECONDS);
         assertEquals(0, pollen.power, EPS);
         assertEquals(0, nectar.power, EPS);
+    }
+
+    @Test
+    @DisplayName("no button turns the launchers off: the right bumper does nothing now")
+    void noOffButton() {
+        launcher.SetSpinning(true);
+        tap(down -> gamepad.right_bumper = down);
+        assertTrue(launcher.IsSpinning());
+        spinsAt(pollen, 900);
+        launcher.Update(UPDATE_SECONDS);
+        assertTrue(pollen.power > 0);
     }
 
     @Test

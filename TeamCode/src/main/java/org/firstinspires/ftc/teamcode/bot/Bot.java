@@ -75,8 +75,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
  *   <li><b>Gamepad 1, driver</b>: sticks drive (field-centric), left bumper slow, right
  *       bumper aim, RIGHT TRIGGER (hold) opens the launch gates, then runs the intake and
  *       transfer to push balls in. Left trigger (hold) is drift assist.
- *   <li><b>Gamepad 2, operator</b>: right bumper turns the launchers off / on (they spin
- *       from START), D-pad trims their speeds (pollen follows the tag's distance), cross
+ *   <li><b>Gamepad 2, operator</b>: the launchers spin from START to the end with no
+ *       button, D-pad trims their speeds (pollen follows the tag's distance), cross
  *       runs the intake and transfer (on / off),
  *       left trigger (hold) runs them while held, square (hold) runs them backward, slowly,
  *       triangle (hold) deploys the flower extractor.

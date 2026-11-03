@@ -11,12 +11,14 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
 /**
  * The two launcher wheels, pollen and nectar, each held at its own target speed.
  *
- * <p>The launchers spin from START: HyDrive and the autos call {@code Bot.SpinLaunchers(true)}
- * the moment START is pressed, so the first shot is ready (coach, 2026-11-02).
+ * <p>The launchers spin from START to the end: HyDrive and the autos call
+ * {@code Bot.SpinLaunchers(true)} the moment START is pressed, so the first shot is ready,
+ * and there is no button to turn them off (coach, 2026-11-02 and 2026-11-03). A launcher
+ * stopped for spinning the wrong way (docs/decisions/0029) therefore stays stopped until
+ * the OpMode is restarted.
  *
  * <p>Controls (operator, gamepad 2):
  * <ul>
- *   <li><b>Right bumper</b>: both launchers off. Press again: both back on.
  *   <li><b>D-pad up / down</b>: pollen launcher 50 RPM faster / slower. With range tuning
  *       on (below) this trims the distance table instead, by the same 50.
  *   <li><b>D-pad right / left</b>: nectar launcher target up / down 50 RPM.
@@ -44,7 +46,6 @@ public class Launcher implements Subsystem {
     private final Vision mVision;
     private final LauncherWheel mPollen;
     private final LauncherWheel mNectar;
-    private final Debouncer mSpinButton;
     private final Debouncer mPollenFasterButton;
     private final Debouncer mPollenSlowerButton;
     private final Debouncer mNectarFasterButton;
@@ -71,7 +72,6 @@ public class Launcher implements Subsystem {
         mNectar = new LauncherWheel("Nectar launcher", op, properties, properties.cfgLaunchNectar,
                 LauncherWheel.Direction(properties.nectarLauncherReversed));
 
-        mSpinButton = new Debouncer(properties.debounce);
         mPollenFasterButton = new Debouncer(properties.debounce);
         mPollenSlowerButton = new Debouncer(properties.debounce);
         mNectarFasterButton = new Debouncer(properties.debounce);
@@ -87,12 +87,9 @@ public class Launcher implements Subsystem {
 
     @Override
     public void HandleUserInput() {
-        // Each press counts once, however long it is held.
-        if (Pressed(mSpinButton, mGamepad.right_bumper)) {
-            SetSpinning(!mSpinning);
-        }
-        // With range tuning on, up / down nudge the whole distance table; the table then sets
-        // the target. Off, they set the target itself.
+        // Each press counts once, however long it is held. With range tuning on, up / down
+        // nudge the whole distance table; the table then sets the target. Off, they set the
+        // target itself.
         if (Pressed(mPollenFasterButton, mGamepad.dpad_up)) {
             if (mProperties.launcherRangeTuning) {
                 mProperties.launcherRangeTrimRpm = mProperties.launcherRangeTrimRpm + mProperties.launcherRpmStep;
@@ -188,7 +185,10 @@ public class Launcher implements Subsystem {
         mNectar.Update(mProperties.nectarLauncherRpm, secondsPassed);
     }
 
-    /** true: both wheels spin at their targets. false: both off. An auto calls this too. */
+    /**
+     * true: both wheels spin at their targets. false: both off. HyDrive and the autos call
+     * this with true at START. Nothing on a gamepad calls it with false.
+     */
     public void SetSpinning(boolean spinning) {
         mSpinning = spinning;
         mPollen.SetOn(spinning);
@@ -244,7 +244,7 @@ public class Launcher implements Subsystem {
     }
 
     private void ShowStatus() {
-        mOp.mTelemetry.addLine("Launchers (gamepad 2): right bumper off / on, D-pad up/down pollen, right/left nectar");
+        mOp.mTelemetry.addLine("Launchers (gamepad 2): always on from START. D-pad up/down pollen, right/left nectar");
         mOp.mTelemetry.addData("Launcher speed from distance", mRangeStatus);
         mPollen.ShowStatus();
         mNectar.ShowStatus();

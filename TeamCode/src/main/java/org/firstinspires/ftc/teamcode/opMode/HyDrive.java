@@ -22,10 +22,10 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * <p>Gamepad 1, driver: sticks drive, left bumper (hold) slow, left trigger (hold) drift
  * assist, right bumper (hold) aims at our hive, <b>right trigger (hold) launches</b>: the
  * gates open, then the intake and transfer push the balls in.
- * <br>Gamepad 2, operator: right bumper turns the launchers off / on, D-pad up/down pollen
- * speed, right/left nectar speed, cross runs the intake and transfer (on / off), <b>left
- * trigger (hold)</b> runs them while held, <b>square (hold)</b> runs them backward, slowly,
- * to spit out extra balls. See docs/decisions/0023 and 0032.
+ * <br>Gamepad 2, operator: the launchers are always on, D-pad up/down pollen speed,
+ * right/left nectar speed, cross runs the intake and transfer (on / off), <b>left trigger
+ * (hold)</b> runs them while held, <b>square (hold)</b> runs them backward, slowly, to spit
+ * out extra balls. See docs/decisions/0023 and 0032.
  */
 @TeleOp(name = "HyDrive")
 public class HyDrive extends LinearOpMode {
@@ -46,7 +46,7 @@ public class HyDrive extends LinearOpMode {
         }
 
         // START was pressed. Spin the launchers up right away, so the first shot is ready.
-        // The operator's right bumper turns them off and on again.
+        // They stay on until STOP: no button turns them off.
         bot.SpinLaunchers(true);
 
         // This loop runs about 50 times a second until STOP.
