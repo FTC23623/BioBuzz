@@ -292,4 +292,110 @@ class IntakeTest {
         loop();
         assertEquals(-TicksPerSecond(properties.transferReverseRpm), transfer.velocity, EPS);
     }
+
+    // ---- Auto-reject an extra ball (0040) ----
+
+    /** Rollers built with a pretend pollen sensor. */
+    private Intake withPollen(PollenSensor pollen) {
+        HardwareMap hardwareMap = mock(HardwareMap.class);
+        when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgIntake)).thenReturn(intake.motor);
+        when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgTransfer)).thenReturn(transfer.motor);
+        HydraOpMode op = new HydraOpMode(mock(Telemetry.class), hardwareMap, mock(Gamepad.class), gamepad);
+        return new Intake(op, properties, gamepad, gates, pollen);
+    }
+
+    private void loop(Intake r) {
+        r.HandleUserInput();
+        r.Process();
+    }
+
+    @Test
+    @DisplayName("intaking and pollen stays detected: the intake runs backward, the transfer keeps going up")
+    void rejectsAnExtraBall() {
+        properties.pollenRejectAfterSeconds = 0;
+        properties.pollenRejectSeconds = 60;
+        PollenSensor pollen = mock(PollenSensor.class);
+        when(pollen.IsDetected()).thenReturn(true);
+        Intake r = withPollen(pollen);
+        gamepad.left_trigger = 1;
+        loop(r);
+        assertTrue(r.IsRejecting());
+        assertEquals(-TicksPerSecond(properties.intakeReverseRpm), intake.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("after the reject: both stop until the operator lets go, then work again")
+    void blockedUntilReleased() {
+        properties.pollenRejectAfterSeconds = 0;
+        properties.pollenRejectSeconds = 0;
+        PollenSensor pollen = mock(PollenSensor.class);
+        when(pollen.IsDetected()).thenReturn(true);
+        Intake r = withPollen(pollen);
+        gamepad.left_trigger = 1;
+        loop(r);   // reject starts
+        loop(r);   // reject over: stopped, trigger still held
+        loop(r);
+        assertFalse(r.IsRunning());
+        assertEquals(0, intake.power, EPS);
+        assertEquals(0, transfer.power, EPS);
+
+        when(pollen.IsDetected()).thenReturn(false);
+        gamepad.left_trigger = 0;
+        loop(r);   // let go: the block lifts
+        gamepad.left_trigger = 1;
+        loop(r);
+        assertTrue(r.IsRunning());
+        assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("the bumper toggle is turned off by a reject, and a press while blocked does nothing")
+    void rejectTurnsTheToggleOff() {
+        properties.pollenRejectAfterSeconds = 0;
+        properties.pollenRejectSeconds = 0;
+        PollenSensor pollen = mock(PollenSensor.class);
+        Intake r = withPollen(pollen);
+        r.SetOn(true);
+        when(pollen.IsDetected()).thenReturn(true);
+        loop(r);
+        loop(r);
+        assertFalse(r.IsOn());
+        assertFalse(r.IsRunning());
+    }
+
+    @Test
+    @DisplayName("pollen for less than the wait: no reject")
+    void briefPollenIsNotAReject() {
+        properties.pollenRejectAfterSeconds = 60;
+        PollenSensor pollen = mock(PollenSensor.class);
+        when(pollen.IsDetected()).thenReturn(true);
+        Intake r = withPollen(pollen);
+        gamepad.left_trigger = 1;
+        loop(r);
+        loop(r);
+        assertFalse(r.IsRejecting());
+        assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("not intaking, or launching, or switched off: pollen never starts a reject")
+    void rejectOnlyWhileIntaking() {
+        properties.pollenRejectAfterSeconds = 0;
+        PollenSensor pollen = mock(PollenSensor.class);
+        when(pollen.IsDetected()).thenReturn(true);
+        Intake r = withPollen(pollen);
+        loop(r);   // rollers off
+        assertFalse(r.IsRejecting());
+
+        when(gates.IsFullyOpen()).thenReturn(true);   // launching: balls pass the switch on purpose
+        gamepad.left_trigger = 1;
+        loop(r);
+        assertFalse(r.IsRejecting());
+
+        when(gates.IsFullyOpen()).thenReturn(false);
+        properties.pollenAutoReject = false;
+        loop(r);
+        assertFalse(r.IsRejecting());
+    }
 }

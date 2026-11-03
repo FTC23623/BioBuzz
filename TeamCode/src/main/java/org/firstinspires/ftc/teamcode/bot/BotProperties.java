@@ -306,6 +306,16 @@ public class BotProperties {
     public double intakeReverseRpm = 400;
     /** Transfer speed while gamepad 2 holds square, carrying balls back down. A plus number. */
     public double transferReverseRpm = 400;
+    // Auto-reject (docs/decisions/0040): the pollen switch sits where a ball only waits once
+    // the robot is full. If the operator is intaking and pollen stays detected that long, the
+    // intake spits the extra ball back out while the transfer keeps the rest moving up. Then
+    // the operator's intake and transfer stop until both their buttons are let go.
+    /** true: reject an extra ball by itself. false: the operator watches for it. */
+    public boolean pollenAutoReject = true;
+    /** Pollen must stay detected this long while intaking, in seconds, before a reject. */
+    public double pollenRejectAfterSeconds = 0.2;
+    /** How long the intake runs backward (transfer forward) to spit the ball out, in seconds. */
+    public double pollenRejectSeconds = 0.5;
     /** How much one D-pad press changes a roller's speed in Test: Motor Tuning. Same as the launchers'. */
     public double intakeRpmStep = 50;
     /** The intake and transfer target speed never goes above this: the motors' top speed. */

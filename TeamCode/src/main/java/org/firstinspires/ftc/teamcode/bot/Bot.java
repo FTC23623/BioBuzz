@@ -198,12 +198,21 @@ public class Bot {
         if (!mProperties.flowerExtractorDisabled) {
             mSystems.add(new FlowerExtractor(mOp, mProperties, mOp.mOperatorGamepad));
         }
+        // The pollen sensor: the intake rejects extra balls with it, the strip turns yellow
+        // with it. Built once if either needs it. A robot without the switch reads "no pollen".
+        PollenSensor pollenSensor = null;
+        if (!mProperties.intakeDisabled || !mProperties.stripDisabled) {
+            pollenSensor = new PollenSensor(mOp, mProperties);
+            mSystems.add(pollenSensor);
+        }
+
         // The intake is handed the gates: once they are open, both rollers push balls in.
         // With the gates switched off it gets null, and the transfer just never does that.
+        // It also gets the pollen sensor, to spit out an extra ball (0040).
         if (mProperties.intakeDisabled) {
             mIntake = null;
         } else {
-            mIntake = new Intake(mOp, mProperties, mOp.mOperatorGamepad, mLaunchGates);
+            mIntake = new Intake(mOp, mProperties, mOp.mOperatorGamepad, mLaunchGates, pollenSensor);
             mSystems.add(mIntake);
         }
 
@@ -226,8 +235,6 @@ public class Bot {
             mLightStrip = null;
         } else {
             // The strip turns LEDs yellow while the pollen sensor is pressed.
-            PollenSensor pollenSensor = new PollenSensor(mOp, mProperties);
-            mSystems.add(pollenSensor);
             mLightStrip = new LightStrip(mOp, mProperties, pollenSensor);
             mSystems.add(mLightStrip);
         }

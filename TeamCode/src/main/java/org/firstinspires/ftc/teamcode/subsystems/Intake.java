@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
@@ -32,6 +33,13 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * about the launcher, not the operator (docs/decisions/0037). Square still wins over both:
  * reverse is for jams.
  *
+ * <p><b>Auto-reject</b> (docs/decisions/0040): the pollen switch only sees a ball once the
+ * robot is full. While the operator is intaking, pollen detected for
+ * {@code pollenRejectAfterSeconds} (0.2 s) means one ball too many: the intake runs backward
+ * to spit it out while the transfer keeps the rest moving up, for {@code pollenRejectSeconds}
+ * (0.5 s). Then the operator's intake and transfer stop, and stay stopped until the left
+ * bumper and the left trigger are both let go. Launching and square are never interrupted.
+ *
  * <p>Each roller has its own speed in BotProperties: {@code intakeRpm}, {@code transferRpm},
  * and the backward ones {@code intakeReverseRpm}, {@code transferReverseRpm}. They are read
  * every loop, so a change on the dashboard counts right away. See docs/decisions/0023.
@@ -49,13 +57,33 @@ public class Intake implements Subsystem {
     private boolean mOn = false;
     private boolean mTriggerHeld = false;
     private boolean mReverseHeld = false;
+    private boolean mBumperHeld = false;
+
+    /** null when there is no pollen sensor: then nothing is ever rejected. */
+    private final PollenSensor mPollenSensor;
+    /** true while pollen has been detected, without a break, during intaking. */
+    private boolean mPollenSeen = false;
+    private final ElapsedTime mPollenSince = new ElapsedTime();
+    /** true while the intake is spitting an extra ball out. */
+    private boolean mRejecting = false;
+    private final ElapsedTime mRejectTimer = new ElapsedTime();
+    /** true after a reject, until the operator lets go of both intake buttons. */
+    private boolean mBlocked = false;
+
+    /** No pollen sensor: never rejects. Tests and robots without the switch use this. */
+    public Intake(HydraOpMode op, BotProperties properties, Gamepad gamepad, LaunchGates launchGates) {
+        this(op, properties, gamepad, launchGates, null);
+    }
 
     /**
-     * @param launchGates the launch gates, so the transfer can feed the launchers while they
-     *                    are open. null when there are none.
+     * @param launchGates  the launch gates, so the transfer can feed the launchers while they
+     *                     are open. null when there are none.
+     * @param pollenSensor the pollen switch, to reject an extra ball. null when there is none.
      */
-    public Intake(HydraOpMode op, BotProperties properties, Gamepad gamepad, LaunchGates launchGates) {
+    public Intake(HydraOpMode op, BotProperties properties, Gamepad gamepad, LaunchGates launchGates,
+                  PollenSensor pollenSensor) {
         mOp = op;
+        mPollenSensor = pollenSensor;
         mProperties = properties;
         mGamepad = gamepad;
         mLaunchGates = launchGates;
@@ -72,10 +100,14 @@ public class Intake implements Subsystem {
 
     @Override
     public void HandleUserInput() {
-        mOnOffButton.In(mGamepad.left_bumper);
+        mBumperHeld = mGamepad.left_bumper;
+        mOnOffButton.In(mBumperHeld);
         if (mOnOffButton.Out()) {
             mOnOffButton.Used();
-            mOn = !mOn;
+            // After a reject the bumper does nothing until it has been let go.
+            if (!mBlocked) {
+                mOn = !mOn;
+            }
         }
         // Held triggers need no debounce: on the moment it is pulled, off when let go.
         mTriggerHeld = mGamepad.left_trigger > mProperties.trgBtnThresh;
@@ -85,6 +117,7 @@ public class Intake implements Subsystem {
 
     @Override
     public void Process() {
+        WatchForAnExtraBall();
         if (mReverseHeld) {
             mIntake.SetRpm(-mProperties.intakeReverseRpm);
             mTransfer.SetRpm(-mProperties.transferReverseRpm);
@@ -103,6 +136,10 @@ public class Intake implements Subsystem {
             // steady rate. The transfer feeds, the intake pushes up any ball stuck below it.
             mIntake.SetRpm(mProperties.intakeRpm * mProperties.launchFeedIntakeScale);
             mTransfer.SetRpm(mProperties.transferRpm * mProperties.launchFeedTransferScale);
+        } else if (mRejecting) {
+            // One ball too many: spit it out the bottom, keep the rest moving up.
+            mIntake.SetRpm(-mProperties.intakeReverseRpm);
+            mTransfer.SetRpm(mProperties.transferRpm);
         } else if (IsRunning()) {
             // Intaking on purpose (cross or the left trigger): full speed.
             mIntake.SetRpm(mProperties.intakeRpm);
@@ -114,9 +151,49 @@ public class Intake implements Subsystem {
         ShowStatus();
     }
 
-    /** true when the left bumper has them on, or the left trigger is held. */
+    /**
+     * Auto-reject: count how long pollen has been detected while intaking, start a reject
+     * past pollenRejectAfterSeconds, end it after pollenRejectSeconds, and lift the block
+     * once the operator lets go of both intake buttons.
+     */
+    private void WatchForAnExtraBall() {
+        if (mRejecting && mRejectTimer.seconds() >= mProperties.pollenRejectSeconds) {
+            mRejecting = false;
+            mOn = false;
+            mBlocked = true;
+        }
+        if (mBlocked && !mBumperHeld && !mTriggerHeld) {
+            mBlocked = false;
+        }
+        boolean intakingOnPurpose = IsRunning() && !mReverseHeld && !IsLaunching() && !IsGateOpening();
+        boolean watching = mProperties.pollenAutoReject && mPollenSensor != null && !mRejecting
+                && intakingOnPurpose;
+        if (!watching || !mPollenSensor.IsDetected()) {
+            mPollenSeen = false;
+            return;
+        }
+        if (!mPollenSeen) {
+            mPollenSeen = true;
+            mPollenSince.reset();
+        }
+        if (mPollenSince.seconds() >= mProperties.pollenRejectAfterSeconds) {
+            mPollenSeen = false;
+            mRejecting = true;
+            mRejectTimer.reset();
+        }
+    }
+
+    /**
+     * true when the left bumper has them on, or the left trigger is held, and no reject has
+     * stopped them (they stay stopped until both buttons are let go).
+     */
     public boolean IsRunning() {
-        return mOn || mTriggerHeld;
+        return (mOn || mTriggerHeld) && !mBlocked;
+    }
+
+    /** true while the intake is spitting an extra ball out. */
+    public boolean IsRejecting() {
+        return mRejecting;
     }
 
     /** true once the launch gates are all the way open, so balls can go through. */
@@ -152,6 +229,10 @@ public class Intake implements Subsystem {
         } else if (IsLaunching()) {
             state = String.format("feeding the launch: intake %.0f%%, transfer %.0f%%",
                     mProperties.launchFeedIntakeScale * 100, mProperties.launchFeedTransferScale * 100);
+        } else if (mRejecting) {
+            state = "FULL: spitting an extra ball out";
+        } else if (mBlocked) {
+            state = "STOPPED after a reject: let go of left bumper and left trigger";
         } else if (IsRunning()) {
             state = "ON, full speed";
         }
