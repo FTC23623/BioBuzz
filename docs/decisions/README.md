@@ -46,6 +46,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0037](0037-rollers-are-1150-rpm-motors-half-speed-launch-feed.md) | The intake and transfer are 1150 RPM motors (145.1 ticks per turn); a launch is fed at half speed | Accepted, ticks per turn is CHECK |
 | [0038](0038-launcher-speed-from-distance.md) | The pollen launcher's speed follows the distance to the tag, in 10-inch bands | Accepted, two rows measured |
 | [0039](0039-controls-update-aim-arc-launchers-always-on.md) | Controls update: aim and slow swap bumpers, the D-pad arcs around the hive, launchers always on, intake on the left bumper | Accepted, not driven yet |
+| [0040](0040-launch-lock-aim-only-on-button-auto-reject.md) | The launch needs a camera lock (operator R2 overrides); aim and tracking only while a button is down; an extra ball is spat out; slow at half | Accepted, not driven yet |
 
 ## TODO: confirm on the robot after this week's tuning
 
@@ -75,6 +76,7 @@ own CHECK section has the detail.
 - [ ] **0037** Test: Motor Tuning, intake target 1150: actual reads about 1150 at power near 1 (`intakeTicksPerRev` 145.1). A launch feeds both rollers at half.
 - [ ] **0038** Shoot from 110, 120, 130 and 140 in and fill the rows of `launchRpmByRangeIn`. A trim that held all day goes into the rows.
 - [ ] **0039** Right bumper aims, left bumper slows. Right bumper plus D-pad left or right: the robot circles the hive keeping its distance (the `Arc` line shows holding and now). Gamepad 2 left bumper toggles the rollers; its right bumper and cross do nothing.
+- [ ] **0040** Trigger with no tag: shut and gamepad 1 buzzes; gamepad 2 R2 overrides. Nothing pressed: no turning, `Aim assist: off`. A fifth ball is spat out and the rollers stop until gamepad 2 lets go. Transfer feeds at 30%. Slow is half speed.
 
 ## Template
 
