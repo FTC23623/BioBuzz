@@ -5,19 +5,32 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.pedropathing.follower.Follower;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
+import org.firstinspires.ftc.teamcode.objects.DashboardTuning;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
+import org.firstinspires.ftc.teamcode.subsystems.AllianceSensor;
 import org.firstinspires.ftc.teamcode.subsystems.Drive_Manual;
+import org.firstinspires.ftc.teamcode.subsystems.FlowerExtractor;
+import org.firstinspires.ftc.teamcode.subsystems.Headlight;
 import org.firstinspires.ftc.teamcode.subsystems.Imu;
 import org.firstinspires.ftc.teamcode.subsystems.Indicator;
 import org.firstinspires.ftc.teamcode.subsystems.ImuSelector;
+import org.firstinspires.ftc.teamcode.subsystems.Intake;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchGates;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchServoTuner;
 import org.firstinspires.ftc.teamcode.subsystems.Launcher;
 import org.firstinspires.ftc.teamcode.subsystems.LightStrip;
+import org.firstinspires.ftc.teamcode.subsystems.MotorTuner;
+import org.firstinspires.ftc.teamcode.subsystems.PollenSensor;
+import org.firstinspires.ftc.teamcode.subsystems.PoseRecorder;
 import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSelector;
@@ -54,8 +67,20 @@ import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
  * <p>To leave a part of the robot out of one OpMode, switch it off in
  * {@link BotProperties} before building the Bot. See docs/decisions/0010.
  *
- * <p>Hold the left bumper in TeleOp and the drive turns to face the nearest AprilTag the
- * camera can see. Which camera is decided from the robot configuration, like the heading.
+ * <p>Hold the left bumper in TeleOp and the drive turns to face the nearest AprilTag of our
+ * hive. Which camera is decided from the robot configuration, like the heading.
+ *
+ * <p><b>Who drives what in TeleOp</b> (docs/decisions/0023):
+ * <ul>
+ *   <li><b>Gamepad 1, driver</b>: sticks drive (field-centric), right bumper slow, left
+ *       bumper aim, RIGHT TRIGGER (hold) opens the launch gates, then runs the intake and
+ *       transfer to push balls in. Left trigger (hold) is drift assist.
+ *   <li><b>Gamepad 2, operator</b>: right bumper turns the launchers off / on (they spin
+ *       from START), D-pad trims their speeds (pollen follows the tag's distance), cross
+ *       runs the intake and transfer (on / off),
+ *       left trigger (hold) runs them while held, square (hold) runs them backward, slowly,
+ *       triangle (hold) deploys the flower extractor.
+ * </ul>
  *
  * <p><b>Adding a new part</b> (an intake, say): write its {@link Subsystem} class, give it
  * a "disabled" setting in BotProperties, and build it in the constructor below the same
@@ -69,14 +94,39 @@ public class Bot {
     private final List<Subsystem> mSystems = new ArrayList<>();
     private final List<LynxModule> mAllHubs;
     private final ElapsedTime mLoopTimer;
+    /** The hubs' battery readers. Empty in unit tests. */
+    private final List<VoltageSensor> mBatterySensors;
+    private final ElapsedTime mBatteryTimer;
+    private double mBatteryVolts = 0;
 
     // The parts of the robot. A part that is disabled in BotProperties stays null.
     private final SafeModeKey mSafeModeKey;
+    private final AllianceSensor mAllianceSensor;
     private final Vision mVision;
     private final Imu mImu;
     private final Launcher mLauncher;
+    private final Intake mIntake;
+    private final LaunchGates mLaunchGates;
     private final Indicator mIndicator;
     private final LightStrip mLightStrip;
+
+    /**
+     * The settings that show on FTC Dashboard's Config tab, to change while the robot runs
+     * (docs/decisions/0022). Each list is one group on the dashboard. To add a setting, add
+     * its name from BotProperties here. Changes there are lost at STOP: write the winner
+     * into BotProperties.
+     */
+    static final String[] LiveTuningDrive = {
+            "driveNormal", "driveSlow", "driveStrafeGain", "driveMotorSlewRate",
+            "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
+            "aimKP", "aimMaxRotate", "aimDoneDegrees"};
+    static final String[] LiveTuningLauncher = {
+            "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm", "launcherKF", "launcherKP", "launcherKI",
+            "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
+            "launchServoSecondsPer60Deg", "launchServoExtraSeconds"};
+    static final String[] LiveTuningIntake = {
+            "intakeRpm", "transferRpm", "launchFeedScale", "intakeReverseRpm", "transferReverseRpm",
+            "rollerKP", "rollerKI", "rollerKD", "rollerKF"};
 
     /**
      * Build the robot. Nothing moves.
@@ -87,13 +137,25 @@ public class Bot {
     public Bot(LinearOpMode opMode, BotProperties properties) {
         mLinearOpMode = opMode;
         mProperties = properties;
-        Telemetry telemetry = WithDashboard(opMode.telemetry);
+        Telemetry telemetry = opMode.telemetry;
+        // At an event, nothing goes to the dashboard (rule R704.D, docs/decisions/0022).
+        if (!BotProperties.competitionMode) {
+            telemetry = WithDashboard(opMode.telemetry);
+            DashboardTuning.Show("Drive", mProperties, LiveTuningDrive);
+            DashboardTuning.Show("Launcher", mProperties, LiveTuningLauncher);
+            DashboardTuning.Show("Intake", mProperties, LiveTuningIntake);
+        }
         mOp = new HydraOpMode(telemetry, opMode.hardwareMap, opMode.gamepad1, opMode.gamepad2);
 
         // The Safe Mode key is checked here, one time, before any other part is built. No
         // OpMode can forget it, and it is never read again (docs/decisions/0007).
         mSafeModeKey = new SafeModeKey(mOp, mProperties);
         mSystems.add(mSafeModeKey);
+
+        // The alliance next: the camera needs it to know which hive's tags are ours
+        // (docs/decisions/0021).
+        mAllianceSensor = new AllianceSensor(mOp, mProperties);
+        mSystems.add(mAllianceSensor);
 
         // The camera goes before the drive in the list, so each loop the drive aims at what
         // the camera saw this loop, not last loop.
@@ -113,12 +175,33 @@ public class Bot {
             mSystems.add(new Drive_Manual(mOp, mProperties, mImu, mVision));
         }
 
+        // The operator (gamepad 2) runs the launchers and the intake. The driver (gamepad 1)
+        // opens the launch gates, so the one who aims is the one who shoots (0023).
         if (mProperties.launcherDisabled) {
             mLauncher = null;
         } else {
-            // The launcher's controls are on gamepad 1 for now (docs/decisions/0009).
-            mLauncher = new Launcher(mOp, mProperties, mOp.mDriverGamepad);
+            // The launcher gets the camera: the pollen wheel's speed follows the distance to the tag.
+            mLauncher = new Launcher(mOp, mProperties, mOp.mOperatorGamepad, mVision);
             mSystems.add(mLauncher);
+        }
+        if (mProperties.launchGatesDisabled) {
+            mLaunchGates = null;
+        } else {
+            // The gates get the camera, so each launch notes how far the tag was.
+            mLaunchGates = new LaunchGates(mOp, mProperties, mOp.mDriverGamepad, mVision);
+            mSystems.add(mLaunchGates);
+        }
+        // The flower extractor is the operator's too: hold triangle and it swings out.
+        if (!mProperties.flowerExtractorDisabled) {
+            mSystems.add(new FlowerExtractor(mOp, mProperties, mOp.mOperatorGamepad));
+        }
+        // The intake is handed the gates: once they are open, both rollers push balls in.
+        // With the gates switched off it gets null, and the transfer just never does that.
+        if (mProperties.intakeDisabled) {
+            mIntake = null;
+        } else {
+            mIntake = new Intake(mOp, mProperties, mOp.mOperatorGamepad, mLaunchGates);
+            mSystems.add(mIntake);
         }
 
         // The light shows what the camera sees, so it goes after the camera in the list.
@@ -129,12 +212,37 @@ public class Bot {
             mSystems.add(mIndicator);
         }
 
+        // The headlight helps the camera, so it turns on at INIT with everything else.
+        if (!mProperties.headlightDisabled) {
+            mSystems.add(new Headlight(mOp, mProperties));
+        }
+
         // The LED strip's demo controls are on gamepad 1's D-pad, which nothing else uses.
         if (mProperties.stripDisabled) {
             mLightStrip = null;
         } else {
-            mLightStrip = new LightStrip(mOp, mProperties, mOp.mDriverGamepad);
+            // The strip turns LEDs yellow while the pollen sensor is pressed.
+            PollenSensor pollenSensor = new PollenSensor(mOp, mProperties);
+            mSystems.add(pollenSensor);
+            mLightStrip = new LightStrip(mOp, mProperties, mOp.mDriverGamepad, pollenSensor);
             mSystems.add(mLightStrip);
+        }
+
+        // The motor tuner shares the launcher's motor and the strip's D-pad. Only
+        // Test: Motor Tuning turns it on, with those two off.
+        if (!mProperties.motorTunerDisabled) {
+            mSystems.add(new MotorTuner(mOp, mProperties, mOp.mDriverGamepad));
+        }
+        // Same D-pad again. Only Test: Launch Servo Tuning turns it on.
+        if (!mProperties.launchServoTunerDisabled) {
+            mSystems.add(new LaunchServoTuner(mOp, mProperties, mOp.mDriverGamepad));
+        }
+        // Gamepad 1's face buttons. Only Tool: Pose Recorder turns it on. It reads where the
+        // robot is the same way Pedro does, so the spots it saves match the autos' (0024).
+        if (!mProperties.poseRecorderDisabled) {
+            File folder = new File(AppUtil.FIRST_FOLDER, "recordings");
+            mSystems.add(new PoseRecorder(mOp, mProperties, mOp.mDriverGamepad,
+                    PedroConstants.CreateLocalizer(mOp.mHardwareMap, mProperties), folder));
         }
 
         // Read every hub's sensors in one trip per loop instead of one trip per sensor.
@@ -145,6 +253,27 @@ public class Bot {
         }
 
         mLoopTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        mBatterySensors = mOp.mHardwareMap.getAll(VoltageSensor.class);
+        mBatteryTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        ReadBattery();
+    }
+
+    /**
+     * Read the battery voltage. With two hubs there are two readings of the same battery;
+     * the lowest one is shown, since a sagging battery is what we want to see.
+     */
+    private void ReadBattery() {
+        double lowest = Double.MAX_VALUE;
+        for (VoltageSensor sensor : mBatterySensors) {
+            double volts = sensor.getVoltage();
+            if (volts > 0 && volts < lowest) {
+                lowest = volts;
+            }
+        }
+        if (lowest != Double.MAX_VALUE) {
+            mBatteryVolts = lowest;
+        }
+        mBatteryTimer.reset();
     }
 
     /**
@@ -185,8 +314,11 @@ public class Bot {
      * START, so the drive team can check the robot before the match.
      */
     public void ShowStatus() {
+        ShowCompetitionStatus();
         // The key was checked once, when the Bot was built. This only shows the answer.
         mSafeModeKey.ShowStatus();
+        // The alliance is read again every loop until START, so the magnet can be moved.
+        mAllianceSensor.ShowStatus();
 
         if (mProperties.driveDisabled) {
             mOp.mTelemetry.addLine("Driver control: OFF in this OpMode");
@@ -198,9 +330,19 @@ public class Bot {
         }
 
         if (mProperties.launcherDisabled) {
-            mOp.mTelemetry.addLine("Launcher: OFF in this OpMode");
+            mOp.mTelemetry.addLine("Launchers: OFF in this OpMode");
         } else {
-            mOp.mTelemetry.addData("Launcher target RPM", "%.0f", mLauncher.GetTargetRpm());
+            mOp.mTelemetry.addData("Launcher target RPM (pollen / nectar)", "%.0f / %.0f",
+                    mLauncher.GetPollenTargetRpm(), mLauncher.GetNectarTargetRpm());
+        }
+        if (mProperties.intakeDisabled) {
+            mOp.mTelemetry.addLine("Intake and transfer: OFF in this OpMode");
+        }
+        if (mProperties.launchGatesDisabled) {
+            mOp.mTelemetry.addLine("Launch gates: OFF in this OpMode");
+        }
+        if (mProperties.flowerExtractorDisabled) {
+            mOp.mTelemetry.addLine("Flower extractor: OFF in this OpMode");
         }
 
         if (mProperties.visionDisabled) {
@@ -210,12 +352,37 @@ public class Bot {
             mVision.Process();
         }
         if (mIndicator != null) {
-            // The light follows the camera before START too.
+            // The light follows the camera before START too, so the drive team can point the
+            // robot at our tags and see that it picks them up (blinking red = wrong alliance).
             mIndicator.Process();
         }
         if (mLightStrip != null) {
             mLightStrip.ShowStatus();
         }
+    }
+
+    /**
+     * Competition or practice, said at the top of the Driver Station before every match.
+     * At an event the dashboard must be off (rule R704.D). The code stops sending to it, but
+     * the dashboard itself can only be switched off in the Robot Controller app's menu.
+     */
+    private void ShowCompetitionStatus() {
+        FtcDashboard dashboard = FtcDashboard.getInstance();
+        boolean dashboardOn = dashboard != null && dashboard.isEnabled();
+        mOp.mTelemetry.addLine(CompetitionStatus(BotProperties.competitionMode, dashboardOn));
+    }
+
+    /** The competition line for the Driver Station. No hardware, so a test can check it. */
+    static String CompetitionStatus(boolean competitionMode, boolean dashboardOn) {
+        if (!competitionMode) {
+            return "PRACTICE MODE: dashboard and live tuning on. Set competitionMode = true "
+                    + "in BotProperties before an event.";
+        }
+        if (dashboardOn) {
+            return "DASHBOARD IS STILL ON (rule R704.D). Robot Controller app: menu, "
+                    + "Disable Dashboard. Then INIT again.";
+        }
+        return "Competition mode: dashboard off.";
     }
 
     /** First line of every loop. Throws away last loop's sensor readings and times the loop. */
@@ -237,6 +404,11 @@ public class Bot {
     /** Every part does its work for one loop. TeleOp and Auto both call this each loop. */
     public void Process() {
         mOp.mTelemetry.addData("LoopTime", mOp.mLoopTime);
+        if (mBatteryTimer.milliseconds() >= mProperties.batteryReadMs) {
+            ReadBattery();
+        }
+        // Graph this while the launchers spin up: a weak battery dips here first.
+        mOp.mTelemetry.addData("Battery volts", "%.2f", mBatteryVolts);
         for (Subsystem system : mSystems) {
             system.Process();
         }
@@ -257,6 +429,62 @@ public class Bot {
             return;
         }
         mIndicator.SetLaunching(launching);
+    }
+
+    /**
+     * true: blink the indicator light orange, so the drive team can see the robot is waiting
+     * for a tag. false: turn it off. Does nothing with no light.
+     */
+    public void ShowWaitingForTag(boolean waiting) {
+        if (mIndicator == null) {
+            return;
+        }
+        mIndicator.SetWaitingForTag(waiting);
+    }
+
+    /** true: both launchers spin at their targets. false: off. Does nothing with no launcher. */
+    public void SpinLaunchers(boolean spin) {
+        if (mLauncher == null) {
+            return;
+        }
+        mLauncher.SetSpinning(spin);
+    }
+
+    /** true when both launchers are at speed. Always true with no launcher, so nothing waits on it. */
+    public boolean LaunchersAtSpeed() {
+        if (mLauncher == null) {
+            return true;
+        }
+        return mLauncher.AtSpeed();
+    }
+
+    /** true: open both launch gates (launch!). false: close them. Does nothing with no gates. */
+    public void OpenLaunchGates(boolean open) {
+        if (mLaunchGates == null) {
+            return;
+        }
+        mLaunchGates.SetOpen(open);
+    }
+
+    /** true: intake and transfer run forward. false: off. Does nothing with no intake. */
+    public void RunIntake(boolean run) {
+        if (mIntake == null) {
+            return;
+        }
+        mIntake.SetOn(run);
+    }
+
+    /** @return true when the camera sees one of our hive's AprilTags. Always false with vision switched off. */
+    public boolean SeesTag() {
+        return mVision.SeesTag();
+    }
+
+    /**
+     * @return degrees from straight ahead to the middle of the nearest tag's group (a hive's
+     *     tags). Left is positive. 0 with no tag.
+     */
+    public double GetTagGroupBearing() {
+        return mVision.GetGroupBearing();
     }
 
     /**

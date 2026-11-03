@@ -1,6 +1,6 @@
 # 0011: Aim assist: hold a button, the robot faces the nearest AprilTag
 
-Status: Accepted. Not yet tried on the robot. The turn direction must be checked first.
+Status: Accepted. Not yet tried on the robot. The turn direction must be checked first. Since 0036 aim assist faces the MIDDLE of the hive's tags, and the launch trigger aims too.
 Date: 2026-10-15
 
 ## Context

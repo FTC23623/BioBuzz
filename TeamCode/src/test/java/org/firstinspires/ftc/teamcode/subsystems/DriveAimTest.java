@@ -89,10 +89,45 @@ class DriveAimTest {
         return power.get(properties.cfgDriveBackRight)[0];
     }
 
+    /** A hive in view, its middle this many degrees left of center (the nearest tag may be elsewhere). */
     private void tagAt(double bearing) {
         when(vision.SeesTag()).thenReturn(true);
+        when(vision.GetGroupBearing()).thenReturn(bearing);
         when(vision.GetBearing()).thenReturn(bearing);
         when(vision.GetTagId()).thenReturn(21);
+    }
+
+    @Test
+    @DisplayName("aims at the MIDDLE of the hive's tags, not the nearest tag")
+    void aimsAtTheGroupMiddle() {
+        when(vision.SeesTag()).thenReturn(true);
+        when(vision.GetBearing()).thenReturn(20.0);          // nearest tag is to the left...
+        when(vision.GetGroupBearing()).thenReturn(-20.0);    // ...but the hive's middle is to the right
+        gamepad.left_bumper = true;
+        runLoops();
+        assertEquals(-0.4, frontLeft(), EPS);   // turns right
+        assertEquals(0.4, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch trigger held: the robot snaps to the hive too, like an auto")
+    void launchTriggerAims() {
+        tagAt(20);
+        gamepad.right_trigger = 1;
+        runLoops();
+        assertEquals(0.4, frontLeft(), EPS);
+        assertEquals(-0.4, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("launchTriggerAims off: the trigger only launches, the robot stays still")
+    void launchTriggerAimOff() {
+        properties.launchTriggerAims = false;
+        tagAt(20);
+        gamepad.right_trigger = 1;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
     }
 
     @Test

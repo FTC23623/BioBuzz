@@ -8,6 +8,7 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -42,9 +43,15 @@ public class Vision_Webcam implements Vision {
     /** Every tag in the newest picture, so the Driver Station can list them. */
     private List<AprilTagDetection> mInView = new ArrayList<>();
     private int mCount = 0;
+    /** Tags in the picture that are not our hive's, so they were ignored. */
+    private int mIgnored = 0;
+    /** Their ids, so the Driver Station can say which tag the camera DID see. */
+    private List<Integer> mIgnoredIds = new ArrayList<>();
     private int mTagId = 0;
     private String mTagName = "";
     private double mBearing = 0;
+    /** Degrees to the middle of the nearest tag's group. */
+    private double mGroupBearing = 0;
     private double mRange = 0;
     private double mElevation = 0;
     private double mYaw = 0;
@@ -61,8 +68,9 @@ public class Vision_Webcam implements Vision {
                 .addProcessor(mAprilTag)
                 .build();
         // Show the camera's picture on the FTC Dashboard too, while it is running (0012).
+        // Never at an event: rule R704.D bans streaming video to the dashboard (0022).
         FtcDashboard dashboard = FtcDashboard.getInstance();
-        if (dashboard != null) {
+        if (dashboard != null && !BotProperties.competitionMode) {
             dashboard.startCameraStream(mPortal, 15);
         }
         mSinceSeen = new ElapsedTime();
@@ -86,7 +94,22 @@ public class Vision_Webcam implements Vision {
     /** Take the newest detections and remember the nearest tag. */
     @Override
     public void Process() {
-        List<AprilTagDetection> detections = mAprilTag.getDetections();
+        // Only our hive's tags count (docs/decisions/0021). Drop the rest before anything looks.
+        List<AprilTagDetection> detections = new ArrayList<>();
+        int[] ourTags = mProperties.HiveTags(mOp.mAlliance);
+        mIgnored = 0;
+        mIgnoredIds = new ArrayList<>();
+        for (AprilTagDetection detection : mAprilTag.getDetections()) {
+            if (detection instanceof AprilTagSingleDetection
+                    && AimAssist.InRange(((AprilTagSingleDetection) detection).id, ourTags)) {
+                detections.add(detection);
+            } else {
+                mIgnored = mIgnored + 1;
+                if (detection instanceof AprilTagSingleDetection) {
+                    mIgnoredIds.add(((AprilTagSingleDetection) detection).id);
+                }
+            }
+        }
         mInView = detections;
         mCount = detections.size();
         AprilTagSingleDetection nearest = Nearest(detections);
@@ -100,6 +123,16 @@ public class Vision_Webcam implements Vision {
             mRange = nearest.ftcPose.range;
             mElevation = nearest.ftcPose.elevation;
             mYaw = nearest.ftcPose.yaw;
+            List<Integer> ids = new ArrayList<>();
+            List<Double> bearings = new ArrayList<>();
+            for (AprilTagDetection detection : detections) {
+                // A tag with no pose has no bearing, so it can't be part of the average.
+                if (detection instanceof AprilTagSingleDetection && detection.ftcPose != null) {
+                    ids.add(((AprilTagSingleDetection) detection).id);
+                    bearings.add(detection.ftcPose.bearing);
+                }
+            }
+            mGroupBearing = AimAssist.GroupCenterBearing(ids, bearings, mTagId, mProperties.tagGroups);
             mEverSeen = true;
             mSinceSeen.reset();
         }
@@ -151,6 +184,14 @@ public class Vision_Webcam implements Vision {
     }
 
     @Override
+    public double GetGroupBearing() {
+        if (!SeesTag()) {
+            return 0;
+        }
+        return mGroupBearing;
+    }
+
+    @Override
     public double GetRange() {
         if (!SeesTag()) {
             return 0;
@@ -163,8 +204,15 @@ public class Vision_Webcam implements Vision {
         return mCount;
     }
 
+    @Override
+    public int CountIgnoredTags() {
+        return mIgnored;
+    }
+
     private void ShowStatus() {
         mOp.mTelemetry.addData("Tags in view", "%d (camera %.0f fps)", mCount, mPortal.getFps());
+        mOp.mTelemetry.addData("Other alliance's tags ignored", mIgnored);
+        Vision_Limelight.ShowIgnored(mOp, mProperties, mIgnoredIds);
         // One line per tag, so a test with several tags shows which one was picked and why.
         for (AprilTagDetection detection : mInView) {
             if (!(detection instanceof AprilTagSingleDetection)) {
@@ -186,6 +234,7 @@ public class Vision_Webcam implements Vision {
         if (SeesTag()) {
             mOp.mTelemetry.addData("Nearest tag", "id %d %s", mTagId, mTagName);
             mOp.mTelemetry.addData("Bearing", "%.1f deg to the %s", Math.abs(mBearing), Side(mBearing));
+            mOp.mTelemetry.addData("Group middle", "%.1f deg to the %s", Math.abs(mGroupBearing), Side(mGroupBearing));
             mOp.mTelemetry.addData("Range", "%.0f in", mRange);
             mOp.mTelemetry.addData("Elevation", "%.1f deg", mElevation);
             mOp.mTelemetry.addData("Tag turned", "%.1f deg", mYaw);

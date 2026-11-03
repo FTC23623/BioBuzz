@@ -11,8 +11,19 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * <p>This OpMode builds the {@link Bot} and runs the loop. The Bot does the rest: each
  * loop, every part of the robot reads the gamepads, then every part does its work.
  *
- * <p>At INIT, point the robot away from the driver. That direction becomes "forward"
- * for field-centric drive. Press circle during the match to re-set it.
+ * <p>The drive is field-centric: "forward" on the stick is away from the driver, whichever
+ * way the robot faces. At INIT, point the robot away from the driver. That direction
+ * becomes "forward". Press circle during the match to re-set it.
+ *
+ * <p>The launchers spin up the moment START is pressed, so the first shot is ready.
+ *
+ * <p>Gamepad 1, driver: sticks drive, right bumper (hold) slow, left trigger (hold) drift
+ * assist, left bumper (hold) aims at our hive, <b>right trigger (hold) launches</b>: the
+ * gates open, then the intake and transfer push the balls in.
+ * <br>Gamepad 2, operator: right bumper turns the launchers off / on, D-pad up/down pollen
+ * speed, right/left nectar speed, cross runs the intake and transfer (on / off), <b>left
+ * trigger (hold)</b> runs them while held, <b>square (hold)</b> runs them backward, slowly,
+ * to spit out extra balls. See docs/decisions/0023 and 0032.
  */
 @TeleOp(name = "HyDrive")
 public class HyDrive extends LinearOpMode {
@@ -20,8 +31,7 @@ public class HyDrive extends LinearOpMode {
     @Override
     public void runOpMode() {
         BotProperties properties = new BotProperties();
-        // The launcher is not part of HyDrive yet (docs/decisions/0009).
-        properties.launcherDisabled = true;
+        ChooseDriveOptions(properties);
 
         Bot bot = new Bot(this, properties);
         bot.Init();
@@ -33,12 +43,23 @@ public class HyDrive extends LinearOpMode {
             bot.EndLoop();
         }
 
-        // START was pressed. This loop runs about 50 times a second until STOP.
+        // START was pressed. Spin the launchers up right away, so the first shot is ready.
+        // The operator's right bumper turns them off and on again.
+        bot.SpinLaunchers(true);
+
+        // This loop runs about 50 times a second until STOP.
         while (opModeIsActive()) {
             bot.StartLoop();
             bot.HandleUserInput();
             bot.Process();
             bot.EndLoop();
         }
+    }
+
+    /**
+     * HyDrive drives the normal way, so this does nothing. A practice TeleOp copies HyDrive
+     * and changes drive settings here, before the Bot is built. See {@link PracticeFieldCentric}.
+     */
+    protected void ChooseDriveOptions(BotProperties properties) {
     }
 }

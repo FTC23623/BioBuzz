@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -51,5 +53,37 @@ class AimAssistTest {
     @DisplayName("a negative kP flips the direction, for a camera that reads backwards")
     void negativeKpFlips() {
         assertEquals(-0.4, AimAssist.RotateToward(20, -0.02, 0.6, 1.0), EPS);
+    }
+
+    private static final int[][] HIVES = {{30, 33}, {34, 37}, {38, 41}, {42, 45}};
+
+    @Test
+    @DisplayName("group middle: averages the tags in the nearest tag's group")
+    void groupAverages() {
+        List<Integer> ids = Arrays.asList(30, 31, 33);
+        List<Double> bearings = Arrays.asList(10.0, 4.0, -2.0);
+        assertEquals(4.0, AimAssist.GroupCenterBearing(ids, bearings, 31, HIVES), EPS);
+    }
+
+    @Test
+    @DisplayName("group middle: tags from another hive are left out")
+    void otherGroupIgnored() {
+        List<Integer> ids = Arrays.asList(42, 45, 37);
+        List<Double> bearings = Arrays.asList(6.0, 2.0, -30.0);
+        assertEquals(4.0, AimAssist.GroupCenterBearing(ids, bearings, 42, HIVES), EPS);
+    }
+
+    @Test
+    @DisplayName("group middle: a tag in no group aims at that tag alone")
+    void noGroupAimsAtTag() {
+        List<Integer> ids = Arrays.asList(7, 30);
+        List<Double> bearings = Arrays.asList(-5.0, 20.0);
+        assertEquals(-5.0, AimAssist.GroupCenterBearing(ids, bearings, 7, HIVES), EPS);
+    }
+
+    @Test
+    @DisplayName("group middle: nothing in view, 0")
+    void emptyIsZero() {
+        assertEquals(0, AimAssist.GroupCenterBearing(Arrays.<Integer>asList(), Arrays.<Double>asList(), 31, HIVES), EPS);
     }
 }

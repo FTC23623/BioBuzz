@@ -34,6 +34,28 @@ public final class MecanumMath {
     }
 
     /**
+     * Drift assist, part 1: the extra drive that moves the pivot to the inside of the turn.
+     * A robot spinning on its inside wheels carries its middle forward, whichever way it
+     * turns, so this is always forward (negative), never backward.
+     *
+     * @param sideGain 0 = pivot in the middle, 0.5 = pivot on the inside wheels (square robot)
+     */
+    public static double DriftDrive(double rotate, double sideGain) {
+        return -Math.abs(rotate) * sideGain;
+    }
+
+    /**
+     * Drift assist, part 2: the extra strafe that moves the pivot to the back. A robot
+     * spinning on its back wheels swings its middle toward the inside of the turn: left
+     * when turning left (positive rotate), right when turning right.
+     *
+     * @param rearGain 0 = pivot in the middle, 0.5 = pivot on the back wheels (square robot)
+     */
+    public static double DriftStrafe(double rotate, double rearGain) {
+        return rotate * rearGain;
+    }
+
+    /**
      * Robot-centric: "forward" means the way the robot is facing.
      */
     public static WheelPowers RobotCentric(double drive, double strafe, double rotate) {
@@ -61,13 +83,29 @@ public final class MecanumMath {
      */
     public static WheelPowers FieldCentric(double drive, double strafe, double rotate,
                                            double yawDegrees) {
+        return FieldCentric(drive, strafe, rotate, yawDegrees, 0, 0);
+    }
+
+    /**
+     * Field-centric, plus some drive and strafe that stay robot-centric. Drift assist uses
+     * this: its pivot point is on the robot, so it must not be turned with the sticks.
+     *
+     * @param robotDrive  extra drive, added after the turn. Negative is forward, like drive.
+     * @param robotStrafe extra strafe, added after the turn. Positive is left, like strafe.
+     */
+    public static WheelPowers FieldCentric(double drive, double strafe, double rotate,
+                                           double yawDegrees, double robotDrive,
+                                           double robotStrafe) {
         // Turn the stick direction backward by the robot's heading, so pushing the stick
         // "up" always means "away from the driver" on the field.
         double turnRadians = -yawDegrees / 180 * Math.PI;
-        double fieldStrafe = strafe * Math.cos(turnRadians) - drive * Math.sin(turnRadians);
-        double fieldDrive = strafe * Math.sin(turnRadians) + drive * Math.cos(turnRadians);
+        double fieldStrafe = strafe * Math.cos(turnRadians) - drive * Math.sin(turnRadians)
+                + robotStrafe;
+        double fieldDrive = strafe * Math.sin(turnRadians) + drive * Math.cos(turnRadians)
+                + robotDrive;
 
-        double total = Math.abs(drive) + Math.abs(strafe) + Math.abs(rotate);
+        double total = Math.abs(drive) + Math.abs(strafe) + Math.abs(rotate)
+                + Math.abs(robotDrive) + Math.abs(robotStrafe);
         double divideBy = Math.max(total, 1);
 
         WheelPowers powers = new WheelPowers();

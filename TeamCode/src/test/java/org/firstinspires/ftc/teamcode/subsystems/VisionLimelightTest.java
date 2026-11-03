@@ -25,6 +25,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.types.Alliance;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class VisionLimelightTest {
     private Limelight3A limelight;
     private Telemetry telemetry;
     private Vision_Limelight vision;
+    private HydraOpMode op;
 
     @BeforeEach
     void setUp() {
@@ -44,7 +46,7 @@ class VisionLimelightTest {
         limelight = mock(Limelight3A.class);
         when(hardwareMap.get(Limelight3A.class, properties.cfgLimelight)).thenReturn(limelight);
         telemetry = mock(Telemetry.class);
-        HydraOpMode op = new HydraOpMode(telemetry, hardwareMap, mock(Gamepad.class), mock(Gamepad.class));
+        op = new HydraOpMode(telemetry, hardwareMap, mock(Gamepad.class), mock(Gamepad.class));
         vision = new Vision_Limelight(op, properties);
     }
 
@@ -136,5 +138,44 @@ class VisionLimelightTest {
     void noPoseNoCrash() {
         assertEquals(0, Vision_Limelight.RangeInches(null), EPS);
         assertEquals(0, Vision_Limelight.RangeInches(new Pose3D(null, null)), EPS);
+    }
+
+    @Test
+    @DisplayName("red: a big blue-hive tag is ignored, our smaller red one is the target")
+    void redIgnoresBlueTags() {
+        op.mAlliance = Alliance.RED;
+        limelightSees(tag(40, -10, 5.0), tag(31, 4, 1.0));
+        vision.Process();
+        assertEquals(31, vision.GetTagId());
+        assertEquals(1, vision.CountTags());
+        assertEquals(1, vision.CountIgnoredTags());
+        verify(telemetry).addData("Other alliance's tags ignored", 1);
+        // The screen names the dropped tag, so "why is the light red?" has an answer.
+        verify(telemetry).addLine(contains("NOT OURS: tag 40"));
+    }
+
+    @Test
+    @DisplayName("visionAnyTag (practice): blue counts a red-hive tag, and the screen warns")
+    void anyTagForPractice() {
+        properties.visionAnyTag = true;
+        op.mAlliance = Alliance.BLUE;
+        limelightSees(tag(30, 0, 3.0));
+        vision.Process();
+        assertTrue(vision.SeesTag());
+        assertEquals(30, vision.GetTagId());
+        assertEquals(0, vision.CountIgnoredTags());
+        verify(telemetry).addLine(contains("EVERY TAG COUNTS"));
+    }
+
+    @Test
+    @DisplayName("blue: only red-hive tags in view means no tag at all")
+    void blueSeesNoRedTags() {
+        op.mAlliance = Alliance.BLUE;
+        limelightSees(tag(30, 0, 3.0), tag(35, 0, 3.0));
+        vision.Process();
+        assertFalse(vision.SeesTag());
+        assertEquals(0, vision.CountTags());
+        // The indicator light blinks red from this: tags in view, none of them ours.
+        assertEquals(2, vision.CountIgnoredTags());
     }
 }

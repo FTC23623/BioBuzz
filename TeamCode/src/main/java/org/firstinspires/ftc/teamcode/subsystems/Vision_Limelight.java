@@ -11,6 +11,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 
 /**
@@ -22,7 +23,9 @@ import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
  *
  * <p><b>Nearest tag:</b> the tag that fills the most of the picture. Nearer tags look
  * bigger. <b>Bearing:</b> the Limelight counts right as positive ({@code tx}); we count
- * left as positive, like yaw, so the sign is flipped here. Ported from Decode
+ * left as positive, like yaw, so the sign is flipped here. <b>Only our hive's tags count</b>
+ * (docs/decisions/0021): the other alliance's are dropped before anything else looks.
+ * Ported from Decode
  * subsystems/LimelightVision.java, without the pipeline-per-alliance switch.
  */
 public class Vision_Limelight implements Vision {
@@ -36,8 +39,14 @@ public class Vision_Limelight implements Vision {
     /** Every tag in the newest picture, so the Driver Station can list them. */
     private List<LLResultTypes.FiducialResult> mInView = new ArrayList<>();
     private int mCount = 0;
+    /** Tags in the picture that are not our hive's, so they were ignored. */
+    private int mIgnored = 0;
+    /** Their ids, so the Driver Station can say which tag the camera DID see. */
+    private List<Integer> mIgnoredIds = new ArrayList<>();
     private int mTagId = 0;
     private double mBearing = 0;
+    /** Degrees to the middle of the nearest tag's group. */
+    private double mGroupBearing = 0;
     private double mRange = 0;
     private double mArea = 0;
     /** What the newest result looked like, for the Driver Station. */
@@ -72,6 +81,8 @@ public class Vision_Limelight implements Vision {
     @Override
     public void Process() {
         mCount = 0;
+        mIgnored = 0;
+        mIgnoredIds = new ArrayList<>();
         mInView = new ArrayList<>();
         LLResult result = mLimelight.getLatestResult();
         if (!mLimelight.isConnected()) {
@@ -84,7 +95,16 @@ public class Vision_Limelight implements Vision {
             mResultState = "target found, " + result.getStaleness() + " ms old";
         }
         if (result != null && result.isValid()) {
-            List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+            List<LLResultTypes.FiducialResult> tags = new ArrayList<>();
+            int[] ourTags = mProperties.HiveTags(mOp.mAlliance);
+            for (LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
+                if (AimAssist.InRange(tag.getFiducialId(), ourTags)) {
+                    tags.add(tag);
+                } else {
+                    mIgnored = mIgnored + 1;
+                    mIgnoredIds.add(tag.getFiducialId());
+                }
+            }
             mInView = tags;
             mCount = tags.size();
             LLResultTypes.FiducialResult nearest = Biggest(tags);
@@ -93,6 +113,13 @@ public class Vision_Limelight implements Vision {
                 mBearing = -nearest.getTargetXDegrees();
                 mRange = RangeInches(nearest.getTargetPoseCameraSpace());
                 mArea = nearest.getTargetArea();
+                List<Integer> ids = new ArrayList<>();
+                List<Double> bearings = new ArrayList<>();
+                for (LLResultTypes.FiducialResult tag : tags) {
+                    ids.add(tag.getFiducialId());
+                    bearings.add(-tag.getTargetXDegrees());
+                }
+                mGroupBearing = AimAssist.GroupCenterBearing(ids, bearings, mTagId, mProperties.tagGroups);
                 mEverSeen = true;
                 mSinceSeen.reset();
             }
@@ -157,6 +184,14 @@ public class Vision_Limelight implements Vision {
     }
 
     @Override
+    public double GetGroupBearing() {
+        if (!SeesTag()) {
+            return 0;
+        }
+        return mGroupBearing;
+    }
+
+    @Override
     public double GetRange() {
         if (!SeesTag()) {
             return 0;
@@ -167,6 +202,11 @@ public class Vision_Limelight implements Vision {
     @Override
     public int CountTags() {
         return mCount;
+    }
+
+    @Override
+    public int CountIgnoredTags() {
+        return mIgnored;
     }
 
     private void ShowStatus() {
@@ -181,6 +221,8 @@ public class Vision_Limelight implements Vision {
         }
         mOp.mTelemetry.addData("Limelight result", mResultState);
         mOp.mTelemetry.addData("Tags in view", mCount);
+        mOp.mTelemetry.addData("Other alliance's tags ignored", mIgnored);
+        ShowIgnored(mOp, mProperties, mIgnoredIds);
         // One line per tag, so a test with several tags shows which one was picked and why.
         for (LLResultTypes.FiducialResult tag : mInView) {
             String line = String.format("  tag %d: fills %.1f%%, %.1f deg to the %s",
@@ -194,6 +236,7 @@ public class Vision_Limelight implements Vision {
         if (SeesTag()) {
             mOp.mTelemetry.addData("Nearest tag", "id %d, %.1f deg to the %s, %.0f in away",
                     mTagId, Math.abs(mBearing), Side(mBearing), mRange);
+            mOp.mTelemetry.addData("Group middle", "%.1f deg to the %s", Math.abs(mGroupBearing), Side(mGroupBearing));
             mOp.mTelemetry.addData("Tag fills", "%.1f%% of the picture", mArea);
             mOp.mTelemetry.addData("Tag last seen", "%.0f ms ago", mSinceSeen.milliseconds());
         } else {
@@ -206,5 +249,21 @@ public class Vision_Limelight implements Vision {
             return "left";
         }
         return "right";
+    }
+
+    /**
+     * Which tags the camera saw but dropped, and why. The usual reason the light stays red
+     * with a tag right in front of the camera: the tag is not one of ours (wrong alliance,
+     * or last season's tag). Both cameras use this.
+     */
+    static void ShowIgnored(HydraOpMode op, BotProperties properties, List<Integer> ignoredIds) {
+        if (!ignoredIds.isEmpty()) {
+            int[] ours = properties.HiveTags(op.mAlliance);
+            op.mTelemetry.addLine("  seen but NOT OURS: " + AimAssist.TagList(ignoredIds) + ". We are "
+                    + op.mAlliance + "; ours are " + ours[0] + " to " + ours[1] + ".");
+        }
+        if (properties.visionAnyTag) {
+            op.mTelemetry.addLine("EVERY TAG COUNTS: visionAnyTag is on. Practice only. Set it false for matches.");
+        }
     }
 }

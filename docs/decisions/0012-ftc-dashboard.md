@@ -1,6 +1,6 @@
 # 0012: FTC Dashboard mirrors the telemetry as live graphs
 
-Status: Accepted. Not yet tried on the robot.
+Status: Accepted. Not yet tried on the robot. Live tuning added by 0022.
 Date: 2026-10-15
 
 ## Context

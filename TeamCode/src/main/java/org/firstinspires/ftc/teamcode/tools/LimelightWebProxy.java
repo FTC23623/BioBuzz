@@ -8,6 +8,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import org.firstinspires.ftc.ftccommon.external.OnCreate;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 
 /**
  * Opens the Limelight's own web page through the Control Hub, so nobody has to unplug the
@@ -47,6 +48,10 @@ public final class LimelightWebProxy {
     /** The Robot Controller app calls this once when it starts. */
     @OnCreate
     public static void start(Context context) {
+        // At an event no laptop may be on the robot's Wi-Fi (rule R704.C), so no relay.
+        if (BotProperties.competitionMode) {
+            return;
+        }
         if (sStarted) {
             return;
         }

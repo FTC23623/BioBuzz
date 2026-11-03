@@ -13,7 +13,9 @@ import java.util.List;
  * Starts with its front (the intake) on the wall. Backs up just far enough to spin without a
  * corner hitting the wall, launches, turns right 90, then puts its left side on the wall and
  * drives along it to collect pollen. Then it moves off the wall, turns right again to face the
- * middle of the field, and drives there.
+ * middle of the field, and drives on toward the far side. Last, it slides right, turns left
+ * 20 degrees to look at the hive's AprilTags, waits until it sees one, aims at the middle of
+ * the hive's tags, and launches.
  *
  * <p>Pedro measures in inches: x grows as the robot drives forward, y grows as it drives left.
  * The robot starts facing the wall, so backing up is minus x and the garden (to its right) is
@@ -27,10 +29,16 @@ public class AutoStrategyA extends PedroAuto {
     private static final double collectStartIn = 24;
     /** How far right of the start the pollen run ends, in inches. */
     private static final double collectEndIn = 48;
-    /** How far the robot drives at the end, toward the middle of the field, in inches. */
-    private static final double driveToMiddleIn = 48;
+    /** How far the robot drives toward the far side of the field, in inches. Clears the hive stand. */
+    private static final double driveToMiddleIn = 102;
     /** How far the robot slides back toward the start while turning, to miss the flower. */
     private static final double flowerClearanceIn = 12;
+    /** How far right the robot slides before it aims at the tag, in inches. */
+    private static final double strafeRightIn = 24;
+    /** Part of that slide happens during the aiming turn, since Pedro can't turn in place. */
+    private static final double aimTurnSlideIn = 2;
+    /** How far LEFT the robot turns to see the AprilTag, in degrees. Left is toward the hive. */
+    private static final double aimTurnDeg = 20;
 
     @Override
     protected List<Path> BuildPaths() {
@@ -42,6 +50,8 @@ public class AutoStrategyA extends PedroAuto {
         double faceWall = 0;
         double faceRight = Math.toRadians(-90);
         double faceMiddle = Math.toRadians(-180);
+        // Heading grows turning left, so add.
+        double faceTag = faceMiddle + Math.toRadians(aimTurnDeg);
 
         // A spinning robot sweeps a circle out to its corners. Its front starts on the wall, so
         // it must back up by (half the diagonal - half the length) before it can turn.
@@ -62,6 +72,9 @@ public class AutoStrategyA extends PedroAuto {
         // Sliding back toward the start adds to y.
         Pose turnedAgain = new Pose(-distanceFromWall, -collectEndIn + flowerClearanceIn);
         Pose nearMiddle = new Pose(-distanceFromWall - driveToMiddleIn, -collectEndIn + flowerClearanceIn);
+        // Facing the middle, the robot's right is plus y.
+        Pose strafed = new Pose(nearMiddle.x(), nearMiddle.y() + strafeRightIn - aimTurnSlideIn);
+        Pose aimed = new Pose(nearMiddle.x(), nearMiddle.y() + strafeRightIn);
 
         // Step 1: back up off the wall, still facing it.
         Path backUpToLaunch = line(start, launchSpot).constant(faceWall);
@@ -77,6 +90,10 @@ public class AutoStrategyA extends PedroAuto {
         Path turnToMiddle = line(offWallAgain, turnedAgain).heading(Interpolator.linear(faceRight, faceMiddle));
         // Step 8: drive forward, toward the middle of the field.
         Path driveToMiddle = line(turnedAgain, nearMiddle).constant(faceMiddle);
+        // Step 9: slide right, still facing the far side.
+        Path strafeRight = line(nearMiddle, strafed).constant(faceMiddle);
+        // Step 10: turn left 20, toward the hive, to see the AprilTag, sliding the last bit of the strafe.
+        Path aimAtTag = line(strafed, aimed).heading(Interpolator.linear(faceMiddle, faceTag));
 
         List<Path> paths = new ArrayList<>();
         paths.add(backUpToLaunch);
@@ -87,6 +104,9 @@ public class AutoStrategyA extends PedroAuto {
         paths.add(moveOffWall);
         paths.add(turnToMiddle);
         paths.add(driveToMiddle);
+        paths.add(strafeRight);
+        paths.add(aimAtTag);
+        paths.add(LAUNCH_WHEN_TAG_SEEN);    // Step 11: wait for the tag, aim, then launch
         return paths;
     }
 }

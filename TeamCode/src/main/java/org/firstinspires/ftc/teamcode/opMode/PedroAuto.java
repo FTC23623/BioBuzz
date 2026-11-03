@@ -30,6 +30,13 @@ import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
  * {@code follower.update()} reads where the robot is and sets the motor powers. When a path
  * is done, the follower stops "following" and holds the robot in place, and we start the
  * next path. See docs/decisions/0008.
+ *
+ * <p><b>Alliance</b>: read from the magnet on the robot, like TeleOp (docs/decisions/0021).
+ * The camera only sees our hive's tags. A backup auto (group "Backup") skips the magnet
+ * and sets the alliance itself, in case the sensor plays up.
+ *
+ * <p><b>Scoring</b>: with {@code autoRunScoring} on, the launchers spin and the intake and
+ * transfer run from START to the end. A LAUNCH step opens both launch gates.
  */
 public abstract class PedroAuto extends LinearOpMode {
 
@@ -44,9 +51,11 @@ public abstract class PedroAuto extends LinearOpMode {
 
     /**
      * Put this in the list from {@link #BuildPaths()} to stop and launch there. It is not a
-     * real path: when the auto reaches it, the robot holds still where the last path ended
-     * for {@code botProperties.autoLaunchSeconds}, then drives the next path. The indicator
-     * light blinks yellow during the stop and turns off after it.
+     * real path: when the auto reaches it, the robot holds still where the last path ended,
+     * waits for the launchers to reach speed (at most {@code autoSpinUpSeconds}), then opens
+     * both launch gates for {@code autoLaunchSeconds}. Once the gates are open, the intake and
+     * transfer push the balls in. Then the gates close and the next path starts. The
+     * indicator light blinks yellow for the whole stop.
      *
      * <pre>
      *     paths.add(driveToLaunchSpot);
@@ -57,6 +66,19 @@ public abstract class PedroAuto extends LinearOpMode {
     // Pedro will not build a line with zero length, so the marker is one inch long. It is
     // never driven: the loop only checks "is this step LAUNCH?".
     protected static final Path LAUNCH = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Like {@link #LAUNCH}, but the robot first holds still until the camera sees an
+     * AprilTag. The indicator light blinks orange while it waits. Once a tag is seen, the
+     * robot turns in place to face the middle of that tag's group, from
+     * {@code botProperties.tagGroups} (the light stays orange), then launches just like
+     * LAUNCH: blinks yellow for {@code botProperties.autoLaunchSeconds}. The aim is picked
+     * once, from the first look at the tag, and is not corrected during the launch. Only our
+     * hive's tags count (blue: 38-45). If none is seen by {@code autoLaunchAnywayAtSeconds}
+     * after START, it launches anyway, facing the way it is.
+     */
+    // A different marker from LAUNCH, so the loop can tell the two apart.
+    protected static final Path LAUNCH_WHEN_TAG_SEEN = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
     /** The paths this auto drives, in order. Runs after {@link #properties} is set up. */
     protected abstract List<Path> BuildPaths();
@@ -70,8 +92,6 @@ public abstract class PedroAuto extends LinearOpMode {
     public void runOpMode() {
         // In an auto, Pedro Pathing drives the wheels, so driver control is switched off.
         botProperties.driveDisabled = true;
-        // No auto uses the launcher yet.
-        botProperties.launcherDisabled = true;
 
         Bot bot = new Bot(this, botProperties);
 
@@ -108,22 +128,88 @@ public abstract class PedroAuto extends LinearOpMode {
             bot.ShowStatus();
             telemetry.addLine("Put the robot on its start spot, facing forward.");
             telemetry.addData("Paths to drive", paths.size());
+            if (botProperties.autoSpeedScale < 1) {
+                telemetry.addLine(String.format("SLOW AUTO: %.0f%% speed. Put autoSpeedScale back to 1 for matches.",
+                        botProperties.autoSpeedScale * 100));
+            }
             bot.EndLoop();
+        }
+
+        if (botProperties.autoRunScoring) {
+            // Spin up now, so the launchers are at speed by the first LAUNCH.
+            bot.SpinLaunchers(true);
+            bot.RunIntake(true);
         }
 
         // Times how long the robot has been on this step: a path, or a LAUNCH stop.
         ElapsedTime stepTimer = new ElapsedTime();
+        // Times the whole auto, from START, for "launch anyway".
+        ElapsedTime autoTimer = new ElapsedTime();
         int pathNumber = 0;
         int pathsGivenUp = 0;
+        // true while a LAUNCH_WHEN_TAG_SEEN step is still waiting for the camera.
+        boolean waitingForTag = paths.get(pathNumber) == LAUNCH_WHEN_TAG_SEEN;
+        // true while a LAUNCH_WHEN_TAG_SEEN step is turning to face the tag it saw.
+        boolean aiming = false;
+        // The heading that faces the tag, in radians. Picked once, when the tag is first seen.
+        double aimHeading = 0;
+        // true while a launch step waits for the launchers to reach speed, gates still shut.
+        boolean spinningUp = paths.get(pathNumber) == LAUNCH;
         StartStep(bot, follower, paths.get(pathNumber), stepTimer);
 
         while (opModeIsActive()) {
             bot.StartLoop();
             follower.update();
 
-            boolean launching = paths.get(pathNumber) == LAUNCH;
+            Path step = paths.get(pathNumber);
+            if (waitingForTag && bot.SeesTag()) {
+                // A tag! Aim at the middle of its group (a hive's tags), not just this one tag.
+                // Bearing is left-positive, like heading, so add it to face that middle.
+                // Hold at the same spot with that heading: the robot turns in place.
+                waitingForTag = false;
+                aiming = true;
+                Pose here = follower.pose();
+                aimHeading = here.heading() + Math.toRadians(bot.GetTagGroupBearing());
+                follower.hold(new Pose(here.x(), here.y(), aimHeading));
+                stepTimer.reset();
+            }
+            if (waitingForTag && autoTimer.seconds() >= botProperties.autoLaunchAnywayAtSeconds) {
+                // No tag, and the auto is nearly over. Launch anyway, facing the way we are.
+                waitingForTag = false;
+                spinningUp = true;
+                bot.ShowWaitingForTag(false);
+                bot.ShowLaunching(true);
+                stepTimer.reset();
+            }
+            if (aiming) {
+                boolean onTarget = Math.abs(AngleBetween(follower.pose().heading(), aimHeading))
+                        <= Math.toRadians(botProperties.aimDoneDegrees);
+                boolean aimTookTooLong = stepTimer.seconds() >= botProperties.autoAimSeconds;
+                if (onTarget || aimTookTooLong) {
+                    // Facing the tag (or close enough). Now launch, like LAUNCH. The follower
+                    // keeps holding this heading; the camera is not asked again.
+                    aiming = false;
+                    spinningUp = true;
+                    bot.ShowWaitingForTag(false);
+                    bot.ShowLaunching(true);
+                    stepTimer.reset();
+                }
+            }
+            if (spinningUp) {
+                boolean spinUpTookTooLong = stepTimer.seconds() >= botProperties.autoSpinUpSeconds;
+                if (bot.LaunchersAtSpeed() || spinUpTookTooLong) {
+                    // Up to speed (or close enough): open the gates. The launch time counts
+                    // from now. The intake and transfer start once the gates are fully open.
+                    spinningUp = false;
+                    bot.OpenLaunchGates(true);
+                    stepTimer.reset();
+                }
+            }
+            boolean launching = step == LAUNCH || step == LAUNCH_WHEN_TAG_SEEN;
             boolean pathFinished;
-            if (launching) {
+            if (waitingForTag || aiming || spinningUp) {
+                pathFinished = false;
+            } else if (launching) {
                 pathFinished = stepTimer.seconds() >= botProperties.autoLaunchSeconds;
             } else {
                 boolean tookTooLong = stepTimer.seconds() >= giveUpSeconds[pathNumber];
@@ -136,12 +222,15 @@ public abstract class PedroAuto extends LinearOpMode {
                 pathFinished = !follower.following();
             }
             if (launching && pathFinished) {
-                // The launch time is up: stop flashing the light.
+                // The launch time is up: close the gates and stop flashing the light.
                 bot.ShowLaunching(false);
+                bot.OpenLaunchGates(false);
             }
             boolean morePathsLeft = pathNumber + 1 < paths.size();
             if (pathFinished && morePathsLeft) {
                 pathNumber = pathNumber + 1;
+                waitingForTag = paths.get(pathNumber) == LAUNCH_WHEN_TAG_SEEN;
+                spinningUp = paths.get(pathNumber) == LAUNCH;
                 StartStep(bot, follower, paths.get(pathNumber), stepTimer);
             }
 
@@ -150,7 +239,12 @@ public abstract class PedroAuto extends LinearOpMode {
 
             Pose where = follower.pose();
             telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
-            telemetry.addData("Launching", paths.get(pathNumber) == LAUNCH);
+            telemetry.addData("Waiting for a tag", waitingForTag);
+            telemetry.addData("Aiming at the tag", aiming);
+            telemetry.addData("Waiting for launchers to reach speed", spinningUp);
+            telemetry.addData("Launching", !waitingForTag && !aiming && !spinningUp && launching);
+            telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
+            telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
             if (!launching) {
                 telemetry.addData("Give up on this path after (s)", "%.1f", giveUpSeconds[pathNumber]);
             }
@@ -187,8 +281,7 @@ public abstract class PedroAuto extends LinearOpMode {
 
         // The heading change, from -180 to 180 degrees, so a turn from -90 to 180 counts
         // as the 90 it really is and not 270.
-        double headingChange = path.endPose().heading() - path.get(0).heading();
-        headingChange = Math.atan2(Math.sin(headingChange), Math.cos(headingChange));
+        double headingChange = AngleBetween(path.get(0).heading(), path.endPose().heading());
         double quarterTurns = Math.abs(headingChange) / Math.toRadians(90);
         double turnSeconds = quarterTurns * properties.autoQuarterTurnSeconds;
 
@@ -197,13 +290,25 @@ public abstract class PedroAuto extends LinearOpMode {
         return seconds * properties.autoGiveUpMargin + properties.autoGiveUpExtraSeconds;
     }
 
-    /** Start one step from the list: drive a path, or stop and launch. */
+    /**
+     * How far to turn from one heading to another, in radians, from -180 to 180 degrees.
+     * So a turn from -90 to 180 counts as the 90 it really is, not 270.
+     */
+    static double AngleBetween(double fromHeading, double toHeading) {
+        double change = toHeading - fromHeading;
+        return Math.atan2(Math.sin(change), Math.cos(change));
+    }
+
+    /** Start one step from the list: drive a path, stop and launch, or stop and wait for a tag. */
     private void StartStep(Bot bot, Follower follower, Path step, ElapsedTime stepTimer) {
         stepTimer.reset();
         if (step == LAUNCH) {
             // Nothing new to follow, so the follower keeps holding the robot where it is.
-            // The launcher is still off in autos, so the indicator light blinks yellow instead.
+            // Blink the light yellow. The gates open once the launchers are at speed.
             bot.ShowLaunching(true);
+        } else if (step == LAUNCH_WHEN_TAG_SEEN) {
+            // Hold still, like LAUNCH, but blink orange until the camera sees a tag.
+            bot.ShowWaitingForTag(true);
         } else {
             follower.follow(step);
         }

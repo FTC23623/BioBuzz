@@ -153,5 +153,58 @@ class MecanumMathTest {
                 }
             }
         }
+
+        @Test
+        @DisplayName("robot-centric extras are added after the turn: at yaw 90 they are not turned")
+        void extrasAreNotTurned() {
+            // Extra forward drive only, robot turned 90 left: still all four wheels forward.
+            p = MecanumMath.FieldCentric(0, 0, 0, 90, -0.5, 0);
+            assertWheels(-0.5, -0.5, -0.5, -0.5);
+        }
+
+        @Test
+        @DisplayName("no extras: same as the four-number version")
+        void zeroExtrasMatch() {
+            MecanumMath.WheelPowers plain = MecanumMath.FieldCentric(0.3, 0.6, -0.1, 30);
+            p = MecanumMath.FieldCentric(0.3, 0.6, -0.1, 30, 0, 0);
+            assertWheels(plain.frontLeft, plain.frontRight, plain.backLeft, plain.backRight);
+        }
+    }
+
+    @Nested
+    @DisplayName("drift assist")
+    class Drift {
+
+        @Test
+        @DisplayName("turning either way adds forward drive (negative)")
+        void driftDriveIsAlwaysForward() {
+            assertEquals(-0.5, MecanumMath.DriftDrive(1, 0.5), EPS);
+            assertEquals(-0.5, MecanumMath.DriftDrive(-1, 0.5), EPS);
+        }
+
+        @Test
+        @DisplayName("strafe follows the turn: left turn slides left, right turn slides right")
+        void driftStrafeFollowsTurn() {
+            assertEquals(0.5, MecanumMath.DriftStrafe(1, 0.5), EPS);
+            assertEquals(-0.5, MecanumMath.DriftStrafe(-1, 0.5), EPS);
+        }
+
+        @Test
+        @DisplayName("gains of 0: the pivot stays in the middle")
+        void zeroGainsDoNothing() {
+            assertEquals(0, MecanumMath.DriftDrive(1, 0), EPS);
+            assertEquals(0, MecanumMath.DriftStrafe(1, 0), EPS);
+        }
+
+        @Test
+        @DisplayName("left turn on the back-left wheel: back left stops, the others roll")
+        void pivotOnBackLeftWheel() {
+            // Full left turn, pivot on the back-left wheel of a square robot.
+            double rotate = 1;
+            double drive = MecanumMath.DriftDrive(rotate, 0.5);
+            double strafe = MecanumMath.DriftStrafe(rotate, 0.5);
+            p = MecanumMath.RobotCentric(drive, strafe, rotate);
+            assertEquals(0, p.backLeft, EPS);
+        }
     }
 }

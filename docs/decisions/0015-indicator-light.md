@@ -1,6 +1,6 @@
 # 0015: An indicator light that shows how many tags the camera sees
 
-Status: Accepted. Not yet tried on the robot.
+Status: Accepted. Not yet tried on the robot. Blinking red for the other alliance's tags, and the Driver Station line, added by 0031.
 Date: 2026-10-17
 
 ## Context

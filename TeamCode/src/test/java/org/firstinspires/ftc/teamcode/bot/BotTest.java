@@ -68,6 +68,8 @@ class BotTest {
         when(motor.getPower()).thenAnswer(call -> last[0]);
         // doReturn, not when(...): calling get() here would throw (see setUp).
         doReturn(motor).when(hardwareMap).get(DcMotorEx.class, name);
+        // Parts that may be missing look motors up with tryGet, which gives null when absent.
+        doReturn(motor).when(hardwareMap).tryGet(DcMotorEx.class, name);
     }
 
     private String[] driveMotorNames() {
@@ -89,6 +91,7 @@ class BotTest {
 
     private void addLauncher() {
         addMotor(properties.cfgLaunchNectar);
+        addMotor(properties.cfgLaunchPollen);
     }
 
     /** One TeleOp loop, the way an OpMode writes it. */
@@ -130,7 +133,11 @@ class BotTest {
             for (String name : driveMotorNames()) {
                 verify(hardwareMap).get(DcMotorEx.class, name);
             }
-            verify(hardwareMap).get(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgLaunchPollen);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgIntake);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgTransfer);
+            verify(hardwareMap).tryGet(Servo.class, properties.cfgPollenServo);
         }
 
         @Test
@@ -148,7 +155,7 @@ class BotTest {
             }
             verify(hardwareMap, never()).get(eq(IMU.class), anyString());
             verify(hardwareMap, never()).tryGet(eq(GoBildaPinpointDriver.class), anyString());
-            verify(hardwareMap).get(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgLaunchNectar);
             verify(telemetry).addLine(contains("Driver control: OFF"));
         }
 
@@ -162,9 +169,9 @@ class BotTest {
             bot.ShowStatus();
             teleOpLoop(bot);
 
-            verify(hardwareMap, never()).get(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap, never()).tryGet(DcMotorEx.class, properties.cfgLaunchNectar);
             verify(hardwareMap).get(DcMotorEx.class, properties.cfgDriveFrontLeft);
-            verify(telemetry).addLine(contains("Launcher: OFF"));
+            verify(telemetry).addLine(contains("Launchers: OFF"));
         }
 
         @Test
@@ -244,7 +251,7 @@ class BotTest {
             Bot bot = new Bot(opMode, properties);
             bot.Init();
             teleOpLoop(bot);
-            verify(hardwareMap, never()).tryGet(eq(Servo.class), anyString());
+            verify(hardwareMap, never()).tryGet(Servo.class, properties.cfgIndicator);
         }
     }
 
@@ -285,18 +292,21 @@ class BotTest {
         void overrideReachesThePart() {
             addLauncher();
             properties.driveDisabled = true;
-            properties.launcherStartRpm = 4000;
+            properties.pollenLauncherRpm = 4000;
             new Bot(opMode, properties).ShowStatus();
-            verify(telemetry).addData("Launcher target RPM", "%.0f", 4000.0);
+            verify(telemetry).addData("Launcher target RPM (pollen / nectar)", "%.0f / %.0f", 4000.0,
+                    properties.nectarLauncherRpm);
         }
 
         @Test
-        @DisplayName("normal settings: the launcher starts at 1000 RPM")
+        @DisplayName("normal settings: the screen shows the BotProperties launcher speeds")
         void normalStartSpeed() {
             addLauncher();
             properties.driveDisabled = true;
+            BotProperties normal = new BotProperties();
             new Bot(opMode, properties).ShowStatus();
-            verify(telemetry).addData("Launcher target RPM", "%.0f", 1000.0);
+            verify(telemetry).addData("Launcher target RPM (pollen / nectar)", "%.0f / %.0f",
+                    normal.pollenLauncherRpm, normal.nectarLauncherRpm);
         }
     }
 
@@ -486,6 +496,69 @@ class BotTest {
             when(opMode.opModeInInit()).thenReturn(false);
             new Bot(opMode, properties).Init();
             verify(hubImu, times(1)).initialize(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("competition (rule R704.D)")
+    class Competition {
+
+        @Test
+        @DisplayName("practice: says how to switch competition mode on")
+        void practiceLine() {
+            assertTrue(Bot.CompetitionStatus(false, true).startsWith("PRACTICE MODE"));
+        }
+
+        @Test
+        @DisplayName("competition with the dashboard still on: tells the drive team how to turn it off")
+        void dashboardStillOn() {
+            assertTrue(Bot.CompetitionStatus(true, true).contains("Disable Dashboard"));
+        }
+
+        @Test
+        @DisplayName("competition with the dashboard off: all clear")
+        void allClear() {
+            assertEquals("Competition mode: dashboard off.", Bot.CompetitionStatus(true, false));
+        }
+
+        @Test
+        @DisplayName("every live-tuning name is a real BotProperties field, so none silently vanish")
+        void liveTuningNamesAreReal() throws Exception {
+            String[][] lists = {Bot.LiveTuningDrive, Bot.LiveTuningLauncher, Bot.LiveTuningIntake};
+            for (String[] list : lists) {
+                for (String name : list) {
+                    BotProperties.class.getField(name);
+                }
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("alliance")
+    class AllianceRead {
+
+        @Test
+        @DisplayName("no alliance sensor: blue, and the Driver Station says so")
+        void noSensorIsBlue() {
+            properties.driveDisabled = true;
+            properties.launcherDisabled = true;
+            Bot bot = new Bot(opMode, properties);
+            bot.ShowStatus();
+            verify(telemetry).addData(eq("ALLIANCE"), anyString(),
+                    eq(org.firstinspires.ftc.teamcode.types.Alliance.BLUE), contains("NO SENSOR"));
+        }
+
+        @Test
+        @DisplayName("magnet sensed: red")
+        void magnetIsRed() {
+            TouchSensor magnet = mock(TouchSensor.class);
+            when(magnet.isPressed()).thenReturn(true);
+            doReturn(magnet).when(hardwareMap).tryGet(TouchSensor.class, properties.cfgAllianceSensor);
+            properties.driveDisabled = true;
+            properties.launcherDisabled = true;
+            new Bot(opMode, properties).ShowStatus();
+            verify(telemetry).addData(eq("ALLIANCE"), anyString(),
+                    eq(org.firstinspires.ftc.teamcode.types.Alliance.RED), eq("magnet sensed"));
         }
     }
 }

@@ -27,6 +27,19 @@ public interface Vision extends Subsystem {
     /** @return inches from the camera to the nearest tag, or 0 when the camera can't tell */
     double GetRange();
 
-    /** @return how many tags are in view right now */
+    /**
+     * @return degrees to the middle of the tag group the nearest tag is in (see
+     *     {@code tagGroups} in BotProperties). Left is positive. 0 when no tag is seen.
+     */
+    double GetGroupBearing();
+
+    /** @return how many of our alliance's tags are in view right now */
     int CountTags();
+
+    /**
+     * @return how many tags are in view right now that are NOT ours (the other alliance's),
+     *     so they were ignored. The indicator light blinks red when this is all the camera
+     *     sees: the camera works, but the alliance is probably set wrong.
+     */
+    int CountIgnoredTags();
 }
