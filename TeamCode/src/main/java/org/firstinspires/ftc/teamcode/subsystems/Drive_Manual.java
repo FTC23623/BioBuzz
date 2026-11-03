@@ -63,6 +63,11 @@ public class Drive_Manual extends Drive {
     private int mArcDirection;
     /** Inches to the tag when the arc started, to hold. 0 while not arcing. */
     private double mArcRangeIn;
+    /**
+     * true once HandleUserInput has read the gamepad this loop. Process clears it. A loop
+     * with no fresh reading never aims, so a button seen once can't keep aiming (0040).
+     */
+    private boolean mInputFresh = false;
 
     public Drive_Manual(HydraOpMode op, BotProperties properties, Imu imu, Vision vision) {
         super(op, properties, imu);
@@ -89,8 +94,8 @@ public class Drive_Manual extends Drive {
         mStrafe = -strafeStick * mProperties.driveStrafeGain;
         mRotate = -turnStick;
         // Aim on the right bumper, and on the launch trigger too, so a launch snaps to the hive.
-        boolean launchHeld = mGamepad.right_trigger > mProperties.trgBtnThresh;
-        mAimHeld = mGamepad.right_bumper || (mProperties.launchTriggerAims && launchHeld);
+        mAimHeld = AimButtonDown();
+        mInputFresh = true;
         // Drift only while the trigger is held, and only in an OpMode that has it on.
         mDriftHeld = mProperties.driveDriftAssist && mGamepad.left_trigger > mProperties.trgBtnThresh;
         // D-pad left or right: arc that way around the hive, but only while aiming (below).
@@ -118,6 +123,12 @@ public class Drive_Manual extends Drive {
         }
     }
 
+    /** true while the right bumper is down, or the launch trigger is pulled (with launchTriggerAims). */
+    private boolean AimButtonDown() {
+        boolean launchHeld = mGamepad.right_trigger > mProperties.trgBtnThresh;
+        return mGamepad.right_bumper || (mProperties.launchTriggerAims && launchHeld);
+    }
+
     @Override
     public void Process() {
         // No heading yet? Drive as if facing forward, like Decode did.
@@ -125,6 +136,22 @@ public class Drive_Manual extends Drive {
         if (mImu.Ready()) {
             yaw = mImu.GetYaw();
         }
+
+        // Aim only while a button is down RIGHT NOW. Two guards: no fresh gamepad reading
+        // this loop means no aim, and the buttons are checked again here, so nothing
+        // remembered from an earlier loop can keep the robot turning (coach, 2026-11-03).
+        if (!mInputFresh) {
+            // No reading this loop: the turn left over from last loop may be an aim turn, so
+            // nothing old is driven. The robot coasts down to still through the slew rate.
+            mDrive = 0;
+            mStrafe = 0;
+            mRotate = 0;
+        }
+        if (!mInputFresh || !AimButtonDown()) {
+            mAimHeld = false;
+            mArcDirection = 0;
+        }
+        mInputFresh = false;
 
         // Aim assist: the middle of the hive's tag group decides the turn, not one tag, so the
         // robot faces the hive itself. The sticks still drive and strafe.
@@ -137,7 +164,12 @@ public class Drive_Manual extends Drive {
                     hiveBearing, mVision.GetTagId(), mVision.GetRange(), mRotate);
         } else if (mAimHeld) {
             mOp.mTelemetry.addLine("Aim assist: held, but no tag in view");
+        } else {
+            mOp.mTelemetry.addLine("Aim assist: off");
         }
+        // The raw buttons, so a trigger that rests a little pressed shows up on the screen.
+        mOp.mTelemetry.addData("Aim buttons", "right bumper %s, launch trigger %.2f (counts above %.2f)",
+                mGamepad.right_bumper, mGamepad.right_trigger, mProperties.trgBtnThresh);
 
         // D-pad while aiming: arc around the hive. Strafe the way the D-pad points, and hold
         // the distance the arc started at with a little drive. Aim above keeps the nose on

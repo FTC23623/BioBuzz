@@ -199,6 +199,50 @@ class DriveAimTest {
         assertEquals(0, frontRight(), EPS);
     }
 
+    // ---- Aim only while a button is down (0040) ----
+
+    @Test
+    @DisplayName("bumper let go between reading and driving: no aim that loop")
+    void releasedBeforeProcessDoesNotAim() {
+        tagAt(20);
+        gamepad.right_bumper = true;
+        drive.HandleUserInput();
+        gamepad.right_bumper = false;   // let go before the drive acts
+        for (int i = 0; i < 50; i++) {
+            drive.Process();
+        }
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("no fresh gamepad reading: a bumper seen once does not keep the robot aiming")
+    void staleInputDoesNotAim() {
+        tagAt(20);
+        gamepad.right_bumper = true;
+        drive.HandleUserInput();
+        drive.Process();
+        // HandleUserInput stops being called, the bumper still reads down: aim must stop.
+        for (int i = 0; i < 50; i++) {
+            drive.Process();
+        }
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("aim, then let go: the robot stops turning, with the tag still in view")
+    void letGoStopsAiming() {
+        tagAt(20);
+        gamepad.right_bumper = true;
+        runLoops();
+        assertEquals(0.4, frontLeft(), EPS);
+        gamepad.right_bumper = false;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
     // ---- Arcing around the hive: D-pad left / right while aiming (0039) ----
 
     /** Aiming at a centered hive this many inches away, with round arc settings. */
