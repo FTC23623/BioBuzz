@@ -38,7 +38,7 @@ Pinpoint calibrates. Then read the Driver Station top to bottom.
 | `EVERY TAG COUNTS` | not on the screen | `visionAnyTag` is true. Never at an event. |
 | `Launcher target RPM (pollen / nectar)` | the no-tag speed, about 3100 / 0 | 0 pollen = the trim was pushed down too far. |
 | `... MISSING. Nothing named '...'` | none | a motor, servo or sensor is missing from the configuration: see section 3. |
-| `Light strip: showing underglow` and the strip | alliance color | yellow with no ball = `pollenSensorInverted` is wrong. Dark = strip missing or the Prism needs the D-pad left clear. |
+| `Light strip: showing underglow` and the strip | alliance color | yellow with no ball = `pollenSensorInverted` is wrong. Dark = strip missing from the configuration, or INIT again to clear and redraw it. |
 | Autos: `Paths to drive N` and no `SLOW AUTO` line | N as the auto says | `SLOW AUTO` = the `autoSpeedScale` line is still in that auto. |
 
 By hand, before INIT: launch gates closed and flower extractor stored (servos do not move
