@@ -6,7 +6,9 @@ import org.firstinspires.ftc.teamcode.bot.Bot;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 
 /**
- * The one TeleOp. There is no red or blue version.
+ * The one TeleOp. The alliance comes from the magnet on the robot, not from the OpMode
+ * name. If the magnet sensor is not working, {@link HyDriveRed} and {@link HyDriveBlue}
+ * (group "Backup") set the alliance themselves, like the backup autos (docs/decisions/0021).
  *
  * <p>This OpMode builds the {@link Bot} and runs the loop. The Bot does the rest: each
  * loop, every part of the robot reads the gamepads, then every part does its work.

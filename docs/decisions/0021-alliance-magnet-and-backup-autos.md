@@ -38,6 +38,9 @@ must only lock onto OUR hive. Competition Manual section 9.9 gives the tag ids:
 
 - An unplugged sensor reads BLUE, not UNKNOWN. A red team that loses the sensor gets blue
   aim. The Driver Station says "NO SENSOR" in that case; pick a backup auto.
+  **Update 2026-11-03:** TeleOp has the same backups now, `HyDrive Red (backup)` and
+  `HyDrive Blue (backup)`, since on red a missing sensor also silences aim assist, the
+  launch trigger's aim, the indicator light and the launcher's speed-from-distance.
 - `stripLedCount` is now 24 and the underglow range is a guess. CHECK on the strip whether
   the Prism's stop LED is inclusive.
 - 0001's "refuse to START with UNKNOWN" no longer applies: there is no UNKNOWN from the
