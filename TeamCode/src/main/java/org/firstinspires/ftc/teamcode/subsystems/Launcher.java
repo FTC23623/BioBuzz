@@ -24,7 +24,8 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *   <li><b>D-pad right / left</b>: nectar launcher target up / down 50 RPM.
  * </ul>
  *
- * <p><b>Speed from distance</b> (docs/decisions/0038): while the camera sees our hive, the
+ * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
+ * (right bumper) or launch (right trigger) and the camera sees our hive, the
  * pollen launcher's target follows {@code launchRpmByRangeIn}, a table of inches to RPM in
  * 10-inch bands (2900 at 110 in, 3300 from 140 in), plus {@code launcherRangeTrimRpm}. The
  * wheel is then already at the right speed when the trigger is pulled. With no tag in view
@@ -53,6 +54,10 @@ public class Launcher implements Subsystem {
     private final ElapsedTime mTimeSinceUpdate;
 
     private boolean mSpinning = false;
+    // TeleOp only: the camera sets the speed only while the driver holds aim or launch
+    // (coach, 2026-11-03). An auto never calls HandleUserInput, so it keeps following.
+    private boolean mFromGamepad = false;
+    private boolean mDriverAiming = false;
     /** What the distance table last said, for the Driver Station. */
     private String mRangeStatus = "no tag seen yet";
 
@@ -87,6 +92,9 @@ public class Launcher implements Subsystem {
 
     @Override
     public void HandleUserInput() {
+        mFromGamepad = true;
+        Gamepad driver = mOp.mDriverGamepad;
+        mDriverAiming = driver.right_bumper || driver.right_trigger > mProperties.trgBtnThresh;
         // Each press counts once, however long it is held. With range tuning on, up / down
         // nudge the whole distance table; the table then sets the target. Off, they set the
         // target itself.
@@ -141,6 +149,12 @@ public class Launcher implements Subsystem {
     private void FollowDistance() {
         if (!mProperties.launcherRangeTuning) {
             mRangeStatus = "OFF (launcherRangeTuning): D-pad sets the speed";
+            return;
+        }
+        if (mFromGamepad && !mDriverAiming) {
+            // TeleOp, no aim button down: the camera is not tracking, so the speed holds.
+            mRangeStatus = String.format(Locale.US, "not tracking (hold aim or launch), holding %.0f",
+                    mProperties.pollenLauncherRpm);
             return;
         }
         if (mVision == null || !mVision.SeesTag()) {

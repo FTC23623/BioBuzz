@@ -49,6 +49,7 @@ class LauncherTest {
     private final FakeMotor pollen = new FakeMotor();
     private final FakeMotor nectar = new FakeMotor();
     private Gamepad gamepad;
+    private Gamepad driver;
     private Vision vision;
     private HydraOpMode op;
     private Launcher launcher;
@@ -70,8 +71,9 @@ class LauncherTest {
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgLaunchPollen)).thenReturn(pollen.motor);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgLaunchNectar)).thenReturn(nectar.motor);
         gamepad = mock(Gamepad.class);
+        driver = mock(Gamepad.class);
         vision = mock(Vision.class);
-        op = new HydraOpMode(mock(Telemetry.class), hardwareMap, mock(Gamepad.class), gamepad);
+        op = new HydraOpMode(mock(Telemetry.class), hardwareMap, driver, gamepad);
         launcher = new Launcher(op, properties, gamepad, vision);
     }
 
@@ -198,6 +200,7 @@ class LauncherTest {
     @DisplayName("range tuning on: D-pad up / down trims the whole table, 50 a press")
     void dpadTrimsTheTable() {
         properties.launcherRangeTuning = true;
+        driver.right_bumper = true;   // TeleOp: the table only follows while aiming
         tagAt(125);
         tap(down -> gamepad.dpad_up = down);
         tap(down -> gamepad.dpad_up = down);
@@ -207,6 +210,39 @@ class LauncherTest {
         tap(down -> gamepad.dpad_down = down);
         launcher.Process();
         assertEquals(3030 + 50, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("TeleOp, no aim button: the camera is not tracking, the speed holds")
+    void teleOpTracksOnlyWhileAiming() {
+        properties.launcherRangeTuning = true;
+        tagAt(150);
+        launcher.HandleUserInput();
+        launcher.Process();
+        assertEquals(1000, launcher.GetPollenTargetRpm(), EPS);
+
+        driver.right_bumper = true;
+        launcher.HandleUserInput();
+        launcher.Process();
+        assertEquals(3300, launcher.GetPollenTargetRpm(), EPS);
+
+        // Let go: holds where it got to, even as the robot moves.
+        driver.right_bumper = false;
+        tagAt(112);
+        launcher.HandleUserInput();
+        launcher.Process();
+        assertEquals(3300, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("TeleOp, launch trigger held: tracks too")
+    void teleOpTracksWhileLaunching() {
+        properties.launcherRangeTuning = true;
+        tagAt(125);
+        driver.right_trigger = 1;
+        launcher.HandleUserInput();
+        launcher.Process();
+        assertEquals(3030, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
