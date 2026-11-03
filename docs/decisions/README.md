@@ -46,6 +46,34 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0037](0037-rollers-are-1150-rpm-motors-half-speed-launch-feed.md) | The intake and transfer are 1150 RPM motors (145.1 ticks per turn); a launch is fed at half speed | Accepted, ticks per turn is CHECK |
 | [0038](0038-launcher-speed-from-distance.md) | The pollen launcher's speed follows the distance to the tag, in 10-inch bands | Accepted, two rows measured |
 
+## TODO: confirm on the robot after this week's tuning
+
+Most of 0018 to 0038 still say "not driven yet" or "not on the robot yet". Each line below
+is the one thing to see on the robot before its status above changes. Tick the box, then
+edit the status in the table. The statuses stay as they are until then. Each decision's
+own CHECK section has the detail.
+
+- [ ] **0018** Hold the left trigger while turning: the robot pivots on its inside back wheel. Tune `driveDriftSideGain` and `driveDriftRearGain` if the pivot lands off the wheel.
+- [ ] **0019** Test: Motor Tuning: both launchers spin forward (both are `Reversed = true`), the intake pulls in, the transfer carries up. The rollers' ticks per turn are 0037's now.
+- [ ] **0020** The launch servos answer to `pollenServo` and `nectarServo` in the configuration, and `launchServoRangeDeg` matches the servo (300 goBILDA, 270 REV).
+- [ ] **0021** The magnet sensor is on the robot as `allianceMagnet`: magnet = `RED`, none = `BLUE`, and the Driver Station says which.
+- [ ] **0022** Thursday night, after the last tuning session: `competitionMode = true`, Disable Dashboard in the Robot Controller app, INIT says `Competition mode: dashboard off.`
+- [ ] **0023** Driver's right trigger launches; operator's cross, left trigger and square run the rollers forward, held, and backward.
+- [ ] **0024** StrategyC and StrategyD, pasted from the recorder, drive the route that was recorded.
+- [ ] **0025** INIT shows `Intake hub started with P / I / D / F` as 10 / 3 / 0 / 0. If not, copy the hub's numbers into the `roller` settings.
+- [ ] **0026 / 0027** INIT: the strip goes dark, then LEDs 12 to 35 light in the alliance color. Count 24. If LED 35 is dark, `prismStopIsOnePastLast = false`. START changes nothing on the strip.
+- [ ] **0028** Hold the launch trigger: the gate is fully open just before the transfer starts, about 0.2 s. Too early, raise `launchServoExtraSeconds`.
+- [ ] **0029** A launcher kicked backward for a moment keeps running; only a full second backward stops it, and right bumper off / on clears the stop.
+- [ ] **0030** An auto's LAUNCH opens the gates once `Launchers at speed` is true. StrategyB with no tag in view still launches by 26 s.
+- [ ] **0031** Camera on the other alliance's tags: the indicator BLINKS red and the Driver Station line says to check the magnet. On ours: blinking blue, blue, green.
+- [ ] **0032** START HyDrive: launchers spin with nothing pressed; right bumper stops and restarts them. Square lets out one ball at a time (400 RPM). Forward on the stick is away from the driver with the robot turned.
+- [ ] **0033** A ball on the pollen switch lights the whole strip yellow. The Driver Station names dropped tags (`seen but NOT OURS`). `visionAnyTag` is false. Triangle on gamepad 2 deploys the extractor.
+- [ ] **0034** Cross on, then hold the trigger: the transfer stops for the gate's 0.2 s, the intake does not. The yellow holds half a second after the ball leaves.
+- [ ] **0035** INIT HyDrive shows the Limelight lines, not `NO CAMERA FOUND`. Empty intake: underglow, not yellow (`pollenSensorInverted`). A ball: yellow and one rumble on gamepad 2.
+- [ ] **0036** Left bumper with two hive tags in view faces between them; the launch trigger turns toward the hive. `Last launch (camera)` shows the inches. D-pad left clears the strip.
+- [ ] **0037** Test: Motor Tuning, intake target 1150: actual reads about 1150 at power near 1 (`intakeTicksPerRev` 145.1). A launch feeds both rollers at half.
+- [ ] **0038** Shoot from 110, 120, 130 and 140 in and fill the rows of `launchRpmByRangeIn`. A trim that held all day goes into the rows.
+
 ## Template
 
 ```markdown
