@@ -159,8 +159,9 @@ class DrivePracticeOptionsTest {
     }
 
     @Test
-    @DisplayName("left bumper held: slow mode, a quarter of the power")
+    @DisplayName("left bumper held: slow mode, driveSlow of the power (half)")
     void leftBumperIsSlow() {
+        assertEquals(0.5, properties.driveSlow, EPS);
         gamepad.left_bumper = true;
         gamepad.left_stick_y = -1;    // full forward
         runLoops();

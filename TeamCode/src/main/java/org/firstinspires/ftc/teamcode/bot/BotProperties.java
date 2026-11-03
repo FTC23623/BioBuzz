@@ -87,8 +87,11 @@ public class BotProperties {
     public double trgBtnThresh = 0.05;
     /** Top drive power with no trigger held. The right trigger launches, so there is no boost. */
     public double driveNormal = 1;
-    /** Top drive power while holding the left bumper, for careful lining up. */
-    public double driveSlow = 0.25;
+    /**
+     * Top drive power while holding the left bumper, for careful lining up. Half speed
+     * (coach, 2026-11-03: a quarter was too slow to be useful).
+     */
+    public double driveSlow = 0.5;
     /** Mecanum wheels strafe a bit slower than they drive, so strafe gets a small boost. */
     public double driveStrafeGain = 1.1;
     /** Most a drive motor's power may change in one loop. 0.2 means 0 to full in 5 loops. */
