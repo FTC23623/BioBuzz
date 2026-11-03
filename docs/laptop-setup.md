@@ -5,8 +5,12 @@ anywhere with internet. Steps 5 to 7 are every practice.
 
 | Laptop | Branch | Subteam |
 |---|---|---|
-| Drive laptop | `u/bryanculver-bot` | Drive and auton |
-| Launcher laptop | `u/bryanculver-bot` | Launcher and aim assist |
+| Drive laptop | `u/bryanculver-update-strat-a` | Drive and auton |
+| Launcher laptop | `u/bryanculver-update-strat-a` | Launcher and aim assist |
+
+`u/bryanculver-update-strat-a` is the tuning branch for the Hartland qualifier. Once the
+coach merges it, both laptops move to `master`: the coach will say when, and the checkout
+in step 2 is the same with `master` picked from the list.
 
 Both subteams work on different files, so sharing a branch is fine. Pull (Update Project)
 before you start, push when you finish, and the other laptop sees your work next pull.
@@ -81,8 +85,10 @@ Android Studio's own "Pair Devices Using Wi-Fi" never works with the hub. It nee
 
 ## Rules
 
-- **Stay on `u/bryanculver-bot`.** Do not make new branches from a laptop; the coach does that.
-- **Only the coach merges** into `u/bryanculver-bot` and `master`.
+- **Stay on the branch in the table.** Do not make new branches from a laptop; the coach
+  does that.
+- **Only the coach merges** into that branch and into `master`.
+- **Before an event**, the coach works through `docs/event-checklist.md`.
 - **Every number has a name** in `BotProperties.java`. A test OpMode that needs a different
   number sets it at the top of its `runOpMode()`, like `Test: Launcher` does.
 - Stuck? Read `docs/how-the-code-fits-together.html` (open it in a browser), then ask.
