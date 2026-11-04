@@ -75,7 +75,7 @@ own CHECK section has the detail.
 - [ ] **0035** INIT HyDrive shows the Limelight lines, not `NO CAMERA FOUND`. Empty intake: underglow, not yellow (`pollenSensorInverted`). A ball: yellow and one rumble on gamepad 2.
 - [ ] **0036** Right bumper (0039) with two hive tags in view faces between them; the launch trigger turns toward the hive. `Last launch (camera)` shows the inches.
 - [ ] **0037** Test: Motor Tuning, intake target 1150: actual reads about 1150 at power near 1 (`intakeTicksPerRev` 145.1). A launch feeds both rollers at half.
-- [ ] **0038** Shoot from 110, 120, 130 and 140 in and fill the rows of `launchRpmByRangeIn`. A trim that held all day goes into the rows.
+- [ ] **0038** Shoot from 110 and 140 in to set `launchNearRpm` and `launchFarRpm`, then from 120 and 130 to set `launchCurve`. A trim that held all day goes into the two RPMs.
 - [ ] **0039** Right bumper aims, left bumper slows. Right bumper plus D-pad left or right: the robot circles the hive keeping its distance (the `Arc` line shows holding and now). Gamepad 2 left bumper toggles the rollers; its right bumper and cross do nothing.
 - [ ] **0040** Trigger with no tag: shut and gamepad 1 buzzes; gamepad 2 R2 overrides. Nothing pressed: no turning, `Aim assist: off`. A fifth ball is spat out and the rollers stop until gamepad 2 lets go. Transfer feeds at 30%. Slow is half speed.
 

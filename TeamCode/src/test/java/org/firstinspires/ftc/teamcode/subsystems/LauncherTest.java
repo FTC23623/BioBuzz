@@ -159,16 +159,36 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("distance table: the band rule, 10 inches a row, clamped at both ends")
-    void bandRule() {
-        double[][] table = {{110, 2900}, {120, 3030}, {130, 3170}, {140, 3300}};
-        assertEquals(2900, Launcher.RpmForRange(100, table), EPS);   // nearer than the first row
-        assertEquals(2900, Launcher.RpmForRange(110, table), EPS);
-        assertEquals(2900, Launcher.RpmForRange(119.9, table), EPS);
-        assertEquals(3030, Launcher.RpmForRange(120, table), EPS);
-        assertEquals(3170, Launcher.RpmForRange(135, table), EPS);
-        assertEquals(3300, Launcher.RpmForRange(140, table), EPS);
-        assertEquals(3300, Launcher.RpmForRange(200, table), EPS);   // farther than the last row
+    @DisplayName("distance curve: 2-inch steps, each a little bigger than the last, clamped at both ends")
+    void curve() {
+        BotProperties p = new BotProperties();
+        p.launchNearIn = 110;
+        p.launchNearRpm = 2900;
+        p.launchFarIn = 140;
+        p.launchFarRpm = 3325;
+        p.launchCurve = 1.1;
+        p.launchBandIn = 2;
+        assertEquals(2900, Launcher.RpmForRange(100, p), EPS);   // nearer than the near shot
+        assertEquals(2900, Launcher.RpmForRange(111.9, p), EPS); // still the first step
+        assertEquals(2922, Launcher.RpmForRange(112, p), EPS);
+        assertEquals(3027, Launcher.RpmForRange(121, p), EPS);
+        assertEquals(3172, Launcher.RpmForRange(130, p), EPS);
+        assertEquals(3325, Launcher.RpmForRange(140, p), EPS);
+        assertEquals(3325, Launcher.RpmForRange(200, p), EPS);   // farther than the far shot
+        // Farther steps are bigger: the curve bends upward, for the ball's arc.
+        double nearStep = Launcher.RpmForRange(112, p) - Launcher.RpmForRange(110, p);
+        double farStep = Launcher.RpmForRange(138, p) - Launcher.RpmForRange(136, p);
+        assertTrue(farStep > nearStep, "near step " + nearStep + ", far step " + farStep);
+    }
+
+    @Test
+    @DisplayName("curve 1: a straight line between the two shots")
+    void curveOneIsStraight() {
+        BotProperties p = new BotProperties();
+        p.launchCurve = 1;
+        p.launchBandIn = 0;   // no steps, so the midpoint is exact
+        assertEquals(Math.round((p.launchNearRpm + p.launchFarRpm) / 2),
+                Launcher.RpmForRange((p.launchNearIn + p.launchFarIn) / 2, p), EPS);
     }
 
     @Test
@@ -177,7 +197,7 @@ class LauncherTest {
         properties.launcherRangeTuning = true;
         tagAt(135);
         launcher.Process();
-        assertEquals(3183, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3232, launcher.GetPollenTargetRpm(), EPS);
         assertEquals(1000, launcher.GetNectarTargetRpm(), EPS);
         tagAt(150);
         launcher.Process();
@@ -188,7 +208,7 @@ class LauncherTest {
     @DisplayName("no tag in view: the target holds where it was, so a blind shot still has a speed")
     void noTagHolds() {
         properties.launcherRangeTuning = true;
-        tagAt(112);
+        tagAt(111);
         launcher.Process();
         assertEquals(2900, launcher.GetPollenTargetRpm(), EPS);
         when(vision.SeesTag()).thenReturn(false);
@@ -206,10 +226,10 @@ class LauncherTest {
         tap(down -> gamepad.dpad_up = down);
         launcher.Process();
         assertEquals(100, properties.launcherRangeTrimRpm, EPS);
-        assertEquals(3042 + 100, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3084 + 100, launcher.GetPollenTargetRpm(), EPS);
         tap(down -> gamepad.dpad_down = down);
         launcher.Process();
-        assertEquals(3042 + 50, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3084 + 50, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -242,7 +262,7 @@ class LauncherTest {
         driver.right_trigger = 1;
         launcher.HandleUserInput();
         launcher.Process();
-        assertEquals(3042, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3084, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test

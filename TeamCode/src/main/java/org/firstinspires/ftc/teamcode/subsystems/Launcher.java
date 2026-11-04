@@ -26,8 +26,8 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
  * (right bumper) or launch (right trigger) and the camera sees our hive, the
- * pollen launcher's target follows {@code launchRpmByRangeIn}, a table of inches to RPM in
- * 10-inch bands (2900 at 110 in, 3325 from 140 in), plus {@code launcherRangeTrimRpm}. The
+ * pollen launcher's target follows a curve of inches to RPM in 2-inch
+ * steps (2900 at 110 in, 3325 from 140 in, bending gently upward between), plus {@code launcherRangeTrimRpm}. The
  * wheel is then already at the right speed when the trigger is pulled. With no tag in view
  * the target stays where it was. {@code launcherRangeTuning = false} turns this off.
  *
@@ -169,30 +169,43 @@ public class Launcher implements Subsystem {
             mRangeStatus = String.format(Locale.US, "tag seen, no distance, holding %.0f", mProperties.pollenLauncherRpm);
             return;
         }
-        double tableRpm = RpmForRange(rangeIn, mProperties.launchRpmByRangeIn);
+        double tableRpm = RpmForRange(rangeIn, mProperties);
         mProperties.pollenLauncherRpm = KeepInRange(tableRpm + mProperties.launcherRangeTrimRpm);
         mRangeStatus = String.format(Locale.US, "%.0f in -> %.0f RPM, trim %+.0f = %.0f",
                 rangeIn, tableRpm, mProperties.launcherRangeTrimRpm, mProperties.pollenLauncherRpm);
     }
 
     /**
-     * The RPM for a distance, from a table of {inches, RPM} rows in order of distance. The
-     * row for the band the robot is in: the last row whose distance is not more than the
-     * range. Nearer than the first row: the first row. Farther than the last: the last.
+     * The RPM for a distance, from the curve through the two measured shots in BotProperties,
+     * in steps of launchBandIn inches:
      *
      * <pre>
-     *     table {110, 2900}, {120, 3030}, {130, 3170}, {140, 3300}
-     *     100 in: 2900     115 in: 2900     120 in: 3030     139 in: 3170     200 in: 3300
+     *     step start = nearIn + whole steps past nearIn
+     *     rpm = near + (far - near) x ((step start - nearIn) / (farIn - nearIn)) ^ curve
+     *
+     *     near 110 in 2900, far 140 in 3325, curve 1.1, steps of 2 in:
+     *     110: 2900   112: 2922   120: 3027   130: 3172   139: 3294   140 and up: 3325
      * </pre>
+     *
+     * Nearer than nearIn: the near speed. Farther than farIn: the far speed.
+     *
+     * @return whole RPM
      */
-    public static double RpmForRange(double rangeIn, double[][] table) {
-        double rpm = table[0][1];
-        for (double[] row : table) {
-            if (rangeIn >= row[0]) {
-                rpm = row[1];
-            }
+    public static double RpmForRange(double rangeIn, BotProperties p) {
+        if (rangeIn <= p.launchNearIn) {
+            return p.launchNearRpm;
         }
-        return rpm;
+        if (rangeIn >= p.launchFarIn) {
+            return p.launchFarRpm;
+        }
+        double stepStart = rangeIn;
+        if (p.launchBandIn > 0) {
+            double steps = Math.floor((rangeIn - p.launchNearIn) / p.launchBandIn);
+            stepStart = p.launchNearIn + steps * p.launchBandIn;
+        }
+        double fraction = (stepStart - p.launchNearIn) / (p.launchFarIn - p.launchNearIn);
+        double rpm = p.launchNearRpm + (p.launchFarRpm - p.launchNearRpm) * Math.pow(fraction, p.launchCurve);
+        return Math.round(rpm);
     }
 
     /** Measure both speeds and set both powers. Process() calls this every 50 ms. */

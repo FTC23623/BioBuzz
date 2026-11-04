@@ -1,6 +1,6 @@
 # 0038: The pollen launcher's speed follows the distance to the tag
 
-Status: Accepted. Table raised on 2026-11-03: 110 → 2900, 120 → 3042, 130 → 3183, 140 → 3325 (far row +25, straight line between). Two rows measured; the two between are guesses. Not yet shot.
+Status: Accepted. Since 2026-11-03 a curve in 2-inch steps, 2900 at 110 in to 3325 at 140 in (see the update at the end). Two rows measured; the two between are guesses. Not yet shot.
 Date: 2026-11-02
 Adds to 0009 (speed control) and 0023 (the D-pad sets the speed).
 
@@ -42,3 +42,27 @@ rows.
   in. It spends more battery and is louder; it is also ready to shoot at any moment.
 - A tag seen but with no distance (the Limelight could not place it) holds the last speed.
 - Tests: `LauncherTest` (the band rule, follows the table, trim, no tag holds, off).
+
+## Update 2026-11-03: a gentle curve in 2-inch steps
+
+The four 10-inch rows are gone. The speed is now a curve through the two measured shots,
+2900 RPM at 110 in and 3325 at 140 in (3300 plus 25), stepped every `launchBandIn` (2) inches:
+
+```
+rpm = near + (far - near) x ((step start - 110) / 30) ^ launchCurve
+```
+
+The ball flies in an arc, so each step out needs a little more than the last.
+`launchCurve` is 1.1, a subtle bend, because the old 120 and 130 guesses already sat close
+to a straight line. 1 is straight; 2 would be a parabola. All six numbers
+(`launchNearIn`, `launchNearRpm`, `launchFarIn`, `launchFarRpm`, `launchCurve`,
+`launchBandIn`) are in BotProperties; the RPMs, the curve and the step are on the
+dashboard's Launcher group. `Launcher.RpmForRange` is still the one place that reads them.
+
+| in | 110 | 112 | 116 | 120 | 124 | 130 | 134 | 138 | 140+ |
+|---|---|---|---|---|---|---|---|---|---|
+| RPM | 2900 | 2922 | 2972 | 3027 | 3084 | 3172 | 3232 | 3294 | 3325 |
+
+Tuning: a miss near the hive moves `launchNearRpm`, a miss far out moves `launchFarRpm`, and
+misses in the middle with both ends right move `launchCurve` (up if the middle falls short).
+

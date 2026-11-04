@@ -218,25 +218,33 @@ public class BotProperties {
     // straight line from 2900 to 3325, rounded; tune each on the robot.
 
     /**
-     * true: the pollen launcher's target follows launchRpmByRangeIn whenever a tag of ours
-     * is in view, and D-pad up / down trims that table instead of setting the speed. false:
+     * true: the pollen launcher's target follows the distance curve below whenever a tag of
+     * ours is in view, and D-pad up / down trims the curve instead of setting the speed. false:
      * the D-pad and the dashboard set pollenLauncherRpm directly, as before.
      */
     public boolean launcherRangeTuning = true;
+    // The speed is a curve through two measured shots, stepped every launchBandIn inches.
+    // A ball flies in an arc, so each step out needs a little more than the one before:
+    //
+    //     rpm = near + (far - near) x ((band start - nearIn) / (farIn - nearIn)) ^ launchCurve
+    //
+    // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.1 is subtle:
+    // the steps grow from 22 RPM near the hive to 31 RPM at 140 in (coach, 2026-11-03).
+    // Nearer than nearIn uses the near speed; farther than farIn uses the far speed.
+    /** The near measured shot: distance, in inches. */
+    public double launchNearIn = 110;
+    /** The near measured shot: RPM that scored from there. */
+    public double launchNearRpm = 2900;
+    /** The far measured shot: distance, in inches. */
+    public double launchFarIn = 140;
+    /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03). */
+    public double launchFarRpm = 3325;
+    /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.1 to start. */
+    public double launchCurve = 1.1;
+    /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
+    public double launchBandIn = 2;
     /**
-     * Rows of {inches to the tag, RPM}, nearest first, 10 inches apart. The robot uses the
-     * row for the 10-inch band it is in: the last row whose distance is not more than the
-     * camera's range. Nearer than the first row uses the first; farther than the last uses
-     * the last. So 115 in is the 110 row, 139 in the 130 row, 200 in the 140 row.
-     */
-    public double[][] launchRpmByRangeIn = {
-            {110, 2900},
-            {120, 3042},
-            {130, 3183},
-            {140, 3325},
-    };
-    /**
-     * Added to every row of the table. D-pad up / down on gamepad 2 moves it by
+     * Added to every step of the curve. D-pad up / down on gamepad 2 moves it by
      * launcherRpmStep while range tuning is on, so the operator can nudge every shot faster
      * or slower on the day. On the dashboard's Launcher group.
      */
