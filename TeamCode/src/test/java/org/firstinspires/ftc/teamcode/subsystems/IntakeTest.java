@@ -260,7 +260,7 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("transfer already running when the trigger is pulled: it STOPS while the gate opens, the intake keeps going")
+    @DisplayName("rollers running when the trigger is pulled: the transfer STOPS while the gate opens, the intake slows to its feed speed at once")
     void runningTransferPausesForTheGate() {
         tap(down -> gamepad.left_bumper = down);
         assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
@@ -269,7 +269,7 @@ class IntakeTest {
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
         assertEquals(0, transfer.velocity, EPS);
-        assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedIntakeScale), intake.velocity, EPS);
 
         // Gate open: the transfer runs again to feed the launch, at the feed speed.
         when(gates.IsFullyOpen()).thenReturn(true);

@@ -23,9 +23,9 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * </ul>
  *
  * <p><b>Launching</b> (driver's right trigger, {@link LaunchGates}): while the gates are
- * still swinging open, the transfer STOPS, even if cross had it running, so no ball is
- * pushed against a half-open gate (docs/decisions/0034). The intake keeps doing what it
- * was. Once the gates are fully open, the intake AND the transfer run forward even if they
+ * still swinging open, the transfer STOPS, even if it was running, so no ball is pushed
+ * against a half-open gate (docs/decisions/0034). The intake, if it was running, drops to
+ * its launch-feed speed the moment the trigger is pulled. Once the gates are fully open, the intake AND the transfer run forward even if they
  * were off, each at a share of its speed ({@code launchFeedIntakeScale} half,
  * {@code launchFeedTransferScale} 30%), so balls go into the launcher one at a time: the
  * transfer pushes the balls into the launchers, the intake pushes along any ball stuck
@@ -128,10 +128,12 @@ public class Intake implements Subsystem {
             mTransfer.SetRpm(-mProperties.transferReverseRpm);
         } else if (IsGateOpening()) {
             // The driver just pulled the trigger and the gate is still swinging open. Stop
-            // the transfer so it is not pushing a ball against the gate. The intake carries
-            // on as it was. Once the gate is fully open, the next branch feeds the launch.
+            // the transfer so it is not pushing a ball against the gate. The intake drops to
+            // its launch-feed speed right away, not when the gate is open, so balls are
+            // already slowing when the launch starts (coach, 2026-11-04). Once the gate is
+            // fully open, the next branch feeds the launch.
             if (IsRunning()) {
-                mIntake.SetRpm(IntakeRoller(mProperties.intakeRpm));
+                mIntake.SetRpm(IntakeRoller(mProperties.intakeRpm * mProperties.launchFeedIntakeScale));
             } else {
                 mIntake.SetRpm(0);
             }
