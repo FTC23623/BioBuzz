@@ -35,7 +35,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *
  * <p><b>Auto-reject</b> (docs/decisions/0040): the pollen switch only sees a ball once the
  * robot is full. While the operator is intaking, pollen detected for
- * {@code pollenRejectAfterSeconds} (0.5 s) means one ball too many: the intake runs backward
+ * {@code pollenRejectAfterSeconds} (1 s) means one ball too many: the intake runs backward
  * to spit it out while the transfer keeps the rest moving up, for {@code pollenRejectSeconds}
  * (0.75 s). Then the operator's intake and transfer stop, and stay stopped until the left
  * bumper and the left trigger are both let go. Launching and square are never interrupted.

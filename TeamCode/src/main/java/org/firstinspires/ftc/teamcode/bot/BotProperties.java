@@ -331,7 +331,7 @@ public class BotProperties {
     /** true: reject an extra ball by itself. false: the operator watches for it. */
     public boolean pollenAutoReject = true;
     /** Pollen must stay detected this long while intaking, in seconds, before a reject. */
-    public double pollenRejectAfterSeconds = 0.5;
+    public double pollenRejectAfterSeconds = 1.0;
     /** How long the intake runs backward (transfer forward) to spit the ball out, in seconds. */
     public double pollenRejectSeconds = 0.75;
     /** How much one D-pad press changes a roller's speed in Test: Motor Tuning. Same as the launchers'. */
