@@ -47,7 +47,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0038](0038-launcher-speed-from-distance.md) | The pollen launcher's speed follows the distance to the tag, in 10-inch bands | Accepted, two rows measured |
 | [0039](0039-controls-update-aim-arc-launchers-always-on.md) | Controls update: aim and slow swap bumpers, the D-pad arcs around the hive, launchers always on, intake on the left bumper | Accepted, not driven yet |
 | [0040](0040-launch-lock-aim-only-on-button-auto-reject.md) | The launch needs a camera lock (operator R2 overrides); aim and tracking only while a button is down; an extra ball is spat out; slow at half | Accepted, not driven yet |
-| [0041](0041-quiet-telemetry-for-loop-time.md) | Quiet telemetry and Test: HyDrive Quiet, to measure what the Driver Station lines cost | Accepted, not measured yet |
+| [0041](0041-quiet-telemetry-for-loop-time.md) | Quiet telemetry, a dashboard switch, to measure what the Driver Station lines cost | Accepted, not measured yet |
 
 ## TODO: confirm on the robot after this week's tuning
 

@@ -101,8 +101,10 @@ public class BotProperties {
     /**
      * true: after START the Driver Station shows only the loop time and the battery, and
      * the parts skip the hardware reads they make just for the screen (the Limelight's
-     * status, motor powers). For measuring loop time; Test: HyDrive Quiet turns it on. INIT
-     * shows everything either way (docs/decisions/0041).
+     * status, motor powers). For measuring loop time: tick it on the dashboard's Drive group
+     * while HyDrive runs, untick it to get the full screen back. Off by default, so a match
+     * (no dashboard) always has the full screen. INIT shows everything either way
+     * (docs/decisions/0041).
      */
     public boolean quietTelemetry = false;
     /**

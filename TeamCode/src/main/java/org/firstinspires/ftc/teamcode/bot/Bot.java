@@ -123,7 +123,8 @@ public class Bot {
     static final String[] LiveTuningDrive = {
             "driveNormal", "driveSlow", "driveStrafeGain", "driveMotorSlewRate",
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
-            "aimKP", "aimMaxRotate", "aimDoneDegrees", "arcStrafePower", "arcRangeKP", "arcMaxDrive"};
+            "aimKP", "aimMaxRotate", "aimDoneDegrees", "arcStrafePower", "arcRangeKP", "arcMaxDrive",
+            "quietTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
