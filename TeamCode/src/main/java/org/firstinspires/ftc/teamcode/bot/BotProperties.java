@@ -435,6 +435,17 @@ public class BotProperties {
      */
     public double autoSpinUpSeconds = 2;
     /**
+     * The FIRST launch of an auto waits up to this long instead, in seconds. The launchers
+     * only start at START, and the first LAUNCH can come a second later, so it must not give
+     * up early (coach, 2026-11-03). Only a launcher that never gets there opens anyway.
+     */
+    public double autoFirstSpinUpSeconds = 5;
+    /**
+     * "At speed" must hold this long without a break, in seconds, before the gates open. A
+     * wheel still speeding up passes through the target for a moment; this waits it out.
+     */
+    public double autoAtSpeedHoldSeconds = 0.25;
+    /**
      * A LAUNCH_WHEN_TAG_SEEN step still waiting for one of our hive's tags this many seconds
      * after START launches anyway, facing the way it is. AUTO is 30 seconds (Competition
      * Manual: "a 30-second AUTO period"), and a robot should never end it holding its balls.

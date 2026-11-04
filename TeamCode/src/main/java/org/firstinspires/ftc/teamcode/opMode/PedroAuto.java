@@ -186,6 +186,11 @@ public abstract class PedroAuto extends LinearOpMode {
         double aimHeading = 0;
         // true while a launch step waits for the launchers to reach speed, gates still shut.
         boolean spinningUp = paths.get(pathNumber) == LAUNCH;
+        // How many launches have opened the gates so far. The first one waits longer.
+        int launchesDone = 0;
+        // How long the launchers have been at speed without a break.
+        ElapsedTime atSpeedTimer = new ElapsedTime();
+        boolean wasAtSpeed = false;
         StartStep(bot, follower, paths.get(pathNumber), stepTimer);
 
         while (opModeIsActive()) {
@@ -226,12 +231,20 @@ public abstract class PedroAuto extends LinearOpMode {
                     stepTimer.reset();
                 }
             }
+            // At speed must hold for a moment, not just touch the target once. Watched every
+            // loop, so a dip between launches starts the count over.
+            boolean atSpeed = bot.LaunchersAtSpeed();
+            if (atSpeed && !wasAtSpeed) {
+                atSpeedTimer.reset();
+            }
+            wasAtSpeed = atSpeed;
             if (spinningUp) {
-                boolean spinUpTookTooLong = stepTimer.seconds() >= botProperties.autoSpinUpSeconds;
-                if (bot.LaunchersAtSpeed() || spinUpTookTooLong) {
-                    // Up to speed (or close enough): open the gates. The launch time counts
-                    // from now. The intake and transfer start once the gates are fully open.
+                boolean steadyAtSpeed = atSpeed && atSpeedTimer.seconds() >= botProperties.autoAtSpeedHoldSeconds;
+                if (ReadyToOpen(steadyAtSpeed, stepTimer.seconds(), launchesDone == 0, botProperties)) {
+                    // Up to speed (or waited as long as allowed): open the gates. The launch
+                    // time counts from now. The rollers start once the gates are fully open.
                     spinningUp = false;
+                    launchesDone = launchesDone + 1;
                     bot.OpenLaunchGates(true);
                     stepTimer.reset();
                 }
@@ -274,7 +287,16 @@ public abstract class PedroAuto extends LinearOpMode {
             telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
             telemetry.addData("Waiting for a tag", waitingForTag);
             telemetry.addData("Aiming at the tag", aiming);
-            telemetry.addData("Waiting for launchers to reach speed", spinningUp);
+            if (spinningUp) {
+                double limit = botProperties.autoSpinUpSeconds;
+                if (launchesDone == 0) {
+                    limit = botProperties.autoFirstSpinUpSeconds;
+                }
+                telemetry.addData("Waiting for launchers to reach speed", "yes, %.1f of at most %.1f s%s",
+                        stepTimer.seconds(), limit, launchesDone == 0 ? " (first launch)" : "");
+            } else {
+                telemetry.addData("Waiting for launchers to reach speed", "no");
+            }
             telemetry.addData("Launching", !waitingForTag && !aiming && !spinningUp && launching);
             telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
             telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
@@ -323,6 +345,28 @@ public abstract class PedroAuto extends LinearOpMode {
         // A slower auto needs more time for the same path.
         double seconds = (driveSeconds + turnSeconds) / properties.autoSpeedScale;
         return seconds * properties.autoGiveUpMargin + properties.autoGiveUpExtraSeconds;
+    }
+
+    /**
+     * May a LAUNCH step open the gates yet? Yes once the launchers have held at speed for
+     * autoAtSpeedHoldSeconds. If they never get there, yes anyway after autoSpinUpSeconds, or
+     * after autoFirstSpinUpSeconds for the first launch of the auto, so a slow or broken
+     * launcher can't freeze the auto.
+     *
+     * @param steadyAtSpeed true when at speed has held for the hold time
+     * @param waitedSeconds how long this launch has waited so far
+     * @param firstLaunch   true for the first launch of this auto
+     */
+    static boolean ReadyToOpen(boolean steadyAtSpeed, double waitedSeconds, boolean firstLaunch,
+                               BotProperties properties) {
+        if (steadyAtSpeed) {
+            return true;
+        }
+        double limit = properties.autoSpinUpSeconds;
+        if (firstLaunch) {
+            limit = properties.autoFirstSpinUpSeconds;
+        }
+        return waitedSeconds >= limit;
     }
 
     /**

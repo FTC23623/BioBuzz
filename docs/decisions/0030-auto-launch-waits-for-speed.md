@@ -36,3 +36,18 @@ The Driver Station shows each stage, plus the time since START.
 - A launch step can take up to 2 s longer when the launchers are slow to spin up.
 - StrategyB now always launches by about 26 s, tag or no tag. Lower
   `autoLaunchAnywayAtSeconds` if the robot needs time to drive after it.
+
+## Update 2026-11-03: the first launch waits for speed, and speed must hold
+
+The coach asked that the first launch of every auto be at speed. The launchers only start at
+START, and StrategyC and D launch about a second later, so the 2 s limit could open the gates
+on a wheel still spinning up, and a single "at speed" reading could catch a wheel passing
+through the target on its way up.
+
+- **The first LAUNCH waits up to `autoFirstSpinUpSeconds` (5 s)**; later ones keep
+  `autoSpinUpSeconds` (2 s). Only a launcher that never gets there opens anyway.
+- **At speed must hold `autoAtSpeedHoldSeconds` (0.25 s) without a break** before the gates
+  open, watched every loop.
+- The Driver Station shows `Waiting for launchers to reach speed: yes, 1.2 of at most 5.0 s
+  (first launch)`.
+- Tests: `LaunchSpinUpTest` (3).
