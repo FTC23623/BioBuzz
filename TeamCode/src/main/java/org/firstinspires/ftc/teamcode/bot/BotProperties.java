@@ -99,6 +99,13 @@ public class BotProperties {
     /** Loops a button must be held before it counts. Filters out electrical noise. */
     public int debounce = 3;
     /**
+     * true: after START the Driver Station shows only the loop time and the battery, and
+     * the parts skip the hardware reads they make just for the screen (the Limelight's
+     * status, motor powers). For measuring loop time; Test: HyDrive Quiet turns it on. INIT
+     * shows everything either way (docs/decisions/0041).
+     */
+    public boolean quietTelemetry = false;
+    /**
      * How often the battery voltage is read, in milliseconds. Each read is an extra trip to
      * the hub, so not every loop. 250 = four times a second, more than enough for a graph.
      */

@@ -68,7 +68,9 @@ public class FlowerExtractor implements Subsystem {
         } else {
             SetPosition(mProperties.flowerExtractorClosed);
         }
-        mOp.mTelemetry.addData("Flower extractor (gamepad 2: hold triangle)", state);
+        if (!mOp.mQuiet) {
+            mOp.mTelemetry.addData("Flower extractor (gamepad 2: hold triangle)", state);
+        }
     }
 
     /** true: deployed. false: stored. An auto could call this. */

@@ -136,7 +136,9 @@ public class Vision_Webcam implements Vision {
             mEverSeen = true;
             mSinceSeen.reset();
         }
-        ShowStatus();
+        if (!mOp.mQuiet) {
+            ShowStatus();
+        }
     }
 
     /** The single tag with the smallest range, or null when none has a pose. */

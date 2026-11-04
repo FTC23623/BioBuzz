@@ -124,7 +124,9 @@ public class Vision_Limelight implements Vision {
                 mSinceSeen.reset();
             }
         }
-        ShowStatus();
+        if (!mOp.mQuiet) {
+            ShowStatus();
+        }
     }
 
     /** The tag that fills the most of the picture, or null when the list is empty. */

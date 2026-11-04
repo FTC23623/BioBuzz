@@ -168,6 +168,9 @@ public class Indicator implements Subsystem {
      * the robot configuration it says so, and what the color would have been.
      */
     private void Say(String color, String why) {
+        if (mOp.mQuiet) {
+            return;
+        }
         if (mLight == null) {
             mOp.mTelemetry.addData("Indicator light", "NOT CONFIGURED: no Servo named '"
                     + mProperties.cfgIndicator + "'. Would be " + color + ": " + why);

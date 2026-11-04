@@ -131,6 +131,9 @@ public class LaunchGates implements Subsystem {
             SetPosition(mPollenServo, mProperties.pollenServoClosed);
             SetPosition(mNectarServo, mProperties.nectarServoClosed);
         }
+        if (mOp.mQuiet) {
+            return;
+        }
         String state = "closed";
         if (IsFullyOpen()) {
             state = "OPEN (launching)";

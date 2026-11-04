@@ -178,4 +178,14 @@ class VisionLimelightTest {
         // The indicator light blinks red from this: tags in view, none of them ours.
         assertEquals(2, vision.CountIgnoredTags());
     }
+
+    @Test
+    @DisplayName("quiet telemetry: still sees the tag, but never asks the Limelight for its status")
+    void quietSkipsTheStatusRead() {
+        op.mQuiet = true;
+        limelightSees(tag(31, -5, 2));
+        vision.Process();
+        assertTrue(vision.SeesTag());
+        verify(limelight, never()).getStatus();
+    }
 }

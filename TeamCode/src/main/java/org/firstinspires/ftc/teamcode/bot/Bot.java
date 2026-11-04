@@ -100,6 +100,8 @@ public class Bot {
     private final List<VoltageSensor> mBatterySensors;
     private final ElapsedTime mBatteryTimer;
     private double mBatteryVolts = 0;
+    /** Loop time smoothed over about the last 50 loops, so two OpModes can be compared. */
+    private double mLoopTimeAverage = 0;
 
     // The parts of the robot. A part that is disabled in BotProperties stays null.
     private final SafeModeKey mSafeModeKey;
@@ -325,6 +327,8 @@ public class Bot {
      * START, so the drive team can check the robot before the match.
      */
     public void ShowStatus() {
+        // INIT always shows everything: the drive team's checks come from this screen.
+        mOp.mQuiet = false;
         ShowCompetitionStatus();
         // The key was checked once, when the Bot was built. This only shows the answer.
         mSafeModeKey.ShowStatus();
@@ -407,6 +411,7 @@ public class Bot {
 
     /** Every part reads the gamepads. TeleOp calls this each loop, before {@link #Process()}. */
     public void HandleUserInput() {
+        mOp.mQuiet = mProperties.quietTelemetry;
         for (Subsystem system : mSystems) {
             system.HandleUserInput();
         }
@@ -414,7 +419,13 @@ public class Bot {
 
     /** Every part does its work for one loop. TeleOp and Auto both call this each loop. */
     public void Process() {
+        mOp.mQuiet = mProperties.quietTelemetry;
+        mLoopTimeAverage = mLoopTimeAverage + (mOp.mLoopTime - mLoopTimeAverage) / 50;
+        if (mOp.mQuiet) {
+            mOp.mTelemetry.addLine("QUIET TELEMETRY: only loop time and battery (quietTelemetry)");
+        }
         mOp.mTelemetry.addData("LoopTime", mOp.mLoopTime);
+        mOp.mTelemetry.addData("LoopTime average (ms)", "%.1f", mLoopTimeAverage);
         if (mBatteryTimer.milliseconds() >= mProperties.batteryReadMs) {
             ReadBattery();
         }

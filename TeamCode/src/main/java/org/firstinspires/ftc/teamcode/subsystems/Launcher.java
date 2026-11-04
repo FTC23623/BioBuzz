@@ -139,7 +139,9 @@ public class Launcher implements Subsystem {
             mTimeSinceUpdate.reset();
             Update(secondsPassed);
         }
-        ShowStatus();
+        if (!mOp.mQuiet) {
+            ShowStatus();
+        }
     }
 
     /**

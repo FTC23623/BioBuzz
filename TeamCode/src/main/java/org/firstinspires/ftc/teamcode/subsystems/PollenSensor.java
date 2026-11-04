@@ -94,6 +94,8 @@ public class PollenSensor implements Subsystem {
             mOp.mOperatorGamepad.rumble(mProperties.pollenRumbleMs);
         }
         mWasDetected = detected;
-        ShowStatus();
+        if (!mOp.mQuiet) {
+            ShowStatus();
+        }
     }
 }

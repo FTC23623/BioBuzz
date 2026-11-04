@@ -3,7 +3,9 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -318,5 +320,21 @@ class LaunchGatesTest {
         gamepad.right_trigger = 1;
         loop();
         assertFalse(gates.IsFullyOpen());
+    }
+
+    @Test
+    @DisplayName("quiet telemetry: the gates still open, but print nothing")
+    void quietPrintsNothing() {
+        HardwareMap hardwareMap = mock(HardwareMap.class);
+        when(hardwareMap.tryGet(Servo.class, properties.cfgPollenServo)).thenReturn(pollen);
+        Telemetry quietScreen = mock(Telemetry.class);
+        HydraOpMode quiet = new HydraOpMode(quietScreen, hardwareMap, gamepad, operator);
+        quiet.mQuiet = true;
+        LaunchGates g = new LaunchGates(quiet, properties, gamepad, vision);
+        gamepad.right_trigger = 1;
+        g.HandleUserInput();
+        g.Process();
+        assertTrue(g.IsOpen());
+        verify(quietScreen, never()).addData(anyString(), any());
     }
 }

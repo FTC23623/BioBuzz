@@ -148,7 +148,9 @@ public class Intake implements Subsystem {
             mIntake.SetRpm(0);
             mTransfer.SetRpm(0);
         }
-        ShowStatus();
+        if (!mOp.mQuiet) {
+            ShowStatus();
+        }
     }
 
     /**

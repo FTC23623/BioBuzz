@@ -30,6 +30,13 @@ public class HydraOpMode {
      */
     public boolean mSafeMode;
 
+    /**
+     * true: parts skip their Driver Station lines, and the hardware reads made only for
+     * them, to save loop time. The Bot sets it from {@code quietTelemetry} after START and
+     * clears it during INIT, so the INIT checks always show (docs/decisions/0041).
+     */
+    public boolean mQuiet;
+
     /** How long the last loop took, in milliseconds. */
     public double mLoopTime;
 

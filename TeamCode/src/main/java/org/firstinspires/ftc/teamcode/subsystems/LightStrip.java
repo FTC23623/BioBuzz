@@ -219,7 +219,7 @@ public class LightStrip implements Subsystem {
         if (!mPollenShown && mOp.mAlliance != mAllianceShown) {
             ShowAlliance();
         }
-        if (mStrip == null) {
+        if (mStrip == null || mOp.mQuiet) {
             return;
         }
         mOp.mTelemetry.addData("Light strip", "showing " + mShowing);

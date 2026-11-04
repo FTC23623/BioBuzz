@@ -160,16 +160,20 @@ public class Drive_Manual extends Drive {
             double hiveBearing = mVision.GetGroupBearing();
             mRotate = AimAssist.RotateToward(hiveBearing, mProperties.aimKP,
                     mProperties.aimMaxRotate, mProperties.aimDoneDegrees);
-            mOp.mTelemetry.addData("Aim assist", "ON: hive middle %.1f deg (tag %d, %.0f in), turn %.2f",
-                    hiveBearing, mVision.GetTagId(), mVision.GetRange(), mRotate);
-        } else if (mAimHeld) {
+            if (!mOp.mQuiet) {
+                mOp.mTelemetry.addData("Aim assist", "ON: hive middle %.1f deg (tag %d, %.0f in), turn %.2f",
+                        hiveBearing, mVision.GetTagId(), mVision.GetRange(), mRotate);
+            }
+        } else if (mAimHeld && !mOp.mQuiet) {
             mOp.mTelemetry.addLine("Aim assist: held, but no tag in view");
-        } else {
+        } else if (!mOp.mQuiet) {
             mOp.mTelemetry.addLine("Aim assist: off");
         }
         // The raw buttons, so a trigger that rests a little pressed shows up on the screen.
-        mOp.mTelemetry.addData("Aim buttons", "right bumper %s, launch trigger %.2f (counts above %.2f)",
-                mGamepad.right_bumper, mGamepad.right_trigger, mProperties.trgBtnThresh);
+        if (!mOp.mQuiet) {
+            mOp.mTelemetry.addData("Aim buttons", "right bumper %s, launch trigger %.2f (counts above %.2f)",
+                    mGamepad.right_bumper, mGamepad.right_trigger, mProperties.trgBtnThresh);
+        }
 
         // D-pad while aiming: arc around the hive. Strafe the way the D-pad points, and hold
         // the distance the arc started at with a little drive. Aim above keeps the nose on
@@ -185,8 +189,10 @@ public class Drive_Manual extends Drive {
             arcStrafe = mArcDirection * mProperties.arcStrafePower;
             arcDrive = AimAssist.HoldRange(rangeIn, mArcRangeIn, mProperties.arcRangeKP,
                     mProperties.arcMaxDrive);
-            mOp.mTelemetry.addData("Arc", "holding %.0f in, now %.0f in, drive %.2f",
-                    mArcRangeIn, rangeIn, arcDrive);
+            if (!mOp.mQuiet) {
+                mOp.mTelemetry.addData("Arc", "holding %.0f in, now %.0f in, drive %.2f",
+                        mArcRangeIn, rangeIn, arcDrive);
+            }
         } else {
             // Not arcing: the next arc measures its own distance when it starts.
             mArcRangeIn = 0;
@@ -216,6 +222,9 @@ public class Drive_Manual extends Drive {
         SetMotorPower(mBackLeftMotor, powers.backLeft * mSpeedLimit);
         SetMotorPower(mBackRightMotor, powers.backRight * mSpeedLimit);
 
+        if (mOp.mQuiet) {
+            return;
+        }
         if (mOp.mSafeMode) {
             mOp.mTelemetry.addLine("SAFE MODE: drive limited");
         }
