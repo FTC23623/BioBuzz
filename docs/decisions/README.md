@@ -49,6 +49,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0040](0040-launch-lock-aim-only-on-button-auto-reject.md) | The launch needs a camera lock (operator R2 overrides); aim and tracking only while a button is down; an extra ball is spat out; slow at half | Accepted, not driven yet |
 | [0041](0041-quiet-telemetry-for-loop-time.md) | Quiet telemetry, a dashboard switch, to measure what the Driver Station lines cost | Accepted, not measured yet |
 | [0042](0042-flower-step-and-recorder-circle.md) | A FLOWER step for the autos (back 6, arm out, 7-inch strokes twice, arm in), recorded with circle | Accepted, not driven yet |
+| [0043](0043-auto-intake-roller-only-for-flower.md) | In autos the intake roller runs only during FLOWER; the transfer feeds launches at 30% | Accepted, not driven yet |
 
 ## TODO: confirm on the robot after this week's tuning
 

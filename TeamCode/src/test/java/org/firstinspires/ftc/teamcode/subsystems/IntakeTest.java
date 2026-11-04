@@ -398,4 +398,62 @@ class IntakeTest {
         loop(r);
         assertFalse(r.IsRejecting());
     }
+
+    // ---- Autos: the transfer alone, the intake roller only for FLOWER (0043) ----
+
+    @Test
+    @DisplayName("auto, intake roller off: the transfer runs at full speed, the intake roller stays off")
+    void transferOnly() {
+        rollers.SetOn(true);
+        rollers.SetIntakeRollerOn(false);
+        rollers.Process();
+        assertEquals(0, intake.power, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("auto launch: the transfer feeds at 30%, the intake roller stays off")
+    void autoLaunchFeedsAtThirtyPercent() {
+        rollers.SetOn(true);
+        rollers.SetIntakeRollerOn(false);
+        when(gates.IsFullyOpen()).thenReturn(true);
+        rollers.Process();
+        assertEquals(0.3, properties.launchFeedTransferScale, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm * 0.3), transfer.velocity, EPS);
+        assertEquals(0, intake.power, EPS);
+    }
+
+    @Test
+    @DisplayName("FLOWER turns the intake roller back on: both run")
+    void flowerTurnsTheRollerOn() {
+        rollers.SetOn(true);
+        rollers.SetIntakeRollerOn(false);
+        rollers.Process();
+        rollers.SetIntakeRollerOn(true);
+        rollers.Process();
+        assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("intake roller off: pollen at the switch never starts a reject, so the transfer keeps running")
+    void noRejectWithTheRollerOff() {
+        properties.pollenRejectAfterSeconds = 0;
+        PollenSensor pollen = mock(PollenSensor.class);
+        when(pollen.IsDetected()).thenReturn(true);
+        Intake r = withPollen(pollen);
+        r.SetOn(true);
+        r.SetIntakeRollerOn(false);
+        r.Process();
+        r.Process();
+        assertFalse(r.IsRejecting());
+        assertTrue(r.IsRunning());
+        assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("autos keep the intake roller off by default")
+    void autoDefault() {
+        assertFalse(new BotProperties().autoIntakeRoller);
+    }
 }

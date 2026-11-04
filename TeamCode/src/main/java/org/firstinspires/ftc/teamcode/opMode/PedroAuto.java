@@ -36,8 +36,10 @@ import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
  * The camera only sees our hive's tags. A backup auto (group "Backup") skips the magnet
  * and sets the alliance itself, in case the sensor plays up.
  *
- * <p><b>Scoring</b>: with {@code autoRunScoring} on, the launchers spin and the intake and
- * transfer run from START to the end. A LAUNCH step opens both launch gates.
+ * <p><b>Scoring</b>: with {@code autoRunScoring} on, the launchers spin and the transfer runs
+ * from START to the end. The intake roller stays off except during a FLOWER step
+ * ({@code autoIntakeRoller}, docs/decisions/0043). A LAUNCH step opens both launch gates,
+ * and the transfer feeds the launch at {@code launchFeedTransferScale} (30%).
  */
 public abstract class PedroAuto extends LinearOpMode {
 
@@ -194,7 +196,10 @@ public abstract class PedroAuto extends LinearOpMode {
         if (botProperties.autoRunScoring) {
             // Spin up now, so the launchers are at speed by the first LAUNCH.
             bot.SpinLaunchers(true);
+            // The transfer runs the whole auto. The intake roller only if autoIntakeRoller
+            // says so; otherwise FLOWER steps turn it on (docs/decisions/0043).
             bot.RunIntake(true);
+            bot.SetIntakeRoller(botProperties.autoIntakeRoller);
         }
 
         // Times how long the robot has been on this step: a path, or a LAUNCH stop.
@@ -415,6 +420,7 @@ public abstract class PedroAuto extends LinearOpMode {
             mFlowerActions = FlowerActions(mFlowerStart, botProperties);
             mFlowerIndex = -1;
             bot.RunIntake(true);
+            bot.SetIntakeRoller(true);
             NextFlowerAction(bot, follower);
         } else {
             follower.follow(step);
@@ -543,6 +549,7 @@ public abstract class PedroAuto extends LinearOpMode {
         if (mFlowerIndex >= mFlowerActions.size()) {
             // Done. The intake goes back to what the auto does between steps.
             bot.RunIntake(botProperties.autoRunScoring);
+            bot.SetIntakeRoller(botProperties.autoIntakeRoller);
             return true;
         }
         return false;

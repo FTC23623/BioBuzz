@@ -524,6 +524,17 @@ public class Bot {
         mFlowerExtractor.SetDeployed(deployed);
     }
 
+    /**
+     * true: the intake roller runs along with the transfer. false: the transfer alone. An
+     * auto turns the roller on only for FLOWER steps. Does nothing with no intake.
+     */
+    public void SetIntakeRoller(boolean on) {
+        if (mIntake == null) {
+            return;
+        }
+        mIntake.SetIntakeRollerOn(on);
+    }
+
     /** true: intake and transfer run forward. false: off. Does nothing with no intake. */
     public void RunIntake(boolean run) {
         if (mIntake == null) {

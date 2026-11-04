@@ -69,6 +69,11 @@ public class Intake implements Subsystem {
     private final ElapsedTime mRejectTimer = new ElapsedTime();
     /** true after a reject, until the operator lets go of both intake buttons. */
     private boolean mBlocked = false;
+    /**
+     * false: the intake roller stays off and only the transfer runs, whatever else says.
+     * TeleOp leaves it true. Autos turn it off between FLOWER steps (docs/decisions/0043).
+     */
+    private boolean mIntakeRollerOn = true;
 
     /** No pollen sensor: never rejects. Tests and robots without the switch use this. */
     public Intake(HydraOpMode op, BotProperties properties, Gamepad gamepad, LaunchGates launchGates) {
@@ -126,7 +131,7 @@ public class Intake implements Subsystem {
             // the transfer so it is not pushing a ball against the gate. The intake carries
             // on as it was. Once the gate is fully open, the next branch feeds the launch.
             if (IsRunning()) {
-                mIntake.SetRpm(mProperties.intakeRpm);
+                mIntake.SetRpm(IntakeRoller(mProperties.intakeRpm));
             } else {
                 mIntake.SetRpm(0);
             }
@@ -134,15 +139,15 @@ public class Intake implements Subsystem {
         } else if (IsLaunching()) {
             // Feeding the launch: slower, so balls go into the launcher one at a time at a
             // steady rate. The transfer feeds, the intake pushes up any ball stuck below it.
-            mIntake.SetRpm(mProperties.intakeRpm * mProperties.launchFeedIntakeScale);
+            mIntake.SetRpm(IntakeRoller(mProperties.intakeRpm * mProperties.launchFeedIntakeScale));
             mTransfer.SetRpm(mProperties.transferRpm * mProperties.launchFeedTransferScale);
         } else if (mRejecting) {
             // One ball too many: spit it out the bottom, keep the rest moving up.
             mIntake.SetRpm(-mProperties.intakeReverseRpm);
             mTransfer.SetRpm(mProperties.transferRpm);
         } else if (IsRunning()) {
-            // Intaking on purpose (cross or the left trigger): full speed.
-            mIntake.SetRpm(mProperties.intakeRpm);
+            // Intaking on purpose (the left bumper or trigger, or an auto): full speed.
+            mIntake.SetRpm(IntakeRoller(mProperties.intakeRpm));
             mTransfer.SetRpm(mProperties.transferRpm);
         } else {
             mIntake.SetRpm(0);
@@ -167,7 +172,10 @@ public class Intake implements Subsystem {
         if (mBlocked && !mBumperHeld && !mTriggerHeld) {
             mBlocked = false;
         }
-        boolean intakingOnPurpose = IsRunning() && !mReverseHeld && !IsLaunching() && !IsGateOpening();
+        // Only while the intake roller itself is picking balls up: with it off (an auto between
+        // FLOWER steps), nothing is coming in, and a reject would stop the transfer too.
+        boolean intakingOnPurpose = IsRunning() && mIntakeRollerOn && !mReverseHeld && !IsLaunching()
+                && !IsGateOpening();
         boolean watching = mProperties.pollenAutoReject && mPollenSensor != null && !mRejecting
                 && intakingOnPurpose;
         if (!watching || !mPollenSensor.IsDetected()) {
@@ -191,6 +199,22 @@ public class Intake implements Subsystem {
      */
     public boolean IsRunning() {
         return (mOn || mTriggerHeld) && !mBlocked;
+    }
+
+    /** The intake roller's forward speed, or 0 while the roller is switched off. */
+    private double IntakeRoller(double rpm) {
+        if (!mIntakeRollerOn) {
+            return 0;
+        }
+        return rpm;
+    }
+
+    /**
+     * true: the intake roller runs whenever the rollers run (normal, TeleOp). false: only the
+     * transfer runs; the intake roller stays off. An auto calls this.
+     */
+    public void SetIntakeRollerOn(boolean on) {
+        mIntakeRollerOn = on;
     }
 
     /** true while the intake is spitting an extra ball out. */
@@ -235,6 +259,8 @@ public class Intake implements Subsystem {
             state = "FULL: spitting an extra ball out";
         } else if (mBlocked) {
             state = "STOPPED after a reject: let go of left bumper and left trigger";
+        } else if (IsRunning() && !mIntakeRollerOn) {
+            state = "transfer ON, intake roller off";
         } else if (IsRunning()) {
             state = "ON, full speed";
         }

@@ -426,6 +426,13 @@ public class BotProperties {
      * spin the whole time. A LAUNCH step opens both launch servos.
      */
     public boolean autoRunScoring = true;
+    /**
+     * In an auto, true: the intake roller runs along with the transfer from START. false
+     * (today): only the transfer runs, and the intake roller comes on only during a FLOWER
+     * step, so the robot doesn't pick up extra balls while driving (coach, 2026-11-03). A
+     * separate auto step to intake on purpose will come later.
+     */
+    public boolean autoIntakeRoller = false;
     /** How long a 90-degree turn takes at full speed, in seconds. A guess: CHECK on the robot. */
     public double autoQuarterTurnSeconds = 1;
     /**
