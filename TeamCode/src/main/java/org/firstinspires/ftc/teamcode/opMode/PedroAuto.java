@@ -89,8 +89,8 @@ public abstract class PedroAuto extends LinearOpMode {
      *       {@code autoFlowerSettleSeconds} (0.3 s) so the robot has stopped,
      *   <li>swings the extractor out, and holds still {@code autoExtractorSeconds} (0.5 s)
      *       before the first stroke,
-     *   <li>strokes forward then back {@code autoFlowerStrokeIn} (7 in), {@code autoFlowerPasses}
-     *       times (2),
+     *   <li>strokes forward {@code autoFlowerStrokeIn} (8 in), holds there
+     *       {@code autoFlowerDwellSeconds} (1 s), strokes back, {@code autoFlowerPasses} times (2),
      *   <li>swings the extractor in.
      * </ol>
      * Every move is along the way the robot faces, so it ends {@code autoFlowerBackIn} behind
@@ -99,12 +99,37 @@ public abstract class PedroAuto extends LinearOpMode {
     // A third marker, like LAUNCH, so the loop can tell it apart.
     protected static final Path FLOWER = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
-    // The FLOWER step's state while it runs, with n = how many moves there are:
-    // stage 0 backs up, 1 settles at the backed-up spot, 2 swings the arm out, 3 to n + 1
-    // are the strokes, n + 2 swings it in, n + 3 is done.
-    private List<Pose> mFlowerMoves = new ArrayList<>();
+    /**
+     * One thing the FLOWER step does: drive to a spot, hold still for a time, or swing the
+     * extractor out or in (and hold still while it swings).
+     */
+    static final class FlowerAction {
+        static final int MOVE = 0;
+        static final int HOLD = 1;
+        static final int ARM_OUT = 2;
+        static final int ARM_IN = 3;
+
+        final int kind;
+        /** MOVE: where to drive. HOLD and the arm: where to hold still. */
+        final Pose spot;
+        /** HOLD and the arm: how long. */
+        final double seconds;
+        /** For the Driver Station: "back up", "settle", "stroke forward", ... */
+        final String name;
+
+        FlowerAction(int kind, Pose spot, double seconds, String name) {
+            this.kind = kind;
+            this.spot = spot;
+            this.seconds = seconds;
+            this.name = name;
+        }
+    }
+
+    // The FLOWER step's state while it runs.
+    private List<FlowerAction> mFlowerActions = new ArrayList<>();
     private Pose mFlowerStart = new Pose(0, 0, 0);
-    private int mFlowerStage = 0;
+    /** Which action is running. -1 before the first; past the end when done. */
+    private int mFlowerIndex = 0;
     private final ElapsedTime mFlowerTimer = new ElapsedTime();
     private double mFlowerGiveUpSeconds = 0;
     /** The robot's top speed, for each flower move's give-up time. Set in runOpMode. */
@@ -301,7 +326,11 @@ public abstract class PedroAuto extends LinearOpMode {
             telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
             telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
             if (step == FLOWER) {
-                telemetry.addData("Flower", "stage %d of %d", mFlowerStage + 1, mFlowerMoves.size() + 3);
+                String doing = "done";
+                if (mFlowerIndex >= 0 && mFlowerIndex < mFlowerActions.size()) {
+                    doing = mFlowerActions.get(mFlowerIndex).name;
+                }
+                telemetry.addData("Flower", "%d of %d: %s", mFlowerIndex + 1, mFlowerActions.size(), doing);
             } else if (!launching) {
                 telemetry.addData("Give up on this path after (s)", "%.1f", giveUpSeconds[pathNumber]);
             }
@@ -391,10 +420,10 @@ public abstract class PedroAuto extends LinearOpMode {
         } else if (step == FLOWER) {
             // Work the flower from here. The intake runs for the whole routine.
             mFlowerStart = follower.pose();
-            mFlowerMoves = FlowerMoves(mFlowerStart, botProperties);
-            mFlowerStage = -1;
+            mFlowerActions = FlowerActions(mFlowerStart, botProperties);
+            mFlowerIndex = -1;
             bot.RunIntake(true);
-            NextFlowerStage(bot, follower);
+            NextFlowerAction(bot, follower);
         } else {
             follower.follow(step);
         }
@@ -405,8 +434,8 @@ public abstract class PedroAuto extends LinearOpMode {
      * first the back-up, then each stroke forward and back. Every pose keeps the heading.
      *
      * <pre>
-     *     facing 0 at (0, 0), back 9, strokes of 7, 2 passes:
-     *     (-9, 0)  (-2, 0)  (-9, 0)  (-2, 0)  (-9, 0)
+     *     facing 0 at (0, 0), back 9, strokes of 8, 2 passes:
+     *     (-9, 0)  (-1, 0)  (-9, 0)  (-1, 0)  (-9, 0)
      * </pre>
      */
     static List<Pose> FlowerMoves(Pose spot, BotProperties p) {
@@ -426,67 +455,100 @@ public abstract class PedroAuto extends LinearOpMode {
         return moves;
     }
 
-    /** Start the next FLOWER stage: a move, a settle, or swinging the arm out or in. */
-    private void NextFlowerStage(Bot bot, Follower follower) {
-        mFlowerStage = mFlowerStage + 1;
+    /**
+     * The FLOWER step in order, from the recorded spot:
+     *
+     * <pre>
+     *     move: back up                 autoFlowerBackIn (9)
+     *     hold: settle                  autoFlowerSettleSeconds (0.3)
+     *     arm out                       autoExtractorSeconds (0.5)
+     *     move: stroke forward          autoFlowerStrokeIn (8)
+     *     hold: at the flower           autoFlowerDwellSeconds (1)
+     *     move: stroke back             autoFlowerStrokeIn (8)
+     *     ... the two strokes and the hold again, autoFlowerPasses times (2) ...
+     *     arm in                        autoExtractorSeconds (0.5)
+     * </pre>
+     */
+    static List<FlowerAction> FlowerActions(Pose spot, BotProperties p) {
+        List<Pose> moves = FlowerMoves(spot, p);
+        List<FlowerAction> actions = new ArrayList<>();
+        Pose backedUp = moves.get(0);
+        actions.add(new FlowerAction(FlowerAction.MOVE, backedUp, 0, "back up"));
+        actions.add(new FlowerAction(FlowerAction.HOLD, backedUp, p.autoFlowerSettleSeconds, "settle"));
+        actions.add(new FlowerAction(FlowerAction.ARM_OUT, backedUp, p.autoExtractorSeconds, "arm out"));
+        // moves 1, 3, 5... are forward strokes; 2, 4, 6... are back strokes.
+        for (int i = 1; i < moves.size(); i++) {
+            Pose to = moves.get(i);
+            boolean forward = i % 2 == 1;
+            if (forward) {
+                actions.add(new FlowerAction(FlowerAction.MOVE, to, 0, "stroke forward"));
+                if (p.autoFlowerDwellSeconds > 0) {
+                    actions.add(new FlowerAction(FlowerAction.HOLD, to, p.autoFlowerDwellSeconds, "at the flower"));
+                }
+            } else {
+                actions.add(new FlowerAction(FlowerAction.MOVE, to, 0, "stroke back"));
+            }
+        }
+        Pose last = moves.get(moves.size() - 1);
+        actions.add(new FlowerAction(FlowerAction.ARM_IN, last, p.autoExtractorSeconds, "arm in"));
+        return actions;
+    }
+
+    /** Start the next FLOWER action. */
+    private void NextFlowerAction(Bot bot, Follower follower) {
+        mFlowerIndex = mFlowerIndex + 1;
         mFlowerTimer.reset();
-        int moves = mFlowerMoves.size();
-        Pose backedUp = mFlowerMoves.get(0);
-        if (mFlowerStage == 1) {
-            // Hold the PLANNED backed-up spot, not wherever the robot was when the path
-            // ended: it may still be braking short of it.
-            follower.hold(backedUp);
-        } else if (mFlowerStage == 2) {
-            bot.SetFlowerExtractor(true);
-            follower.hold(backedUp);
-        } else if (mFlowerStage == moves + 2) {
-            bot.SetFlowerExtractor(false);
-            follower.hold(mFlowerMoves.get(moves - 1));
-        } else if (mFlowerStage == 0 || (mFlowerStage >= 3 && mFlowerStage <= moves + 1)) {
-            // Stage 0 is move 0 (the back-up); stages 3 to n + 1 are moves 1 to n - 1.
-            int move = 0;
-            if (mFlowerStage >= 3) {
-                move = mFlowerStage - 2;
-            }
+        if (mFlowerIndex >= mFlowerActions.size()) {
+            return;
+        }
+        FlowerAction action = mFlowerActions.get(mFlowerIndex);
+        if (action.kind == FlowerAction.MOVE) {
+            // From where the last action meant the robot to be, not where it happens to be.
             Pose from = mFlowerStart;
-            if (move > 0) {
-                from = mFlowerMoves.get(move - 1);
+            if (mFlowerIndex > 0) {
+                from = mFlowerActions.get(mFlowerIndex - 1).spot;
             }
-            Pose to = mFlowerMoves.get(move);
-            if (Math.hypot(to.x() - from.x(), to.y() - from.y()) < 0.01) {
+            if (Math.hypot(action.spot.x() - from.x(), action.spot.y() - from.y()) < 0.01) {
                 // A zero-inch move (a setting of 0): Pedro won't build it, so skip it.
-                NextFlowerStage(bot, follower);
+                NextFlowerAction(bot, follower);
                 return;
             }
-            Path path = line(from, to).constant(mFlowerStart.heading());
+            Path path = line(from, action.spot).constant(mFlowerStart.heading());
             mFlowerGiveUpSeconds = GiveUpSeconds(path, botProperties, mTopSpeed);
             follower.follow(path);
+            return;
+        }
+        // HOLD and the arm: hold the PLANNED spot, not wherever the robot was when the last
+        // move ended: it may still be braking short of it.
+        follower.hold(action.spot);
+        if (action.kind == FlowerAction.ARM_OUT) {
+            bot.SetFlowerExtractor(true);
+        } else if (action.kind == FlowerAction.ARM_IN) {
+            bot.SetFlowerExtractor(false);
         }
     }
 
     /** One loop of the FLOWER step. @return true once the arm is back in. */
     private boolean FlowerStep(Bot bot, Follower follower) {
-        int moves = mFlowerMoves.size();
-        if (mFlowerStage > moves + 2) {
+        if (mFlowerIndex >= mFlowerActions.size()) {
             return true;
         }
-        boolean stageDone;
-        if (mFlowerStage == 1) {
-            stageDone = mFlowerTimer.seconds() >= botProperties.autoFlowerSettleSeconds;
-        } else if (mFlowerStage == 2 || mFlowerStage == moves + 2) {
-            stageDone = mFlowerTimer.seconds() >= botProperties.autoExtractorSeconds;
-        } else {
+        FlowerAction action = mFlowerActions.get(mFlowerIndex);
+        boolean actionDone;
+        if (action.kind == FlowerAction.MOVE) {
             boolean tookTooLong = mFlowerTimer.seconds() >= mFlowerGiveUpSeconds;
             if (follower.following() && tookTooLong) {
-                // Stuck on the flower: stop pushing and carry on with the next stroke.
+                // Stuck on the flower: stop pushing and carry on.
                 follower.hold(follower.pose());
             }
-            stageDone = !follower.following();
+            actionDone = !follower.following();
+        } else {
+            actionDone = mFlowerTimer.seconds() >= action.seconds;
         }
-        if (stageDone) {
-            NextFlowerStage(bot, follower);
+        if (actionDone) {
+            NextFlowerAction(bot, follower);
         }
-        if (mFlowerStage > moves + 2) {
+        if (mFlowerIndex >= mFlowerActions.size()) {
             // Done. The intake goes back to what the auto does between steps.
             bot.RunIntake(botProperties.autoRunScoring);
             return true;

@@ -56,3 +56,15 @@ The sequence is now: back 9, settle 0.3 s, arm out 0.5 s, forward 7, back 7, for
 back 7, arm in 0.5 s. The robot ends 9 in behind the recorded spot. If the arm still goes out
 early, raise `autoFlowerSettleSeconds`.
 
+
+## Update 2026-11-03, later: strokes of 8, and a second at the flower
+
+The coach asked for one inch further into the flower and another second of extraction.
+
+- **`autoFlowerStrokeIn` = 8** (was 7). The robot reaches 1 in closer to the flower and
+  still ends 9 in behind the recorded spot.
+- **`autoFlowerDwellSeconds` = 1**: at the end of each forward stroke the robot holds still
+  for a second. 0 leaves the hold out.
+- The step is now a plain list of actions (`PedroAuto.FlowerActions`): back up, settle, arm
+  out, forward, hold, back, forward, hold, back, arm in. The Driver Station's `Flower` line
+  names the one running, like `5 of 10: at the flower`.

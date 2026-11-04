@@ -106,7 +106,7 @@ public class BotProperties {
      * (no dashboard) always has the full screen. INIT shows everything either way
      * (docs/decisions/0041).
      */
-    public boolean quietTelemetry = false;
+    public boolean quietTelemetry = true;
     /**
      * How often the battery voltage is read, in milliseconds. Each read is an extra trip to
      * the hub, so not every loop. 250 = four times a second, more than enough for a graph.
@@ -456,8 +456,8 @@ public class BotProperties {
     // The FLOWER step (docs/decisions/0042): from the spot it was recorded at, the robot backs
     // up, swings the extractor out, works the flower with short strokes forward and back,
     // and swings the extractor in, with the intake running the whole time. Every move is
-    // along the way the robot faces. Today: back 9, settle, out, forward 7, back 7,
-    // forward 7, back 7, in. The robot ends 9 inches behind the recorded spot (coach,
+    // along the way the robot faces. Today: back 9, settle, out, forward 8, hold 1 s,
+    // back 8, forward 8, hold 1 s, back 8, in. The robot ends 9 inches behind the recorded spot (coach,
     // 2026-11-03: 6 was too close, and the arm went out before the robot had stopped).
     /** How far the robot backs up from the recorded spot before the extractor goes out, in inches. */
     public double autoFlowerBackIn = 9;
@@ -466,8 +466,13 @@ public class BotProperties {
      * stopped before the arm swings out.
      */
     public double autoFlowerSettleSeconds = 0.3;
-    /** How long one stroke forward or back is, in inches. */
-    public double autoFlowerStrokeIn = 7;
+    /**
+     * How long one stroke forward or back is, in inches. 8: one inch further into the flower
+     * than the first 7 (coach, 2026-11-03).
+     */
+    public double autoFlowerStrokeIn = 8;
+    /** At the end of each forward stroke the robot holds still this long, in seconds, to extract. */
+    public double autoFlowerDwellSeconds = 1;
     /** How many forward-and-back pairs of strokes. 2 = forward, back, forward, back. */
     public int autoFlowerPasses = 2;
     /**
