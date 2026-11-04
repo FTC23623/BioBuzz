@@ -56,6 +56,8 @@ class LaunchGatesTest {
         lockedOnTheHive();
         // The lock is off by default; these tests check it working, so switch it on.
         properties.launchNeedsLock = true;
+        // Dead-center locks here; the pollen offset has its own test.
+        properties.aimHiveBearingDeg = 0;
         HydraOpMode op = new HydraOpMode(telemetry, hardwareMap, gamepad, operator);
         gates = new LaunchGates(op, properties, gamepad, vision);
     }
@@ -344,5 +346,16 @@ class LaunchGatesTest {
     @DisplayName("by default the lock is off: the trigger launches with no tag in view")
     void lockOffByDefault() {
         assertFalse(new BotProperties().launchNeedsLock);
+    }
+
+    @Test
+    @DisplayName("pollen offset: locked when the hive sits 1 deg left, not when it is 1 deg right")
+    void lockUsesThePollenOffset() {
+        properties.aimHiveBearingDeg = 1;
+        properties.aimDoneDegrees = 0.5;
+        when(vision.GetGroupBearing()).thenReturn(1.2);
+        org.junit.jupiter.api.Assertions.assertTrue(gates.CameraLocked());
+        when(vision.GetGroupBearing()).thenReturn(-1.0);
+        assertFalse(gates.CameraLocked());
     }
 }

@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
@@ -174,7 +175,8 @@ public class LaunchGates implements Subsystem {
         if (!CameraLocked()) {
             // The hive is in view but off to one side. The trigger is turning the robot
             // toward it (launchTriggerAims); the gates open once it is facing the hive.
-            mLockStatus = String.format("turning to the hive, %.1f deg off", mVision.GetGroupBearing());
+            mLockStatus = String.format("turning to the hive, %.1f deg off",
+                    AimAssist.AimError(mVision.GetGroupBearing(), mProperties.aimHiveBearingDeg));
             return false;
         }
         mLockStatus = "";
@@ -186,7 +188,8 @@ public class LaunchGates implements Subsystem {
         if (mVision == null || !mVision.SeesTag()) {
             return false;
         }
-        return Math.abs(mVision.GetGroupBearing()) <= mProperties.aimDoneDegrees;
+        double aimError = AimAssist.AimError(mVision.GetGroupBearing(), mProperties.aimHiveBearingDeg);
+        return Math.abs(aimError) <= mProperties.aimDoneDegrees;
     }
 
     /** The camera's view the moment the gates were told to open. */

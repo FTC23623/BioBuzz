@@ -158,7 +158,10 @@ public class Drive_Manual extends Drive {
         boolean aimingAtHive = mAimHeld && mVision.SeesTag();
         if (aimingAtHive) {
             double hiveBearing = mVision.GetGroupBearing();
-            mRotate = AimAssist.RotateToward(hiveBearing, mProperties.aimKP,
+            // The pollen launcher sits left of the camera, so aim the hive a little left of
+            // center (aimHiveBearingDeg), not dead center.
+            double aimError = AimAssist.AimError(hiveBearing, mProperties.aimHiveBearingDeg);
+            mRotate = AimAssist.RotateToward(aimError, mProperties.aimKP,
                     mProperties.aimMaxRotate, mProperties.aimDoneDegrees);
             if (!mOp.mQuiet) {
                 mOp.mTelemetry.addData("Aim assist", "ON: hive middle %.1f deg (tag %d, %.0f in), turn %.2f",

@@ -113,4 +113,12 @@ class AimAssistTest {
     void emptyIsZero() {
         assertEquals(0, AimAssist.GroupCenterBearing(Arrays.<Integer>asList(), Arrays.<Double>asList(), 31, HIVES), EPS);
     }
+
+    @Test
+    @DisplayName("aim error: the hive's bearing less where it should sit")
+    void aimError() {
+        assertEquals(4, AimAssist.AimError(5, 1), EPS);
+        assertEquals(-1, AimAssist.AimError(0, 1), EPS);
+        assertEquals(0, AimAssist.AimError(1, 1), EPS);
+    }
 }

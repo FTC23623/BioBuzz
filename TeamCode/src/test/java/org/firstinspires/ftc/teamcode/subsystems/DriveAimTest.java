@@ -62,6 +62,8 @@ class DriveAimTest {
         vision = mock(Vision.class);
         op = new HydraOpMode(mock(Telemetry.class), hardwareMap, gamepad, mock(Gamepad.class));
         op.mSafeMode = false;
+        // These tests check the aim itself, dead center. The pollen offset has its own test.
+        properties.aimHiveBearingDeg = 0;
         drive = new Drive_Manual(op, properties, imu, vision);
     }
 
@@ -358,5 +360,21 @@ class DriveAimTest {
         runLoops();
         assertEquals(0.4, frontLeft(), EPS);
         assertEquals(-0.4, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("pollen offset: with the hive dead ahead, the robot turns right until the hive sits 1 deg left")
+    void pollenOffsetTurnsRight() {
+        properties.aimHiveBearingDeg = 1;
+        properties.aimDoneDegrees = 0.1;
+        tagAt(0);
+        gamepad.right_bumper = true;
+        runLoops();
+        // 1 degree to go, to the right: 0.02 x -1 = -0.02.
+        assertEquals(-0.02, frontLeft(), EPS);
+        assertEquals(0.02, frontRight(), EPS);
+        tagAt(1);   // now aimed
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
     }
 }

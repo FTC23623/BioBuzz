@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.teamcode.bot.Bot;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
 
 /**
@@ -232,7 +233,9 @@ public abstract class PedroAuto extends LinearOpMode {
                 waitingForTag = false;
                 aiming = true;
                 Pose here = follower.pose();
-                aimHeading = here.heading() + Math.toRadians(bot.GetTagGroupBearing());
+                // The pollen launcher sits left of the camera: aim the hive aimHiveBearingDeg
+                // left of center, which turns the robot that much further right.
+                aimHeading = AimHeading(here.heading(), bot.GetTagGroupBearing(), botProperties);
                 follower.hold(new Pose(here.x(), here.y(), aimHeading));
                 stepTimer.reset();
             }
@@ -371,6 +374,16 @@ public abstract class PedroAuto extends LinearOpMode {
         // A slower auto needs more time for the same path.
         double seconds = (driveSeconds + turnSeconds) / properties.autoSpeedScale;
         return seconds * properties.autoGiveUpMargin + properties.autoGiveUpExtraSeconds;
+    }
+
+    /**
+     * The heading that aims the pollen launcher at the hive, from the heading now and the
+     * hive's bearing in the camera: turn by the bearing, less where the hive should sit once
+     * aimed ({@code aimHiveBearingDeg}). Radians in and out, the bearing in degrees.
+     */
+    static double AimHeading(double headingNow, double hiveBearingDeg, BotProperties properties) {
+        double turnDeg = AimAssist.AimError(hiveBearingDeg, properties.aimHiveBearingDeg);
+        return headingNow + Math.toRadians(turnDeg);
     }
 
     /**

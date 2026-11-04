@@ -34,6 +34,19 @@ public final class AimAssist {
     }
 
     /**
+     * How far the robot still has to turn, in degrees, left positive: the hive's bearing in
+     * the camera minus where it should sit once aimed ({@code aimHiveBearingDeg}). 0 = aimed.
+     *
+     * <pre>
+     *     hive 5 deg left, should sit 1 deg left: 4 deg still to turn, left
+     *     hive dead ahead, should sit 1 deg left: -1, turn 1 deg right
+     * </pre>
+     */
+    public static double AimError(double hiveBearingDeg, double aimHiveBearingDeg) {
+        return hiveBearingDeg - aimHiveBearingDeg;
+    }
+
+    /**
      * The drive that keeps the robot the same distance from the tag while it arcs around
      * it. Strafing sideways on its own slowly carries the robot away from the tag; this
      * pulls it back in.

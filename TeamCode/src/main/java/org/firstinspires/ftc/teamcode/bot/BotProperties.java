@@ -556,6 +556,14 @@ public class BotProperties {
     /** Within this many degrees of center, aim assist stops turning. Stops the wobble. */
     public double aimDoneDegrees = 1.0;
     /**
+     * Where the hive's middle should sit in the camera's view once aimed, in degrees, left
+     * positive like every bearing. The pollen launcher is mounted LEFT of the camera, so with
+     * the camera dead on the hive the pollen shot lands left of it. 1 = hold the hive 1 degree
+     * left of center, which turns the robot 1 degree further right (coach, 2026-11-03). Used by
+     * aim assist, the launch lock and the autos' aim. If shots now land right, make it smaller.
+     */
+    public double aimHiveBearingDeg = 1.0;
+    /**
      * true: the driver's launch trigger also turns the robot to face the middle of our hive's
      * tags while it is held, the way an auto aims before LAUNCH_WHEN_TAG_SEEN (coach,
      * 2026-11-02). false: the trigger only opens the gates; the right bumper still aims.
