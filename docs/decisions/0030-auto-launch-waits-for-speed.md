@@ -59,3 +59,5 @@ steps sat yellow until the time limit. A LAUNCH now opens the gates as soon as t
 wheel reads **`autoLaunchMinRpm` (2800) or faster**. The 0.25 s hold is gone. The time limits
 stay (5 s for the first launch, 2 s after), and a robot with no pollen wheel never waits.
 The Driver Station shows `yes, pollen 2650 of 2800 RPM, 1.2 of at most 5.0 s (first launch)`.
+
+**Same evening:** `autoLaunchMinRpm` raised to **2950**.

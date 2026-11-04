@@ -443,9 +443,9 @@ public class BotProperties {
     /**
      * In an auto, a LAUNCH opens the gates once the pollen launcher is spinning at least this
      * fast, in RPM. The wheels did not hold within 50 RPM of the target long enough on the
-     * robot, so the auto no longer waits for "at speed" (coach, 2026-11-03).
+     * robot, so the auto no longer waits for "at speed" (coach, 2026-11-03: 2800, then 2950).
      */
-    public double autoLaunchMinRpm = 2800;
+    public double autoLaunchMinRpm = 2950;
     /**
      * A LAUNCH_WHEN_TAG_SEEN step still waiting for one of our hive's tags this many seconds
      * after START launches anyway, facing the way it is. AUTO is 30 seconds (Competition

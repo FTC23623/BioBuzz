@@ -13,7 +13,7 @@ class LaunchSpinUpTest {
     private final BotProperties properties = new BotProperties();
 
     @Test
-    @DisplayName("pollen wheel at 2800 RPM or more: open, first launch or not")
+    @DisplayName("pollen wheel at 2950 RPM or more: open, first launch or not")
     void fastEnoughOpens() {
         assertTrue(PedroAuto.ReadyToOpen(true, 0, true, properties));
         assertTrue(PedroAuto.ReadyToOpen(true, 0, false, properties));
@@ -35,8 +35,8 @@ class LaunchSpinUpTest {
     }
 
     @Test
-    @DisplayName("the launch speed is 2800 RPM")
+    @DisplayName("the launch speed is 2950 RPM")
     void minRpm() {
-        org.junit.jupiter.api.Assertions.assertEquals(2800, properties.autoLaunchMinRpm, 1e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(2950, properties.autoLaunchMinRpm, 1e-9);
     }
 }
