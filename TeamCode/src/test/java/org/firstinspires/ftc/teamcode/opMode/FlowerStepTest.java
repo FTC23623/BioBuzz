@@ -26,7 +26,9 @@ class FlowerStepTest {
     @Test
     @DisplayName("facing forward from (0, 0): back to -9, then -1, -9, -1, -9")
     void facingForward() {
-        List<Pose> moves = PedroAuto.FlowerMoves(new Pose(0, 0, 0), new BotProperties());
+        BotProperties p = new BotProperties();
+        p.autoFlowerPasses = 2;
+        List<Pose> moves = PedroAuto.FlowerMoves(new Pose(0, 0, 0), p);
         assertEquals(5, moves.size());
         assertPose(-9, 0, 0, moves.get(0));
         assertPose(-1, 0, 0, moves.get(1));
@@ -39,7 +41,9 @@ class FlowerStepTest {
     @DisplayName("facing left (90 deg) from (10, 20): the same moves, along y")
     void facingLeft() {
         double left = Math.toRadians(90);
-        List<Pose> moves = PedroAuto.FlowerMoves(new Pose(10, 20, left), new BotProperties());
+        BotProperties p = new BotProperties();
+        p.autoFlowerPasses = 2;
+        List<Pose> moves = PedroAuto.FlowerMoves(new Pose(10, 20, left), p);
         assertPose(10, 11, left, moves.get(0));
         assertPose(10, 19, left, moves.get(1));
         assertPose(10, 11, left, moves.get(4));
@@ -63,21 +67,23 @@ class FlowerStepTest {
     }
 
     @Test
-    @DisplayName("the starting numbers are the coach's: back 9, settle 0.3 s, strokes of 8, a 1 s hold at the flower, 2 passes, half a second for the arm")
+    @DisplayName("the starting numbers are the coach's: back 9, settle 0.3 s, strokes of 8, a 1 s hold at the flower, 1 pass, half a second for the arm")
     void startingNumbers() {
         BotProperties p = new BotProperties();
         assertEquals(9, p.autoFlowerBackIn, closeEnough);
         assertEquals(0.3, p.autoFlowerSettleSeconds, closeEnough);
         assertEquals(8, p.autoFlowerStrokeIn, closeEnough);
         assertEquals(1, p.autoFlowerDwellSeconds, closeEnough);
-        assertEquals(2, p.autoFlowerPasses);
+        assertEquals(1, p.autoFlowerPasses);
         assertEquals(0.5, p.autoExtractorSeconds, closeEnough);
     }
 
     @Test
-    @DisplayName("the order: back up, settle, arm out, then forward, hold, back twice, then arm in")
+    @DisplayName("two passes: back up, settle, arm out, then forward, hold, back twice, then arm in")
     void actionOrder() {
-        List<PedroAuto.FlowerAction> actions = PedroAuto.FlowerActions(new Pose(0, 0, 0), new BotProperties());
+        BotProperties p = new BotProperties();
+        p.autoFlowerPasses = 2;
+        List<PedroAuto.FlowerAction> actions = PedroAuto.FlowerActions(new Pose(0, 0, 0), p);
         String[] expected = {"back up", "settle", "arm out",
                 "stroke forward", "at the flower", "stroke back",
                 "stroke forward", "at the flower", "stroke back", "arm in"};
@@ -96,6 +102,17 @@ class FlowerStepTest {
     void noDwell() {
         BotProperties p = new BotProperties();
         p.autoFlowerDwellSeconds = 0;
-        assertEquals(8, PedroAuto.FlowerActions(new Pose(0, 0, 0), p).size());
+        assertEquals(6, PedroAuto.FlowerActions(new Pose(0, 0, 0), p).size());
+    }
+
+    @Test
+    @DisplayName("today's one pass: back up, settle, arm out, forward, hold at the flower, back, arm in")
+    void onePass() {
+        List<PedroAuto.FlowerAction> actions = PedroAuto.FlowerActions(new Pose(0, 0, 0), new BotProperties());
+        String[] expected = {"back up", "settle", "arm out", "stroke forward", "at the flower", "stroke back", "arm in"};
+        assertEquals(expected.length, actions.size());
+        for (int i = 0; i < expected.length; i++) {
+            assertEquals(expected[i], actions.get(i).name, "action " + (i + 1));
+        }
     }
 }

@@ -90,7 +90,7 @@ public abstract class PedroAuto extends LinearOpMode {
      *   <li>swings the extractor out, and holds still {@code autoExtractorSeconds} (0.5 s)
      *       before the first stroke,
      *   <li>strokes forward {@code autoFlowerStrokeIn} (8 in), holds there
-     *       {@code autoFlowerDwellSeconds} (1 s), strokes back, {@code autoFlowerPasses} times (2),
+     *       {@code autoFlowerDwellSeconds} (1 s), strokes back, {@code autoFlowerPasses} times (1),
      *   <li>swings the extractor in.
      * </ol>
      * Every move is along the way the robot faces, so it ends {@code autoFlowerBackIn} behind
@@ -213,9 +213,6 @@ public abstract class PedroAuto extends LinearOpMode {
         boolean spinningUp = paths.get(pathNumber) == LAUNCH;
         // How many launches have opened the gates so far. The first one waits longer.
         int launchesDone = 0;
-        // How long the launchers have been at speed without a break.
-        ElapsedTime atSpeedTimer = new ElapsedTime();
-        boolean wasAtSpeed = false;
         StartStep(bot, follower, paths.get(pathNumber), stepTimer);
 
         while (opModeIsActive()) {
@@ -256,16 +253,10 @@ public abstract class PedroAuto extends LinearOpMode {
                     stepTimer.reset();
                 }
             }
-            // At speed must hold for a moment, not just touch the target once. Watched every
-            // loop, so a dip between launches starts the count over.
-            boolean atSpeed = bot.LaunchersAtSpeed();
-            if (atSpeed && !wasAtSpeed) {
-                atSpeedTimer.reset();
-            }
-            wasAtSpeed = atSpeed;
             if (spinningUp) {
-                boolean steadyAtSpeed = atSpeed && atSpeedTimer.seconds() >= botProperties.autoAtSpeedHoldSeconds;
-                if (ReadyToOpen(steadyAtSpeed, stepTimer.seconds(), launchesDone == 0, botProperties)) {
+                // Fast enough to launch: the pollen wheel at autoLaunchMinRpm or more.
+                boolean fastEnough = bot.PollenLauncherAtLeast(botProperties.autoLaunchMinRpm);
+                if (ReadyToOpen(fastEnough, stepTimer.seconds(), launchesDone == 0, botProperties)) {
                     // Up to speed (or waited as long as allowed): open the gates. The launch
                     // time counts from now. The rollers start once the gates are fully open.
                     spinningUp = false;
@@ -317,7 +308,8 @@ public abstract class PedroAuto extends LinearOpMode {
                 if (launchesDone == 0) {
                     limit = botProperties.autoFirstSpinUpSeconds;
                 }
-                telemetry.addData("Waiting for launchers to reach speed", "yes, %.1f of at most %.1f s%s",
+                telemetry.addData("Waiting for launchers to reach speed", "yes, pollen %.0f of %.0f RPM, %.1f of at most %.1f s%s",
+                        bot.PollenLauncherRpm(), botProperties.autoLaunchMinRpm,
                         stepTimer.seconds(), limit, launchesDone == 0 ? " (first launch)" : "");
             } else {
                 telemetry.addData("Waiting for launchers to reach speed", "no");
@@ -377,18 +369,18 @@ public abstract class PedroAuto extends LinearOpMode {
     }
 
     /**
-     * May a LAUNCH step open the gates yet? Yes once the launchers have held at speed for
-     * autoAtSpeedHoldSeconds. If they never get there, yes anyway after autoSpinUpSeconds, or
+     * May a LAUNCH step open the gates yet? Yes once the pollen launcher spins at
+     * autoLaunchMinRpm or faster. If it never gets there, yes anyway after autoSpinUpSeconds, or
      * after autoFirstSpinUpSeconds for the first launch of the auto, so a slow or broken
      * launcher can't freeze the auto.
      *
-     * @param steadyAtSpeed true when at speed has held for the hold time
+     * @param fastEnough    true when the pollen launcher is at autoLaunchMinRpm or faster
      * @param waitedSeconds how long this launch has waited so far
      * @param firstLaunch   true for the first launch of this auto
      */
-    static boolean ReadyToOpen(boolean steadyAtSpeed, double waitedSeconds, boolean firstLaunch,
+    static boolean ReadyToOpen(boolean fastEnough, double waitedSeconds, boolean firstLaunch,
                                BotProperties properties) {
-        if (steadyAtSpeed) {
+        if (fastEnough) {
             return true;
         }
         double limit = properties.autoSpinUpSeconds;
@@ -434,7 +426,7 @@ public abstract class PedroAuto extends LinearOpMode {
      * first the back-up, then each stroke forward and back. Every pose keeps the heading.
      *
      * <pre>
-     *     facing 0 at (0, 0), back 9, strokes of 8, 2 passes:
+     *     facing 0 at (0, 0), back 9, strokes of 8, 2 passes (today's 1 pass stops after the third):
      *     (-9, 0)  (-1, 0)  (-9, 0)  (-1, 0)  (-9, 0)
      * </pre>
      */
@@ -465,7 +457,7 @@ public abstract class PedroAuto extends LinearOpMode {
      *     move: stroke forward          autoFlowerStrokeIn (8)
      *     hold: at the flower           autoFlowerDwellSeconds (1)
      *     move: stroke back             autoFlowerStrokeIn (8)
-     *     ... the two strokes and the hold again, autoFlowerPasses times (2) ...
+     *     ... again, if autoFlowerPasses (1) is more than 1 ...
      *     arm in                        autoExtractorSeconds (0.5)
      * </pre>
      */

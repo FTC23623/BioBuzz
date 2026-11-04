@@ -68,3 +68,8 @@ The coach asked for one inch further into the flower and another second of extra
 - The step is now a plain list of actions (`PedroAuto.FlowerActions`): back up, settle, arm
   out, forward, hold, back, forward, hold, back, arm in. The Driver Station's `Flower` line
   names the one running, like `5 of 10: at the flower`.
+
+## Update 2026-11-03, latest: one pass
+
+`autoFlowerPasses` = 1: back 9, settle, arm out, forward 8, hold 1 s, back 8, arm in. The
+second forward-and-back was dropped. 2 brings it back.

@@ -479,6 +479,25 @@ public class Bot {
     }
 
     /** true when both launchers are at speed. Always true with no launcher, so nothing waits on it. */
+    /**
+     * true when the pollen launcher is spinning at least this fast. Always true with no
+     * launcher, or no pollen wheel in the configuration, so nothing waits on a missing part.
+     */
+    public boolean PollenLauncherAtLeast(double rpm) {
+        if (mLauncher == null) {
+            return true;
+        }
+        return mLauncher.PollenAtLeast(rpm);
+    }
+
+    /** The pollen launcher's measured speed, in RPM. 0 with no launcher. */
+    public double PollenLauncherRpm() {
+        if (mLauncher == null) {
+            return 0;
+        }
+        return mLauncher.GetPollenMeasuredRpm();
+    }
+
     public boolean LaunchersAtSpeed() {
         if (mLauncher == null) {
             return true;

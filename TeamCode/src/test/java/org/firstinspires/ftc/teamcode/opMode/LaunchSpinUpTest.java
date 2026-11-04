@@ -7,14 +7,14 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** When an auto's LAUNCH may open the gates: at speed, or after waiting as long as allowed. */
+/** When an auto's LAUNCH may open the gates: the pollen wheel fast enough, or after waiting as long as allowed. */
 @DisplayName("Auto LAUNCH spin-up")
 class LaunchSpinUpTest {
     private final BotProperties properties = new BotProperties();
 
     @Test
-    @DisplayName("held at speed: open, first launch or not")
-    void steadyOpens() {
+    @DisplayName("pollen wheel at 2800 RPM or more: open, first launch or not")
+    void fastEnoughOpens() {
         assertTrue(PedroAuto.ReadyToOpen(true, 0, true, properties));
         assertTrue(PedroAuto.ReadyToOpen(true, 0, false, properties));
     }
@@ -32,5 +32,11 @@ class LaunchSpinUpTest {
     void laterLaunches() {
         assertFalse(PedroAuto.ReadyToOpen(false, 1.9, false, properties));
         assertTrue(PedroAuto.ReadyToOpen(false, 2.0, false, properties));
+    }
+
+    @Test
+    @DisplayName("the launch speed is 2800 RPM")
+    void minRpm() {
+        org.junit.jupiter.api.Assertions.assertEquals(2800, properties.autoLaunchMinRpm, 1e-9);
     }
 }

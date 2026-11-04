@@ -250,6 +250,14 @@ public class Launcher implements Subsystem {
         return mProperties.nectarLauncherRpm;
     }
 
+    /** true when the pollen wheel spins at least this fast, or is not in the configuration. */
+    public boolean PollenAtLeast(double rpm) {
+        if (!mPollen.IsPresent()) {
+            return true;
+        }
+        return mPollen.GetMeasuredRpm() >= rpm;
+    }
+
     public double GetPollenMeasuredRpm() {
         return mPollen.GetMeasuredRpm();
     }

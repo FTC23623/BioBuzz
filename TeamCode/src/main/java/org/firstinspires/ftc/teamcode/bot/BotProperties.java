@@ -441,10 +441,11 @@ public class BotProperties {
      */
     public double autoFirstSpinUpSeconds = 5;
     /**
-     * "At speed" must hold this long without a break, in seconds, before the gates open. A
-     * wheel still speeding up passes through the target for a moment; this waits it out.
+     * In an auto, a LAUNCH opens the gates once the pollen launcher is spinning at least this
+     * fast, in RPM. The wheels did not hold within 50 RPM of the target long enough on the
+     * robot, so the auto no longer waits for "at speed" (coach, 2026-11-03).
      */
-    public double autoAtSpeedHoldSeconds = 0.25;
+    public double autoLaunchMinRpm = 2800;
     /**
      * A LAUNCH_WHEN_TAG_SEEN step still waiting for one of our hive's tags this many seconds
      * after START launches anyway, facing the way it is. AUTO is 30 seconds (Competition
@@ -457,7 +458,7 @@ public class BotProperties {
     // up, swings the extractor out, works the flower with short strokes forward and back,
     // and swings the extractor in, with the intake running the whole time. Every move is
     // along the way the robot faces. Today: back 9, settle, out, forward 8, hold 1 s,
-    // back 8, forward 8, hold 1 s, back 8, in. The robot ends 9 inches behind the recorded spot (coach,
+    // back 8, in. The robot ends 9 inches behind the recorded spot (coach,
     // 2026-11-03: 6 was too close, and the arm went out before the robot had stopped).
     /** How far the robot backs up from the recorded spot before the extractor goes out, in inches. */
     public double autoFlowerBackIn = 9;
@@ -473,8 +474,11 @@ public class BotProperties {
     public double autoFlowerStrokeIn = 8;
     /** At the end of each forward stroke the robot holds still this long, in seconds, to extract. */
     public double autoFlowerDwellSeconds = 1;
-    /** How many forward-and-back pairs of strokes. 2 = forward, back, forward, back. */
-    public int autoFlowerPasses = 2;
+    /**
+     * How many forward-and-back pairs of strokes. 1 = forward, hold, back (coach, 2026-11-03:
+     * the second pass was dropped). 2 = do it twice.
+     */
+    public int autoFlowerPasses = 1;
     /**
      * How long the extractor arm takes to swing out or in, in seconds. The robot holds still
      * meanwhile, and the first forward stroke only starts once the arm is out.

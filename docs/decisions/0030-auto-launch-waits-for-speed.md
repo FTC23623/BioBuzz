@@ -51,3 +51,11 @@ through the target on its way up.
 - The Driver Station shows `Waiting for launchers to reach speed: yes, 1.2 of at most 5.0 s
   (first launch)`.
 - Tests: `LaunchSpinUpTest` (3).
+
+## Update 2026-11-03, later: launch at 2800 RPM, not "at speed"
+
+On the robot the launchers did not hold within 50 RPM of the target long enough, so LAUNCH
+steps sat yellow until the time limit. A LAUNCH now opens the gates as soon as the pollen
+wheel reads **`autoLaunchMinRpm` (2800) or faster**. The 0.25 s hold is gone. The time limits
+stay (5 s for the first launch, 2 s after), and a robot with no pollen wheel never waits.
+The Driver Station shows `yes, pollen 2650 of 2800 RPM, 1.2 of at most 5.0 s (first launch)`.
