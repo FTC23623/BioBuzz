@@ -1,6 +1,6 @@
 # 0040: The launch needs a camera lock; aim and tracking only while a button is down; an extra ball is spat out
 
-Status: Accepted. Not yet driven. Reject timing and the switch's position are CHECK.
+Status: Accepted. Not yet driven. Reject timing and the switch's position are CHECK. The launch lock is switched OFF by default since later on 2026-11-03 (`launchNeedsLock = false`, on the dashboard's Launcher group).
 Date: 2026-11-03
 Changes 0036 (the launch trigger opened the gates whatever the camera saw), 0037 (one feed share for both rollers), 0038 (the launcher followed the camera all the time) and 0039 (slow mode at a quarter).
 

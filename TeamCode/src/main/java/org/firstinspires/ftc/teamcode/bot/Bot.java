@@ -128,7 +128,7 @@ public class Bot {
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
-            "launchServoSecondsPer60Deg", "launchServoExtraSeconds"};
+            "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock"};
     static final String[] LiveTuningIntake = {
             "intakeRpm", "transferRpm", "launchFeedIntakeScale", "launchFeedTransferScale",
             "intakeReverseRpm", "transferReverseRpm",

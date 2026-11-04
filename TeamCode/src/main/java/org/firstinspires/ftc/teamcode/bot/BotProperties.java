@@ -509,8 +509,10 @@ public class BotProperties {
      * with no tag, the gates stay shut and the driver's gamepad buzzes, so a wild launch is
      * caught (coach, 2026-11-03). The operator's right trigger, held, overrides the lock for
      * a camera that has died. false: the trigger launches whatever the camera sees.
+     * OFF since 2026-11-03 at the coach's request; tick it on the dashboard's Launcher group
+     * to try it again.
      */
-    public boolean launchNeedsLock = true;
+    public boolean launchNeedsLock = false;
     /** How long the driver's gamepad buzzes when the trigger is pulled with no lock, in milliseconds. */
     public int launchNoLockRumbleMs = 300;
 

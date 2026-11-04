@@ -54,6 +54,8 @@ class LaunchGatesTest {
         telemetry = mock(Telemetry.class);
         vision = mock(Vision.class);
         lockedOnTheHive();
+        // The lock is off by default; these tests check it working, so switch it on.
+        properties.launchNeedsLock = true;
         HydraOpMode op = new HydraOpMode(telemetry, hardwareMap, gamepad, operator);
         gates = new LaunchGates(op, properties, gamepad, vision);
     }
@@ -336,5 +338,11 @@ class LaunchGatesTest {
         g.Process();
         assertTrue(g.IsOpen());
         verify(quietScreen, never()).addData(anyString(), any());
+    }
+
+    @Test
+    @DisplayName("by default the lock is off: the trigger launches with no tag in view")
+    void lockOffByDefault() {
+        assertFalse(new BotProperties().launchNeedsLock);
     }
 }
