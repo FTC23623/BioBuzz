@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * The FLOWER step's moves, without a robot (docs/decisions/0042): back 6, then forward 7 and
+ * The FLOWER step's moves, without a robot (docs/decisions/0042): back 9, then forward 7 and
  * back 7 twice, all along the way the robot faces.
  */
 @DisplayName("FLOWER step")
@@ -24,15 +24,15 @@ class FlowerStepTest {
     }
 
     @Test
-    @DisplayName("facing forward from (0, 0): back to -6, then 1, -6, 1, -6")
+    @DisplayName("facing forward from (0, 0): back to -9, then -2, -9, -2, -9")
     void facingForward() {
         List<Pose> moves = PedroAuto.FlowerMoves(new Pose(0, 0, 0), new BotProperties());
         assertEquals(5, moves.size());
-        assertPose(-6, 0, 0, moves.get(0));
-        assertPose(1, 0, 0, moves.get(1));
-        assertPose(-6, 0, 0, moves.get(2));
-        assertPose(1, 0, 0, moves.get(3));
-        assertPose(-6, 0, 0, moves.get(4));
+        assertPose(-9, 0, 0, moves.get(0));
+        assertPose(-2, 0, 0, moves.get(1));
+        assertPose(-9, 0, 0, moves.get(2));
+        assertPose(-2, 0, 0, moves.get(3));
+        assertPose(-9, 0, 0, moves.get(4));
     }
 
     @Test
@@ -40,9 +40,9 @@ class FlowerStepTest {
     void facingLeft() {
         double left = Math.toRadians(90);
         List<Pose> moves = PedroAuto.FlowerMoves(new Pose(10, 20, left), new BotProperties());
-        assertPose(10, 14, left, moves.get(0));
-        assertPose(10, 21, left, moves.get(1));
-        assertPose(10, 14, left, moves.get(4));
+        assertPose(10, 11, left, moves.get(0));
+        assertPose(10, 18, left, moves.get(1));
+        assertPose(10, 11, left, moves.get(4));
     }
 
     @Test
@@ -63,10 +63,11 @@ class FlowerStepTest {
     }
 
     @Test
-    @DisplayName("the starting numbers are the coach's: back 6, strokes of 7, 2 passes, half a second for the arm")
+    @DisplayName("the starting numbers are the coach's: back 9, settle 0.3 s, strokes of 7, 2 passes, half a second for the arm")
     void startingNumbers() {
         BotProperties p = new BotProperties();
-        assertEquals(6, p.autoFlowerBackIn, closeEnough);
+        assertEquals(9, p.autoFlowerBackIn, closeEnough);
+        assertEquals(0.3, p.autoFlowerSettleSeconds, closeEnough);
         assertEquals(7, p.autoFlowerStrokeIn, closeEnough);
         assertEquals(2, p.autoFlowerPasses);
         assertEquals(0.5, p.autoExtractorSeconds, closeEnough);

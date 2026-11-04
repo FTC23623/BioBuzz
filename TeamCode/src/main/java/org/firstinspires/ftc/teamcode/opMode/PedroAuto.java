@@ -85,8 +85,10 @@ public abstract class PedroAuto extends LinearOpMode {
      * Put this in the list after the path to a flower to work it there (docs/decisions/0042).
      * The intake runs, and from where the last path ended the robot:
      * <ol>
-     *   <li>backs up {@code autoFlowerBackIn} (6 in),
-     *   <li>swings the extractor out ({@code autoExtractorSeconds}),
+     *   <li>backs up {@code autoFlowerBackIn} (9 in), and holds that spot
+     *       {@code autoFlowerSettleSeconds} (0.3 s) so the robot has stopped,
+     *   <li>swings the extractor out, and holds still {@code autoExtractorSeconds} (0.5 s)
+     *       before the first stroke,
      *   <li>strokes forward then back {@code autoFlowerStrokeIn} (7 in), {@code autoFlowerPasses}
      *       times (2),
      *   <li>swings the extractor in.
@@ -97,8 +99,9 @@ public abstract class PedroAuto extends LinearOpMode {
     // A third marker, like LAUNCH, so the loop can tell it apart.
     protected static final Path FLOWER = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
-    // The FLOWER step's state while it runs. Stage 0 backs up, 1 swings the arm out, 2 to n
-    // are the strokes, n + 1 swings it in, n + 2 is done; n = how many moves there are.
+    // The FLOWER step's state while it runs, with n = how many moves there are:
+    // stage 0 backs up, 1 settles at the backed-up spot, 2 swings the arm out, 3 to n + 1
+    // are the strokes, n + 2 swings it in, n + 3 is done.
     private List<Pose> mFlowerMoves = new ArrayList<>();
     private Pose mFlowerStart = new Pose(0, 0, 0);
     private int mFlowerStage = 0;
@@ -358,8 +361,8 @@ public abstract class PedroAuto extends LinearOpMode {
      * first the back-up, then each stroke forward and back. Every pose keeps the heading.
      *
      * <pre>
-     *     facing 0 at (0, 0), back 6, strokes of 7, 2 passes:
-     *     (-6, 0)  (1, 0)  (-6, 0)  (1, 0)  (-6, 0)
+     *     facing 0 at (0, 0), back 9, strokes of 7, 2 passes:
+     *     (-9, 0)  (-2, 0)  (-9, 0)  (-2, 0)  (-9, 0)
      * </pre>
      */
     static List<Pose> FlowerMoves(Pose spot, BotProperties p) {
@@ -379,22 +382,27 @@ public abstract class PedroAuto extends LinearOpMode {
         return moves;
     }
 
-    /** Start the next FLOWER stage: a move, or swinging the arm out or in. */
+    /** Start the next FLOWER stage: a move, a settle, or swinging the arm out or in. */
     private void NextFlowerStage(Bot bot, Follower follower) {
         mFlowerStage = mFlowerStage + 1;
         mFlowerTimer.reset();
         int moves = mFlowerMoves.size();
+        Pose backedUp = mFlowerMoves.get(0);
         if (mFlowerStage == 1) {
+            // Hold the PLANNED backed-up spot, not wherever the robot was when the path
+            // ended: it may still be braking short of it.
+            follower.hold(backedUp);
+        } else if (mFlowerStage == 2) {
             bot.SetFlowerExtractor(true);
-            follower.hold(follower.pose());
-        } else if (mFlowerStage == moves + 1) {
+            follower.hold(backedUp);
+        } else if (mFlowerStage == moves + 2) {
             bot.SetFlowerExtractor(false);
-            follower.hold(follower.pose());
-        } else if (mFlowerStage <= moves) {
-            // Stage 0 is move 0 (the back-up); stages 2 to n are moves 1 to n - 1.
-            int move = mFlowerStage;
-            if (mFlowerStage > 0) {
-                move = mFlowerStage - 1;
+            follower.hold(mFlowerMoves.get(moves - 1));
+        } else if (mFlowerStage == 0 || (mFlowerStage >= 3 && mFlowerStage <= moves + 1)) {
+            // Stage 0 is move 0 (the back-up); stages 3 to n + 1 are moves 1 to n - 1.
+            int move = 0;
+            if (mFlowerStage >= 3) {
+                move = mFlowerStage - 2;
             }
             Pose from = mFlowerStart;
             if (move > 0) {
@@ -415,12 +423,13 @@ public abstract class PedroAuto extends LinearOpMode {
     /** One loop of the FLOWER step. @return true once the arm is back in. */
     private boolean FlowerStep(Bot bot, Follower follower) {
         int moves = mFlowerMoves.size();
-        if (mFlowerStage > moves + 1) {
+        if (mFlowerStage > moves + 2) {
             return true;
         }
-        boolean waitingForTheArm = mFlowerStage == 1 || mFlowerStage == moves + 1;
         boolean stageDone;
-        if (waitingForTheArm) {
+        if (mFlowerStage == 1) {
+            stageDone = mFlowerTimer.seconds() >= botProperties.autoFlowerSettleSeconds;
+        } else if (mFlowerStage == 2 || mFlowerStage == moves + 2) {
             stageDone = mFlowerTimer.seconds() >= botProperties.autoExtractorSeconds;
         } else {
             boolean tookTooLong = mFlowerTimer.seconds() >= mFlowerGiveUpSeconds;
@@ -433,7 +442,7 @@ public abstract class PedroAuto extends LinearOpMode {
         if (stageDone) {
             NextFlowerStage(bot, follower);
         }
-        if (mFlowerStage > moves + 1) {
+        if (mFlowerStage > moves + 2) {
             // Done. The intake goes back to what the auto does between steps.
             bot.RunIntake(botProperties.autoRunScoring);
             return true;

@@ -40,3 +40,19 @@ the rest from there.
 - The routine is about 28 inches of driving plus 1 s of arm, roughly 3 to 4 s at full speed.
 - The recorded spot is where the robot meets the flower, not where it ends.
 - Tests: `FlowerStepTest` (5), `PoseRecorderTest` (circle, 2).
+
+## Update 2026-11-03: back up 9, and stop before the arm goes out
+
+On the robot the arm swung out before the robot had finished backing up. When Pedro ends a
+path the robot can still be braking, and the arm stage held the robot wherever it was at
+that moment. Now:
+
+- **`autoFlowerBackIn` = 9** (was 6), for more room from the flower.
+- After the back-up the robot **holds the planned backed-up spot** (not where it happened to
+  be) for **`autoFlowerSettleSeconds` = 0.3**, and only then swings the arm out.
+- The arm still has `autoExtractorSeconds` (0.5) before the first forward stroke starts.
+
+The sequence is now: back 9, settle 0.3 s, arm out 0.5 s, forward 7, back 7, forward 7,
+back 7, arm in 0.5 s. The robot ends 9 in behind the recorded spot. If the arm still goes out
+early, raise `autoFlowerSettleSeconds`.
+

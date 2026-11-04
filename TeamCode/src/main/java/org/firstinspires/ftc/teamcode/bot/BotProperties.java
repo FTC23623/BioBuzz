@@ -445,15 +445,24 @@ public class BotProperties {
     // The FLOWER step (docs/decisions/0042): from the spot it was recorded at, the robot backs
     // up, swings the extractor out, works the flower with short strokes forward and back,
     // and swings the extractor in, with the intake running the whole time. Every move is
-    // along the way the robot faces. Today: back 6, out, forward 7, back 7, forward 7,
-    // back 7, in. The robot ends 6 inches behind the recorded spot (coach, 2026-11-03).
+    // along the way the robot faces. Today: back 9, settle, out, forward 7, back 7,
+    // forward 7, back 7, in. The robot ends 9 inches behind the recorded spot (coach,
+    // 2026-11-03: 6 was too close, and the arm went out before the robot had stopped).
     /** How far the robot backs up from the recorded spot before the extractor goes out, in inches. */
-    public double autoFlowerBackIn = 6;
+    public double autoFlowerBackIn = 9;
+    /**
+     * After the back-up, the robot holds the backed-up spot this long, in seconds, so it has
+     * stopped before the arm swings out.
+     */
+    public double autoFlowerSettleSeconds = 0.3;
     /** How long one stroke forward or back is, in inches. */
     public double autoFlowerStrokeIn = 7;
     /** How many forward-and-back pairs of strokes. 2 = forward, back, forward, back. */
     public int autoFlowerPasses = 2;
-    /** How long the extractor arm takes to swing out or in, in seconds. The robot holds still meanwhile. */
+    /**
+     * How long the extractor arm takes to swing out or in, in seconds. The robot holds still
+     * meanwhile, and the first forward stroke only starts once the arm is out.
+     */
     public double autoExtractorSeconds = 0.5;
     /**
      * In an auto, the most time the robot spends turning to face a tag before it launches
