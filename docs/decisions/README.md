@@ -48,6 +48,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0039](0039-controls-update-aim-arc-launchers-always-on.md) | Controls update: aim and slow swap bumpers, the D-pad arcs around the hive, launchers always on, intake on the left bumper | Accepted, not driven yet |
 | [0040](0040-launch-lock-aim-only-on-button-auto-reject.md) | The launch needs a camera lock (operator R2 overrides); aim and tracking only while a button is down; an extra ball is spat out; slow at half | Accepted, not driven yet |
 | [0041](0041-quiet-telemetry-for-loop-time.md) | Quiet telemetry, a dashboard switch, to measure what the Driver Station lines cost | Accepted, not measured yet |
+| [0042](0042-flower-step-and-recorder-circle.md) | A FLOWER step for the autos (back 6, arm out, 7-inch strokes twice, arm in), recorded with circle | Accepted, not driven yet |
 
 ## TODO: confirm on the robot after this week's tuning
 
@@ -76,6 +77,7 @@ own CHECK section has the detail.
 - [ ] **0036** Right bumper (0039) with two hive tags in view faces between them; the launch trigger turns toward the hive. `Last launch (camera)` shows the inches.
 - [ ] **0037** Test: Motor Tuning, intake target 1150: actual reads about 1150 at power near 1 (`intakeTicksPerRev` 145.1). A launch feeds both rollers at half.
 - [ ] **0038** Shoot from 110 and 140 in to set `launchNearRpm` and `launchFarRpm`, then from 120 and 130 to set `launchCurve`. A trim that held all day goes into the two RPMs.
+- [ ] **0042** A circle-recorded spot runs back 6, arm out, four 7-inch strokes, arm in, with the intake on; the `Flower` line counts the stages.
 - [ ] **0039** Right bumper aims, left bumper slows. Right bumper plus D-pad left or right: the robot circles the hive keeping its distance (the `Arc` line shows holding and now). Gamepad 2 left bumper toggles the rollers; its right bumper and cross do nothing.
 - [ ] **0040** Trigger with no tag: shut and gamepad 1 buzzes; gamepad 2 R2 overrides. Nothing pressed: no turning, `Aim assist: off`. A fifth ball is spat out and the rollers stop until gamepad 2 lets go. Transfer feeds at 30%. Slow is half speed.
 

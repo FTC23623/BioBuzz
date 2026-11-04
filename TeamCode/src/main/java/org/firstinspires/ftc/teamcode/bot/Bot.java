@@ -113,6 +113,7 @@ public class Bot {
     private final LaunchGates mLaunchGates;
     private final Indicator mIndicator;
     private final LightStrip mLightStrip;
+    private final FlowerExtractor mFlowerExtractor;
 
     /**
      * The settings that show on FTC Dashboard's Config tab, to change while the robot runs
@@ -199,8 +200,11 @@ public class Bot {
             mSystems.add(mLaunchGates);
         }
         // The flower extractor is the operator's too: hold triangle and it swings out.
-        if (!mProperties.flowerExtractorDisabled) {
-            mSystems.add(new FlowerExtractor(mOp, mProperties, mOp.mOperatorGamepad));
+        if (mProperties.flowerExtractorDisabled) {
+            mFlowerExtractor = null;
+        } else {
+            mFlowerExtractor = new FlowerExtractor(mOp, mProperties, mOp.mOperatorGamepad);
+            mSystems.add(mFlowerExtractor);
         }
         // The pollen sensor: the intake rejects extra balls with it, the strip turns yellow
         // with it. Built once if either needs it. A robot without the switch reads "no pollen".
@@ -488,6 +492,17 @@ public class Bot {
             return;
         }
         mLaunchGates.SetOpen(open);
+    }
+
+    /**
+     * true: the flower extractor swings out (deployed). false: back in (stored). An auto's
+     * FLOWER step calls this. Does nothing with no extractor.
+     */
+    public void SetFlowerExtractor(boolean deployed) {
+        if (mFlowerExtractor == null) {
+            return;
+        }
+        mFlowerExtractor.SetDeployed(deployed);
     }
 
     /** true: intake and transfer run forward. false: off. Does nothing with no intake. */

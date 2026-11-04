@@ -442,6 +442,19 @@ public class BotProperties {
     public double autoLaunchAnywayAtSeconds = 26;
     /** In an auto, how long the gates stay open at a LAUNCH step, in seconds. */
     public double autoLaunchSeconds = 2;
+    // The FLOWER step (docs/decisions/0042): from the spot it was recorded at, the robot backs
+    // up, swings the extractor out, works the flower with short strokes forward and back,
+    // and swings the extractor in, with the intake running the whole time. Every move is
+    // along the way the robot faces. Today: back 6, out, forward 7, back 7, forward 7,
+    // back 7, in. The robot ends 6 inches behind the recorded spot (coach, 2026-11-03).
+    /** How far the robot backs up from the recorded spot before the extractor goes out, in inches. */
+    public double autoFlowerBackIn = 6;
+    /** How long one stroke forward or back is, in inches. */
+    public double autoFlowerStrokeIn = 7;
+    /** How many forward-and-back pairs of strokes. 2 = forward, back, forward, back. */
+    public int autoFlowerPasses = 2;
+    /** How long the extractor arm takes to swing out or in, in seconds. The robot holds still meanwhile. */
+    public double autoExtractorSeconds = 0.5;
     /**
      * In an auto, the most time the robot spends turning to face a tag before it launches
      * anyway, in seconds. A guess: CHECK on the robot.

@@ -8,6 +8,7 @@ import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathSegment;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.teamcode.bot.Bot;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
@@ -80,6 +81,32 @@ public abstract class PedroAuto extends LinearOpMode {
     // A different marker from LAUNCH, so the loop can tell the two apart.
     protected static final Path LAUNCH_WHEN_TAG_SEEN = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
+    /**
+     * Put this in the list after the path to a flower to work it there (docs/decisions/0042).
+     * The intake runs, and from where the last path ended the robot:
+     * <ol>
+     *   <li>backs up {@code autoFlowerBackIn} (6 in),
+     *   <li>swings the extractor out ({@code autoExtractorSeconds}),
+     *   <li>strokes forward then back {@code autoFlowerStrokeIn} (7 in), {@code autoFlowerPasses}
+     *       times (2),
+     *   <li>swings the extractor in.
+     * </ol>
+     * Every move is along the way the robot faces, so it ends {@code autoFlowerBackIn} behind
+     * the spot, still facing the flower. Tool: Pose Recorder writes it after a circle press.
+     */
+    // A third marker, like LAUNCH, so the loop can tell it apart.
+    protected static final Path FLOWER = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    // The FLOWER step's state while it runs. Stage 0 backs up, 1 swings the arm out, 2 to n
+    // are the strokes, n + 1 swings it in, n + 2 is done; n = how many moves there are.
+    private List<Pose> mFlowerMoves = new ArrayList<>();
+    private Pose mFlowerStart = new Pose(0, 0, 0);
+    private int mFlowerStage = 0;
+    private final ElapsedTime mFlowerTimer = new ElapsedTime();
+    private double mFlowerGiveUpSeconds = 0;
+    /** The robot's top speed, for each flower move's give-up time. Set in runOpMode. */
+    private double mTopSpeed = 1;
+
     /** The paths this auto drives, in order. Runs after {@link #properties} is set up. */
     protected abstract List<Path> BuildPaths();
 
@@ -117,6 +144,7 @@ public abstract class PedroAuto extends LinearOpMode {
         // it is. Strafing is the robot's slower way to drive, so use that speed: it can only
         // give more time, never less.
         double topSpeed = PedroConstants.ForesightConfig().maxAchievableStrafeVelocity.get();
+        mTopSpeed = topSpeed;
         double[] giveUpSeconds = new double[paths.size()];
         for (int i = 0; i < paths.size(); i++) {
             giveUpSeconds[i] = GiveUpSeconds(paths.get(i), botProperties, topSpeed);
@@ -209,6 +237,8 @@ public abstract class PedroAuto extends LinearOpMode {
             boolean pathFinished;
             if (waitingForTag || aiming || spinningUp) {
                 pathFinished = false;
+            } else if (step == FLOWER) {
+                pathFinished = FlowerStep(bot, follower);
             } else if (launching) {
                 pathFinished = stepTimer.seconds() >= botProperties.autoLaunchSeconds;
             } else {
@@ -245,7 +275,9 @@ public abstract class PedroAuto extends LinearOpMode {
             telemetry.addData("Launching", !waitingForTag && !aiming && !spinningUp && launching);
             telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
             telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
-            if (!launching) {
+            if (step == FLOWER) {
+                telemetry.addData("Flower", "stage %d of %d", mFlowerStage + 1, mFlowerMoves.size() + 3);
+            } else if (!launching) {
                 telemetry.addData("Give up on this path after (s)", "%.1f", giveUpSeconds[pathNumber]);
             }
             telemetry.addData("Paths given up (took too long)", pathsGivenUp);
@@ -309,8 +341,103 @@ public abstract class PedroAuto extends LinearOpMode {
         } else if (step == LAUNCH_WHEN_TAG_SEEN) {
             // Hold still, like LAUNCH, but blink orange until the camera sees a tag.
             bot.ShowWaitingForTag(true);
+        } else if (step == FLOWER) {
+            // Work the flower from here. The intake runs for the whole routine.
+            mFlowerStart = follower.pose();
+            mFlowerMoves = FlowerMoves(mFlowerStart, botProperties);
+            mFlowerStage = -1;
+            bot.RunIntake(true);
+            NextFlowerStage(bot, follower);
         } else {
             follower.follow(step);
         }
+    }
+
+    /**
+     * Where each FLOWER move ends, worked out from where the robot is and the way it faces:
+     * first the back-up, then each stroke forward and back. Every pose keeps the heading.
+     *
+     * <pre>
+     *     facing 0 at (0, 0), back 6, strokes of 7, 2 passes:
+     *     (-6, 0)  (1, 0)  (-6, 0)  (1, 0)  (-6, 0)
+     * </pre>
+     */
+    static List<Pose> FlowerMoves(Pose spot, BotProperties p) {
+        double heading = spot.heading();
+        // One inch "forward" on the field, for a robot facing this heading.
+        double forwardX = Math.cos(heading);
+        double forwardY = Math.sin(heading);
+        List<Pose> moves = new ArrayList<>();
+        double alongIn = -p.autoFlowerBackIn;
+        moves.add(new Pose(spot.x() + forwardX * alongIn, spot.y() + forwardY * alongIn, heading));
+        for (int pass = 0; pass < p.autoFlowerPasses; pass++) {
+            alongIn = alongIn + p.autoFlowerStrokeIn;
+            moves.add(new Pose(spot.x() + forwardX * alongIn, spot.y() + forwardY * alongIn, heading));
+            alongIn = alongIn - p.autoFlowerStrokeIn;
+            moves.add(new Pose(spot.x() + forwardX * alongIn, spot.y() + forwardY * alongIn, heading));
+        }
+        return moves;
+    }
+
+    /** Start the next FLOWER stage: a move, or swinging the arm out or in. */
+    private void NextFlowerStage(Bot bot, Follower follower) {
+        mFlowerStage = mFlowerStage + 1;
+        mFlowerTimer.reset();
+        int moves = mFlowerMoves.size();
+        if (mFlowerStage == 1) {
+            bot.SetFlowerExtractor(true);
+            follower.hold(follower.pose());
+        } else if (mFlowerStage == moves + 1) {
+            bot.SetFlowerExtractor(false);
+            follower.hold(follower.pose());
+        } else if (mFlowerStage <= moves) {
+            // Stage 0 is move 0 (the back-up); stages 2 to n are moves 1 to n - 1.
+            int move = mFlowerStage;
+            if (mFlowerStage > 0) {
+                move = mFlowerStage - 1;
+            }
+            Pose from = mFlowerStart;
+            if (move > 0) {
+                from = mFlowerMoves.get(move - 1);
+            }
+            Pose to = mFlowerMoves.get(move);
+            if (Math.hypot(to.x() - from.x(), to.y() - from.y()) < 0.01) {
+                // A zero-inch move (a setting of 0): Pedro won't build it, so skip it.
+                NextFlowerStage(bot, follower);
+                return;
+            }
+            Path path = line(from, to).constant(mFlowerStart.heading());
+            mFlowerGiveUpSeconds = GiveUpSeconds(path, botProperties, mTopSpeed);
+            follower.follow(path);
+        }
+    }
+
+    /** One loop of the FLOWER step. @return true once the arm is back in. */
+    private boolean FlowerStep(Bot bot, Follower follower) {
+        int moves = mFlowerMoves.size();
+        if (mFlowerStage > moves + 1) {
+            return true;
+        }
+        boolean waitingForTheArm = mFlowerStage == 1 || mFlowerStage == moves + 1;
+        boolean stageDone;
+        if (waitingForTheArm) {
+            stageDone = mFlowerTimer.seconds() >= botProperties.autoExtractorSeconds;
+        } else {
+            boolean tookTooLong = mFlowerTimer.seconds() >= mFlowerGiveUpSeconds;
+            if (follower.following() && tookTooLong) {
+                // Stuck on the flower: stop pushing and carry on with the next stroke.
+                follower.hold(follower.pose());
+            }
+            stageDone = !follower.following();
+        }
+        if (stageDone) {
+            NextFlowerStage(bot, follower);
+        }
+        if (mFlowerStage > moves + 1) {
+            // Done. The intake goes back to what the auto does between steps.
+            bot.RunIntake(botProperties.autoRunScoring);
+            return true;
+        }
+        return false;
     }
 }

@@ -109,4 +109,21 @@ class PoseRecorderTest {
         assertEquals(190, PoseRecorder.Unwrap(170, -170), EPS);
         assertEquals(45, PoseRecorder.Unwrap(0, 45), EPS);
     }
+
+    @Test
+    @DisplayName("circle saves a spot plus FLOWER; the Java adds the FLOWER step after the path there")
+    void circleIsFlower() throws Exception {
+        robotIsAt(30, -10, -90);
+        tap(down -> gamepad.circle = down);
+        assertEquals(1, recorder.CountSpots());
+        assertTrue(fileText().contains("paths.add(toSpot1);\npaths.add(FLOWER);"));
+        assertTrue(!fileText().contains("paths.add(LAUNCH);"));
+    }
+
+    @Test
+    @DisplayName("the Driver Station line says FLOWER")
+    void spotLineSaysFlower() {
+        PoseRecorder.Spot spot = new PoseRecorder.Spot(1, 2, 3, false, true);
+        assertTrue(PoseRecorder.SpotLine(4, spot).endsWith(", FLOWER"));
+    }
 }

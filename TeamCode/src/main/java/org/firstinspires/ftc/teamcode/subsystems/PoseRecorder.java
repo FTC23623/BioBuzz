@@ -28,6 +28,9 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * <ul>
  *   <li><b>Cross / A</b>: save this spot.
  *   <li><b>Triangle / Y</b>: save this spot, and LAUNCH here.
+ *   <li><b>Circle / B</b>: save this spot, and work the FLOWER here: back up, extractor out,
+ *       stroke forward and back, extractor in (docs/decisions/0042). Drive up to the flower,
+ *       facing it, the way you want the robot to meet it, then press.
  *   <li><b>Square / X</b>: forget the last spot.
  * </ul>
  *
@@ -47,12 +50,19 @@ public class PoseRecorder implements Subsystem {
         final double headingDeg;
         /** true: the auto stops here and launches. */
         final boolean launch;
+        /** true: the auto works the flower here (the FLOWER step). */
+        final boolean flower;
 
         Spot(double x, double y, double headingDeg, boolean launch) {
+            this(x, y, headingDeg, launch, false);
+        }
+
+        Spot(double x, double y, double headingDeg, boolean launch, boolean flower) {
             this.x = x;
             this.y = y;
             this.headingDeg = headingDeg;
             this.launch = launch;
+            this.flower = flower;
         }
     }
 
@@ -66,6 +76,7 @@ public class PoseRecorder implements Subsystem {
     private final List<Spot> mSpots = new ArrayList<>();
     private final Debouncer mSaveButton;
     private final Debouncer mLaunchButton;
+    private final Debouncer mFlowerButton;
     private final Debouncer mUndoButton;
 
     private boolean mStarted = false;
@@ -83,6 +94,7 @@ public class PoseRecorder implements Subsystem {
         mFile = new File(folder, "PoseRecording_" + time + ".java.txt");
         mSaveButton = new Debouncer(properties.debounce);
         mLaunchButton = new Debouncer(properties.debounce);
+        mFlowerButton = new Debouncer(properties.debounce);
         mUndoButton = new Debouncer(properties.debounce);
     }
 
@@ -94,7 +106,7 @@ public class PoseRecorder implements Subsystem {
             mLocalizer.setPose(new Pose(0, 0, 0));
         }
         mOp.mTelemetry.addLine("POSE RECORDER: the robot's spot right now is the start (0, 0).");
-        mOp.mTelemetry.addLine("Cross: save spot. Triangle: save spot + LAUNCH. Square: undo.");
+        mOp.mTelemetry.addLine("Cross: save spot. Triangle: save + LAUNCH. Circle: save + FLOWER. Square: undo.");
         return true;
     }
 
@@ -105,6 +117,9 @@ public class PoseRecorder implements Subsystem {
         }
         if (Pressed(mLaunchButton, mGamepad.triangle)) {
             SaveSpot(true);
+        }
+        if (Pressed(mFlowerButton, mGamepad.circle)) {
+            SaveSpot(false, true);
         }
         if (Pressed(mUndoButton, mGamepad.square) && !mSpots.isEmpty()) {
             mSpots.remove(mSpots.size() - 1);
@@ -140,13 +155,18 @@ public class PoseRecorder implements Subsystem {
 
     /** Remember where the robot is now, rumble once, and write the file. */
     private void SaveSpot(boolean launch) {
+        SaveSpot(launch, false);
+    }
+
+    /** Remember where the robot is now, rumble once, and write the file. */
+    private void SaveSpot(boolean launch, boolean flower) {
         Pose here = mLocalizer.pose();
         double previousDeg = 0;
         if (!mSpots.isEmpty()) {
             previousDeg = mSpots.get(mSpots.size() - 1).headingDeg;
         }
         double headingDeg = Unwrap(previousDeg, Math.toDegrees(here.heading()));
-        mSpots.add(new Spot(here.x(), here.y(), headingDeg, launch));
+        mSpots.add(new Spot(here.x(), here.y(), headingDeg, launch, flower));
         mGamepad.rumbleBlips(1);
         WriteFile();
     }
@@ -195,13 +215,16 @@ public class PoseRecorder implements Subsystem {
         if (spot.launch) {
             line = line + ", LAUNCH";
         }
+        if (spot.flower) {
+            line = line + ", FLOWER";
+        }
         return line;
     }
 
     /**
      * The spots as Java for a PedroAuto's {@code BuildPaths()}. One Pose per spot, a
-     * straight line from each spot to the next, and a LAUNCH after any spot saved with
-     * triangle. A path keeps its heading when the robot did not turn, else it turns
+     * straight line from each spot to the next, a LAUNCH after any spot saved with
+     * triangle, and a FLOWER after any spot saved with circle. A path keeps its heading when the robot did not turn, else it turns
      * smoothly along the way.
      */
     static String ToJava(List<Spot> spots) {
@@ -232,6 +255,9 @@ public class PoseRecorder implements Subsystem {
         java.append("\nList<Path> paths = new ArrayList<>();\n");
         for (int i = 0; i < spots.size(); i++) {
             java.append("paths.add(toSpot").append(i + 1).append(");\n");
+            if (spots.get(i).flower) {
+                java.append("paths.add(FLOWER);\n");
+            }
             if (spots.get(i).launch) {
                 java.append("paths.add(LAUNCH);\n");
             }

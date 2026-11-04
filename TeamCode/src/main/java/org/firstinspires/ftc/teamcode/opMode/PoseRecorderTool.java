@@ -8,6 +8,7 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * <ul>
  *   <li><b>Cross / A</b>: save this spot.
  *   <li><b>Triangle / Y</b>: save this spot and LAUNCH here.
+ *   <li><b>Circle / B</b>: save this spot and work the FLOWER here (docs/decisions/0042).
  *   <li><b>Square / X</b>: forget the last spot.
  * </ul>
  *
@@ -20,7 +21,7 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  *       copy of AutoShapeZ, run it at half speed first.
  * </ol>
  *
- * <p>Robot-centric, so circle does nothing. See docs/decisions/0024.
+ * <p>Robot-centric, so circle is free for the FLOWER step. See docs/decisions/0024.
  */
 @TeleOp(name = "Tool: Pose Recorder", group = "Tool")
 public class PoseRecorderTool extends HyDrive {
