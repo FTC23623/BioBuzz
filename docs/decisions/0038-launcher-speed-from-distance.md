@@ -1,6 +1,6 @@
 # 0038: The pollen launcher's speed follows the distance to the tag
 
-Status: Accepted. Two rows measured; the two between are guesses. Not yet shot.
+Status: Accepted. Table raised on 2026-11-03: 110 → 2900, 120 → 3042, 130 → 3183, 140 → 3325 (far row +25, straight line between). Two rows measured; the two between are guesses. Not yet shot.
 Date: 2026-11-02
 Adds to 0009 (speed control) and 0023 (the D-pad sets the speed).
 

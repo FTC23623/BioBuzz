@@ -177,11 +177,11 @@ class LauncherTest {
         properties.launcherRangeTuning = true;
         tagAt(135);
         launcher.Process();
-        assertEquals(3170, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3183, launcher.GetPollenTargetRpm(), EPS);
         assertEquals(1000, launcher.GetNectarTargetRpm(), EPS);
         tagAt(150);
         launcher.Process();
-        assertEquals(3300, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3325, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -206,10 +206,10 @@ class LauncherTest {
         tap(down -> gamepad.dpad_up = down);
         launcher.Process();
         assertEquals(100, properties.launcherRangeTrimRpm, EPS);
-        assertEquals(3030 + 100, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3042 + 100, launcher.GetPollenTargetRpm(), EPS);
         tap(down -> gamepad.dpad_down = down);
         launcher.Process();
-        assertEquals(3030 + 50, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3042 + 50, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -224,14 +224,14 @@ class LauncherTest {
         driver.right_bumper = true;
         launcher.HandleUserInput();
         launcher.Process();
-        assertEquals(3300, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3325, launcher.GetPollenTargetRpm(), EPS);
 
         // Let go: holds where it got to, even as the robot moves.
         driver.right_bumper = false;
         tagAt(112);
         launcher.HandleUserInput();
         launcher.Process();
-        assertEquals(3300, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3325, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -242,7 +242,7 @@ class LauncherTest {
         driver.right_trigger = 1;
         launcher.HandleUserInput();
         launcher.Process();
-        assertEquals(3030, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3042, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test

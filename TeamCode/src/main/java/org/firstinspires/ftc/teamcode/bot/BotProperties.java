@@ -214,7 +214,8 @@ public class BotProperties {
     // A farther shot needs a faster wheel. While the camera sees our hive, the pollen
     // launcher's target follows the table below, so the wheel is already at the right speed
     // when the trigger is pulled. Measured by the coach, 2026-11-02: 2900 at 110 in, 3300
-    // past 140 in. The rows between are guesses in a straight line; tune each on the robot.
+    // past 140 in; the far row raised 25 to 3325 on 2026-11-03. The rows between are a
+    // straight line from 2900 to 3325, rounded; tune each on the robot.
 
     /**
      * true: the pollen launcher's target follows launchRpmByRangeIn whenever a tag of ours
@@ -230,9 +231,9 @@ public class BotProperties {
      */
     public double[][] launchRpmByRangeIn = {
             {110, 2900},
-            {120, 3030},
-            {130, 3170},
-            {140, 3300},
+            {120, 3042},
+            {130, 3183},
+            {140, 3325},
     };
     /**
      * Added to every row of the table. D-pad up / down on gamepad 2 moves it by
@@ -322,9 +323,9 @@ public class BotProperties {
     /** true: reject an extra ball by itself. false: the operator watches for it. */
     public boolean pollenAutoReject = true;
     /** Pollen must stay detected this long while intaking, in seconds, before a reject. */
-    public double pollenRejectAfterSeconds = 0.2;
+    public double pollenRejectAfterSeconds = 0.5;
     /** How long the intake runs backward (transfer forward) to spit the ball out, in seconds. */
-    public double pollenRejectSeconds = 0.5;
+    public double pollenRejectSeconds = 0.75;
     /** How much one D-pad press changes a roller's speed in Test: Motor Tuning. Same as the launchers'. */
     public double intakeRpmStep = 50;
     /** The intake and transfer target speed never goes above this: the motors' top speed. */

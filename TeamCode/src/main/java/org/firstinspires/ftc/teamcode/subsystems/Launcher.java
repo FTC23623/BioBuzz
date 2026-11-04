@@ -27,7 +27,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
  * (right bumper) or launch (right trigger) and the camera sees our hive, the
  * pollen launcher's target follows {@code launchRpmByRangeIn}, a table of inches to RPM in
- * 10-inch bands (2900 at 110 in, 3300 from 140 in), plus {@code launcherRangeTrimRpm}. The
+ * 10-inch bands (2900 at 110 in, 3325 from 140 in), plus {@code launcherRangeTrimRpm}. The
  * wheel is then already at the right speed when the trigger is pulled. With no tag in view
  * the target stays where it was. {@code launcherRangeTuning = false} turns this off.
  *
