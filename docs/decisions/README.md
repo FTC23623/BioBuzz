@@ -51,6 +51,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0042](0042-flower-step-and-recorder-circle.md) | A FLOWER step for the autos (back 6, arm out, 7-inch strokes twice, arm in), recorded with circle | Accepted, not driven yet |
 | [0043](0043-auto-intake-roller-only-for-flower.md) | In autos the intake roller runs only during FLOWER; the transfer feeds launches at 30% | Accepted, not driven yet |
 | [0044](0044-aim-offset-by-side-of-hive.md) | The aim offset flips with the side of the hive the robot stands on | Accepted, not driven yet |
+| [0045](0045-launch-wiggle.md) | Launch wiggle: square with the launch trigger swings 1 deg left and right, a side per ball | Experiment, not driven yet |
 
 ## TODO: confirm on the robot after this week's tuning
 

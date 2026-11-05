@@ -621,6 +621,22 @@ public class BotProperties {
     /** The distance correction never drives harder than this, either way. */
     public double arcMaxDrive = 0.4;
 
+    // Launch wiggle (docs/decisions/0045): while the driver holds SQUARE and the launch
+    // trigger, the robot swings wiggleDeg left, then right, a side per ball, so balls that
+    // leave one after another don't run into each other. The heading comes from the IMU
+    // (Pinpoint), not the camera. An experiment (coach, 2026-11-04): CHECK every number.
+    /** How far either side of where the wiggle started, in degrees. */
+    public double wiggleDeg = 1;
+    /**
+     * How long each side lasts, in seconds. The coach measured a ball every 10 frames of a
+     * 60 fps video: 10 / 60 = 0.167 s, so each ball leaves on the other side from the last.
+     */
+    public double wiggleSwitchSeconds = 10.0 / 60.0;
+    /** Turn power per degree off the wiggle's side. 0.1 x 2 degrees = 0.2 power. */
+    public double wiggleKP = 0.1;
+    /** The wiggle never turns harder than this, either way. */
+    public double wiggleMaxRotate = 0.3;
+
     // ---- Alliance (docs/decisions/0021) ---------------------------------------------------
     // A REV Magnetic Limit Switch on the robot. A magnet near it means RED. No magnet, or no
     // sensor at all, means BLUE. Read over and over during INIT, so the drive team can move

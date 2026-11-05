@@ -126,6 +126,7 @@ public class Bot {
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
             "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "aimSideCenterDeg", "aimSideReversed",
             "arcStrafePower", "arcRangeKP", "arcMaxDrive",
+            "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
             "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",

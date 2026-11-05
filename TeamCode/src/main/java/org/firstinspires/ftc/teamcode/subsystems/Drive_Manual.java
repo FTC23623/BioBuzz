@@ -2,11 +2,13 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.MecanumMath;
+import org.firstinspires.ftc.teamcode.objects.Wiggle;
 
 /**
  * Driver control of the mecanum drive.
@@ -31,6 +33,9 @@ import org.firstinspires.ftc.teamcode.objects.MecanumMath;
  *       strafes that way at {@code arcStrafePower}, aim keeps the nose on the hive, and a
  *       little drive holds the distance the arc started at ({@code arcRangeKP}). With the
  *       aim button up, or no tag in view, the D-pad does nothing (docs/decisions/0039).
+ *   <li><b>Square / X (hold, with the launch trigger)</b>: wiggle. The robot swings
+ *       {@code wiggleDeg} left, then right, a side per ball, so balls don't run into each
+ *       other. Takes over the turn from aim while held (docs/decisions/0045).
  * </ul>
  *
  * <p>Practice options, off unless an OpMode turns them on in BotProperties (from Decode's
@@ -68,6 +73,13 @@ public class Drive_Manual extends Drive {
      * with no fresh reading never aims, so a button seen once can't keep aiming (0040).
      */
     private boolean mInputFresh = false;
+    /** true while the driver holds square AND the launch trigger. */
+    private boolean mWiggleHeld = false;
+    /** true once a wiggle has started: its center heading and its timer are set. */
+    private boolean mWiggling = false;
+    /** Which way the robot faced when the wiggle started, degrees. */
+    private double mWiggleCenterYaw = 0;
+    private final ElapsedTime mWiggleTimer = new ElapsedTime();
 
     public Drive_Manual(HydraOpMode op, BotProperties properties, Imu imu, Vision vision) {
         super(op, properties, imu);
@@ -95,6 +107,7 @@ public class Drive_Manual extends Drive {
         mRotate = -turnStick;
         // Aim on the right bumper, and on the launch trigger too, so a launch snaps to the hive.
         mAimHeld = AimButtonDown();
+        mWiggleHeld = mGamepad.square && mGamepad.right_trigger > mProperties.trgBtnThresh;
         mInputFresh = true;
         // Drift only while the trigger is held, and only in an OpMode that has it on.
         mDriftHeld = mProperties.driveDriftAssist && mGamepad.left_trigger > mProperties.trgBtnThresh;
@@ -151,6 +164,9 @@ public class Drive_Manual extends Drive {
             mAimHeld = false;
             mArcDirection = 0;
         }
+        if (!mInputFresh) {
+            mWiggleHeld = false;
+        }
         mInputFresh = false;
 
         // Aim assist: the middle of the hive's tag group decides the turn, not one tag, so the
@@ -173,6 +189,24 @@ public class Drive_Manual extends Drive {
             mOp.mTelemetry.addLine("Aim assist: held, but no tag in view");
         } else if (!mOp.mQuiet) {
             mOp.mTelemetry.addLine("Aim assist: off");
+        }
+        // Square with the launch trigger: wiggle. It takes over the turn from aim (aim first,
+        // then hold square), swinging around the heading it started at, by the IMU.
+        if (mWiggleHeld && mImu.Ready()) {
+            if (!mWiggling) {
+                mWiggling = true;
+                mWiggleCenterYaw = yaw;
+                mWiggleTimer.reset();
+            }
+            int side = Wiggle.Side(mWiggleTimer.seconds(), mProperties.wiggleSwitchSeconds);
+            mRotate = Wiggle.Turn(yaw, mWiggleCenterYaw, side, mProperties.wiggleDeg,
+                    mProperties.wiggleKP, mProperties.wiggleMaxRotate);
+            if (!mOp.mQuiet) {
+                mOp.mTelemetry.addData("Wiggle", "%s of %.1f deg, now %.1f off, turn %.2f",
+                        side > 0 ? "left" : "right", mWiggleCenterYaw, yaw - mWiggleCenterYaw, mRotate);
+            }
+        } else {
+            mWiggling = false;
         }
         // The raw buttons, so a trigger that rests a little pressed shows up on the screen.
         if (!mOp.mQuiet) {

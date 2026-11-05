@@ -33,6 +33,7 @@ class DriveAimTest {
     private Gamepad gamepad;
     private Vision vision;
     private Drive_Manual drive;
+    private Imu imu;
 
     private DcMotorEx motor(String name) {
         double[] last = {0};
@@ -56,7 +57,7 @@ class DriveAimTest {
             when(hardwareMap.get(DcMotorEx.class, name)).thenReturn(m);
         }
         gamepad = mock(Gamepad.class);
-        Imu imu = mock(Imu.class);
+        imu = mock(Imu.class);
         when(imu.Ready()).thenReturn(true);
         when(imu.GetYaw()).thenReturn(0.0);
         vision = mock(Vision.class);
@@ -393,6 +394,47 @@ class DriveAimTest {
         assertEquals(-0.02, frontRight(), EPS);
         tagAt(-1);   // now aimed
         when(vision.GetSideDegrees()).thenReturn(-20.0);
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("wiggle: square with the launch trigger turns left first, toward 1 deg left of the start")
+    void wiggleStartsLeft() {
+        properties.wiggleDeg = 1;
+        properties.wiggleKP = 0.1;
+        properties.wiggleMaxRotate = 0.3;
+        properties.wiggleSwitchSeconds = 60;   // long, so the test stays on the left side
+        properties.driveNormal = 1;
+        gamepad.square = true;
+        gamepad.right_trigger = 1;
+        runLoops();
+        // 1 degree to go, left: 0.1 x 1 = 0.1, a left turn (positive rotate).
+        assertEquals(0.1, frontLeft(), EPS);
+        assertEquals(-0.1, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("wiggle: overrides aim while held; square alone (no trigger) does nothing")
+    void wiggleNeedsTheTrigger() {
+        properties.wiggleSwitchSeconds = 60;
+        properties.driveNormal = 1;
+        gamepad.square = true;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        tagAt(-20);   // aim alone would turn right hard
+        gamepad.right_trigger = 1;
+        runLoops();
+        assertEquals(0.1, frontLeft(), EPS);   // the wiggle's gentle left wins
+    }
+
+    @Test
+    @DisplayName("wiggle: no heading from the IMU, no wiggle")
+    void wiggleNeedsTheImu() {
+        when(imu.Ready()).thenReturn(false);
+        properties.wiggleSwitchSeconds = 60;
+        gamepad.square = true;
+        gamepad.right_trigger = 1;
         runLoops();
         assertEquals(0, frontLeft(), EPS);
     }
