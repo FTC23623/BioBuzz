@@ -31,6 +31,9 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *   <li><b>Circle / B</b>: save this spot, and work the FLOWER here: back up, extractor out,
  *       stroke forward and back, extractor in (docs/decisions/0042). Drive up to the flower,
  *       facing it, the way you want the robot to meet it, then press.
+ *   <li><b>D-pad up</b>: save this spot, and turn the INTAKE_ON here: roller and transfer
+ *       run from here on (docs/decisions/0047).
+ *   <li><b>D-pad down</b>: save this spot, and turn the INTAKE_OFF here.
  *   <li><b>Square / X</b>: forget the last spot.
  * </ul>
  *
@@ -52,17 +55,28 @@ public class PoseRecorder implements Subsystem {
         final boolean launch;
         /** true: the auto works the flower here (the FLOWER step). */
         final boolean flower;
+        /** true: the auto turns the intake on here (the INTAKE_ON step). */
+        final boolean intakeOn;
+        /** true: the auto turns the intake off here (the INTAKE_OFF step). */
+        final boolean intakeOff;
 
         Spot(double x, double y, double headingDeg, boolean launch) {
             this(x, y, headingDeg, launch, false);
         }
 
         Spot(double x, double y, double headingDeg, boolean launch, boolean flower) {
+            this(x, y, headingDeg, launch, flower, false, false);
+        }
+
+        Spot(double x, double y, double headingDeg, boolean launch, boolean flower,
+             boolean intakeOn, boolean intakeOff) {
             this.x = x;
             this.y = y;
             this.headingDeg = headingDeg;
             this.launch = launch;
             this.flower = flower;
+            this.intakeOn = intakeOn;
+            this.intakeOff = intakeOff;
         }
     }
 
@@ -77,6 +91,8 @@ public class PoseRecorder implements Subsystem {
     private final Debouncer mSaveButton;
     private final Debouncer mLaunchButton;
     private final Debouncer mFlowerButton;
+    private final Debouncer mIntakeOnButton;
+    private final Debouncer mIntakeOffButton;
     private final Debouncer mUndoButton;
 
     private boolean mStarted = false;
@@ -95,6 +111,8 @@ public class PoseRecorder implements Subsystem {
         mSaveButton = new Debouncer(properties.debounce);
         mLaunchButton = new Debouncer(properties.debounce);
         mFlowerButton = new Debouncer(properties.debounce);
+        mIntakeOnButton = new Debouncer(properties.debounce);
+        mIntakeOffButton = new Debouncer(properties.debounce);
         mUndoButton = new Debouncer(properties.debounce);
     }
 
@@ -107,6 +125,7 @@ public class PoseRecorder implements Subsystem {
         }
         mOp.mTelemetry.addLine("POSE RECORDER: the robot's spot right now is the start (0, 0).");
         mOp.mTelemetry.addLine("Cross: save spot. Triangle: save + LAUNCH. Circle: save + FLOWER. Square: undo.");
+        mOp.mTelemetry.addLine("D-pad up: save + INTAKE_ON. D-pad down: save + INTAKE_OFF.");
         return true;
     }
 
@@ -120,6 +139,12 @@ public class PoseRecorder implements Subsystem {
         }
         if (Pressed(mFlowerButton, mGamepad.circle)) {
             SaveSpot(false, true);
+        }
+        if (Pressed(mIntakeOnButton, mGamepad.dpad_up)) {
+            SaveSpot(false, false, true, false);
+        }
+        if (Pressed(mIntakeOffButton, mGamepad.dpad_down)) {
+            SaveSpot(false, false, false, true);
         }
         if (Pressed(mUndoButton, mGamepad.square) && !mSpots.isEmpty()) {
             mSpots.remove(mSpots.size() - 1);
@@ -160,13 +185,18 @@ public class PoseRecorder implements Subsystem {
 
     /** Remember where the robot is now, rumble once, and write the file. */
     private void SaveSpot(boolean launch, boolean flower) {
+        SaveSpot(launch, flower, false, false);
+    }
+
+    /** Remember where the robot is now, rumble once, and write the file. */
+    private void SaveSpot(boolean launch, boolean flower, boolean intakeOn, boolean intakeOff) {
         Pose here = mLocalizer.pose();
         double previousDeg = 0;
         if (!mSpots.isEmpty()) {
             previousDeg = mSpots.get(mSpots.size() - 1).headingDeg;
         }
         double headingDeg = Unwrap(previousDeg, Math.toDegrees(here.heading()));
-        mSpots.add(new Spot(here.x(), here.y(), headingDeg, launch, flower));
+        mSpots.add(new Spot(here.x(), here.y(), headingDeg, launch, flower, intakeOn, intakeOff));
         mGamepad.rumbleBlips(1);
         WriteFile();
     }
@@ -218,14 +248,21 @@ public class PoseRecorder implements Subsystem {
         if (spot.flower) {
             line = line + ", FLOWER";
         }
+        if (spot.intakeOn) {
+            line = line + ", INTAKE_ON";
+        }
+        if (spot.intakeOff) {
+            line = line + ", INTAKE_OFF";
+        }
         return line;
     }
 
     /**
      * The spots as Java for a PedroAuto's {@code BuildPaths()}. One Pose per spot, a
      * straight line from each spot to the next, a LAUNCH after any spot saved with
-     * triangle, and a FLOWER after any spot saved with circle. A path keeps its heading when the robot did not turn, else it turns
-     * smoothly along the way.
+     * triangle, a FLOWER after any spot saved with circle, and an INTAKE_ON or INTAKE_OFF
+     * after any spot saved with D-pad up or down. A path keeps its heading when the robot
+     * did not turn, else it turns smoothly along the way.
      */
     static String ToJava(List<Spot> spots) {
         StringBuilder java = new StringBuilder();
@@ -255,6 +292,12 @@ public class PoseRecorder implements Subsystem {
         java.append("\nList<Path> paths = new ArrayList<>();\n");
         for (int i = 0; i < spots.size(); i++) {
             java.append("paths.add(toSpot").append(i + 1).append(");\n");
+            if (spots.get(i).intakeOn) {
+                java.append("paths.add(INTAKE_ON);\n");
+            }
+            if (spots.get(i).intakeOff) {
+                java.append("paths.add(INTAKE_OFF);\n");
+            }
             if (spots.get(i).flower) {
                 java.append("paths.add(FLOWER);\n");
             }

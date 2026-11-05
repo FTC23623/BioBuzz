@@ -31,12 +31,13 @@ class RecordedAutosTest {
         return launches;
     }
 
-    /** Each driven path starts where the one before it ended. LAUNCH stops are skipped over. */
+    /** Each driven path starts where the one before it ended. LAUNCH, FLOWER and INTAKE steps are skipped over. */
     private static void assertConnected(List<Path> paths) {
         Pose lastEnd = null;
         for (int i = 0; i < paths.size(); i++) {
             Path path = paths.get(i);
-            if (path == PedroAuto.LAUNCH || path == PedroAuto.FLOWER) {
+            if (path == PedroAuto.LAUNCH || path == PedroAuto.FLOWER
+                    || path == PedroAuto.INTAKE_ON || path == PedroAuto.INTAKE_OFF) {
                 continue;
             }
             if (lastEnd != null) {

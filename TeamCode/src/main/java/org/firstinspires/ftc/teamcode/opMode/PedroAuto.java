@@ -40,7 +40,8 @@ import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
  *
  * <p><b>Scoring</b>: with {@code autoRunScoring} on, the launchers spin and the transfer runs
  * from START to the end. The intake roller stays off except during a FLOWER step
- * ({@code autoIntakeRoller}, docs/decisions/0043). A LAUNCH step opens both launch gates,
+ * ({@code autoIntakeRoller}, docs/decisions/0043), or between an INTAKE_ON and an INTAKE_OFF
+ * step (docs/decisions/0047). A LAUNCH step opens both launch gates,
  * and the transfer feeds the launch at {@code launchFeedTransferScale} (30%).
  */
 public abstract class PedroAuto extends LinearOpMode {
@@ -102,6 +103,33 @@ public abstract class PedroAuto extends LinearOpMode {
      */
     // A third marker, like LAUNCH, so the loop can tell it apart.
     protected static final Path FLOWER = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Put this in the list to turn the intake on: the intake roller and the transfer both run
+     * from here on, until an {@link #INTAKE_OFF}. It takes no time: the next path starts
+     * straight away. Tool: Pose Recorder writes it after a D-pad up press.
+     *
+     * <pre>
+     *     paths.add(toBalls);
+     *     paths.add(INTAKE_ON);
+     *     paths.add(driveThroughBalls);
+     *     paths.add(INTAKE_OFF);
+     * </pre>
+     */
+    // Markers, like LAUNCH, so the loop can tell them apart.
+    protected static final Path INTAKE_ON = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Put this in the list to turn the intake roller off again. The transfer keeps running
+     * if {@code autoRunScoring} is on, so LAUNCH steps still feed. Takes no time. Tool: Pose
+     * Recorder writes it after a D-pad down press.
+     */
+    protected static final Path INTAKE_OFF = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** true while the intake roller should run between steps: INTAKE_ON / INTAKE_OFF set it. */
+    private boolean mRollerOn = false;
+    /** true while the intake and transfer should run between steps. */
+    private boolean mIntakeRunning = false;
 
     /**
      * One thing the FLOWER step does: drive to a spot, hold still for a time, or swing the
@@ -208,6 +236,9 @@ public abstract class PedroAuto extends LinearOpMode {
             bot.EndLoop();
         }
 
+        // What the intake does between steps, until an INTAKE_ON or INTAKE_OFF changes it.
+        mIntakeRunning = botProperties.autoRunScoring;
+        mRollerOn = botProperties.autoIntakeRoller;
         if (botProperties.autoRunScoring) {
             // Spin up now, so the launchers are at speed by the first LAUNCH.
             bot.SpinLaunchers(true);
@@ -294,6 +325,9 @@ public abstract class PedroAuto extends LinearOpMode {
                 pathFinished = false;
             } else if (step == FLOWER) {
                 pathFinished = FlowerStep(bot, follower);
+            } else if (step == INTAKE_ON || step == INTAKE_OFF) {
+                // Done the moment it starts: StartStep already switched the intake.
+                pathFinished = true;
             } else if (launching) {
                 pathFinished = stepTimer.seconds() >= botProperties.autoLaunchSeconds;
             } else {
@@ -458,6 +492,18 @@ public abstract class PedroAuto extends LinearOpMode {
             bot.RunIntake(true);
             bot.SetIntakeRoller(true);
             NextFlowerAction(bot, follower);
+        } else if (step == INTAKE_ON) {
+            // Roller and transfer on. The follower keeps holding the robot where it is.
+            mIntakeRunning = true;
+            mRollerOn = true;
+            bot.RunIntake(true);
+            bot.SetIntakeRoller(true);
+        } else if (step == INTAKE_OFF) {
+            // Roller off. The transfer goes back to what the auto does (autoRunScoring).
+            mIntakeRunning = botProperties.autoRunScoring;
+            mRollerOn = false;
+            bot.RunIntake(mIntakeRunning);
+            bot.SetIntakeRoller(false);
         } else {
             follower.follow(step);
         }
@@ -583,9 +629,10 @@ public abstract class PedroAuto extends LinearOpMode {
             NextFlowerAction(bot, follower);
         }
         if (mFlowerIndex >= mFlowerActions.size()) {
-            // Done. The intake goes back to what the auto does between steps.
-            bot.RunIntake(botProperties.autoRunScoring);
-            bot.SetIntakeRoller(botProperties.autoIntakeRoller);
+            // Done. The intake goes back to what it did before the flower: the start
+            // settings, or the last INTAKE_ON / INTAKE_OFF.
+            bot.RunIntake(mIntakeRunning);
+            bot.SetIntakeRoller(mRollerOn);
             return true;
         }
         return false;

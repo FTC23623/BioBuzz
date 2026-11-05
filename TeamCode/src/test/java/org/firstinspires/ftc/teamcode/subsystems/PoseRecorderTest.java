@@ -121,6 +121,27 @@ class PoseRecorderTest {
     }
 
     @Test
+    @DisplayName("D-pad up saves a spot plus INTAKE_ON, D-pad down a spot plus INTAKE_OFF")
+    void dpadIsIntake() throws Exception {
+        robotIsAt(10, 0, 0);
+        tap(down -> gamepad.dpad_up = down);
+        robotIsAt(40, 0, 0);
+        tap(down -> gamepad.dpad_down = down);
+        assertEquals(2, recorder.CountSpots());
+        assertTrue(fileText().contains(
+                "paths.add(toSpot1);\npaths.add(INTAKE_ON);\npaths.add(toSpot2);\npaths.add(INTAKE_OFF);\nreturn paths;"));
+    }
+
+    @Test
+    @DisplayName("the Driver Station line says INTAKE_ON / INTAKE_OFF")
+    void spotLineSaysIntake() {
+        assertTrue(PoseRecorder.SpotLine(1, new PoseRecorder.Spot(1, 2, 3, false, false, true, false))
+                .endsWith(", INTAKE_ON"));
+        assertTrue(PoseRecorder.SpotLine(2, new PoseRecorder.Spot(1, 2, 3, false, false, false, true))
+                .endsWith(", INTAKE_OFF"));
+    }
+
+    @Test
     @DisplayName("the Driver Station line says FLOWER")
     void spotLineSaysFlower() {
         PoseRecorder.Spot spot = new PoseRecorder.Spot(1, 2, 3, false, true);

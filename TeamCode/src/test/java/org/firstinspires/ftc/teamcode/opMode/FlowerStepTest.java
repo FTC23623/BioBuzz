@@ -64,6 +64,11 @@ class FlowerStepTest {
     void ownMarker() {
         assertNotSame(PedroAuto.LAUNCH, PedroAuto.FLOWER);
         assertNotSame(PedroAuto.LAUNCH_WHEN_TAG_SEEN, PedroAuto.FLOWER);
+        // The intake steps are markers of their own too (docs/decisions/0047).
+        assertNotSame(PedroAuto.INTAKE_ON, PedroAuto.INTAKE_OFF);
+        assertNotSame(PedroAuto.LAUNCH, PedroAuto.INTAKE_ON);
+        assertNotSame(PedroAuto.FLOWER, PedroAuto.INTAKE_ON);
+        assertNotSame(PedroAuto.FLOWER, PedroAuto.INTAKE_OFF);
     }
 
     @Test

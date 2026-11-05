@@ -53,6 +53,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0044](0044-aim-offset-by-side-of-hive.md) | The aim offset flips with the side of the hive the robot stands on | Accepted, not driven yet |
 | [0045](0045-launch-wiggle.md) | Launch wiggle: square with the launch trigger swings 1 deg left and right, a side per ball | Experiment, not driven yet |
 | [0046](0046-auto-to-teleop-handoff.md) | The autos go straight on to TeleOp and keep the heading; renamed by field side, color-sensing first | Accepted, not run on the field yet |
+| [0047](0047-auto-intake-on-off-steps.md) | INTAKE_ON and INTAKE_OFF auto steps, recorded with D-pad up / down | Accepted, not driven yet |
 
 ## TODO: confirm on the robot after this week's tuning
 

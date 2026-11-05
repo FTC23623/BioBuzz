@@ -9,6 +9,8 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  *   <li><b>Cross / A</b>: save this spot.
  *   <li><b>Triangle / Y</b>: save this spot and LAUNCH here.
  *   <li><b>Circle / B</b>: save this spot and work the FLOWER here (docs/decisions/0042).
+ *   <li><b>D-pad up</b>: save this spot and turn the INTAKE_ON here (docs/decisions/0047).
+ *   <li><b>D-pad down</b>: save this spot and turn the INTAKE_OFF here.
  *   <li><b>Square / X</b>: forget the last spot.
  * </ul>
  *
