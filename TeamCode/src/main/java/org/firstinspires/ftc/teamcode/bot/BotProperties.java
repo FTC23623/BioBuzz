@@ -237,10 +237,9 @@ public class BotProperties {
     //
     //     rpm = near + (far - near) x ((band start - nearIn) / (farIn - nearIn)) ^ launchCurve
     //
-    // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.25 since
-    // 2026-11-04 (was 1.1): with the near shot 150 lower and the far one the same, the middle
-    // needs to stay low too, so the curve bends harder: 2750 at 110, 2870 at 120, 3036 at
-    // 130, 3225 at 140 (coach).
+    // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.1, a gentle
+    // bend: 2750 at 110, 2892 at 120, 3054 at 130, 3225 at 140 (coach, 2026-11-04; it was
+    // 1.25 for a few hours while the far shot was still 3325).
     // Nearer than nearIn uses the near speed; farther than farIn uses the far speed.
     /** The near measured shot: distance, in inches. */
     public double launchNearIn = 110;
@@ -250,8 +249,8 @@ public class BotProperties {
     public double launchFarIn = 140;
     /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03, -100 on 2026-11-04). */
     public double launchFarRpm = 3225;
-    /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.25 since 2026-11-04. */
-    public double launchCurve = 1.25;
+    /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.1 since 2026-11-04. */
+    public double launchCurve = 1.1;
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
     public double launchBandIn = 2;
     /**

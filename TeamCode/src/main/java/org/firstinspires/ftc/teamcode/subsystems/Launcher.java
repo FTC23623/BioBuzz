@@ -186,8 +186,8 @@ public class Launcher implements Subsystem {
      *     step start = nearIn + whole steps past nearIn
      *     rpm = near + (far - near) x ((step start - nearIn) / (farIn - nearIn)) ^ curve
      *
-     *     near 110 in 2750, far 140 in 3225, curve 1.25, steps of 2 in:
-     *     110: 2750   112: 2766   120: 2870   130: 3036   139: 3186   140 and up: 3225
+     *     near 110 in 2750, far 140 in 3225, curve 1.1, steps of 2 in:
+     *     110: 2750   112: 2774   120: 2892   130: 3054   139: 3190   140 and up: 3225
      * </pre>
      *
      * Nearer than nearIn: the near speed. Farther than farIn: the far speed.
