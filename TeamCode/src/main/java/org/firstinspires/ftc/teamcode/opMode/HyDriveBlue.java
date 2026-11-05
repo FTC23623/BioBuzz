@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.types.Alliance;
  * camera drops our own hive's tags. This OpMode sets the alliance itself, the same way
  * the backup autos do (docs/decisions/0021).
  */
-@TeleOp(name = "HyDrive Blue (backup)", group = "Backup")
+@TeleOp(name = HyDrive.BLUE_NAME, group = "Backup")
 public class HyDriveBlue extends HyDrive {
     @Override
     protected void ChooseDriveOptions(BotProperties properties) {

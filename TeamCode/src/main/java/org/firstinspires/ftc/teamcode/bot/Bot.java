@@ -13,6 +13,7 @@ import java.util.List;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.objects.DashboardTuning;
+import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
@@ -102,6 +103,8 @@ public class Bot {
     private double mBatteryVolts = 0;
     /** Loop time smoothed over about the last 50 loops, so two OpModes can be compared. */
     private double mLoopTimeAverage = 0;
+    /** true when INIT kept the heading the auto left, instead of zeroing it (0046). */
+    private boolean mHeadingFromAuto = false;
 
     // The parts of the robot. A part that is disabled in BotProperties stays null.
     private final SafeModeKey mSafeModeKey;
@@ -328,6 +331,30 @@ public class Bot {
             }
             EndLoop();
         } while (!everyPartReady && mLinearOpMode.opModeInInit());
+
+        KeepHeadingFromAuto();
+    }
+
+    /**
+     * Right after an auto, keep the heading it left, so "forward" is still away from the
+     * driver (docs/decisions/0046). Only in an OpMode that drives, once the heading is ready.
+     * The auto's heading is taken either way, so it is never used twice.
+     */
+    private void KeepHeadingFromAuto() {
+        double yawFromAuto = HeadingHandoff.Take(HeadingHandoff.NowSeconds(),
+                mProperties.headingHandoffMaxSeconds);
+        if (mImu == null || !mImu.Ready() || !mProperties.headingFromAuto) {
+            return;
+        }
+        if (!Double.isNaN(yawFromAuto)) {
+            mImu.SetYaw(yawFromAuto);
+            mHeadingFromAuto = true;
+        }
+    }
+
+    /** true when INIT kept the heading the auto left. */
+    public boolean HeadingFromAuto() {
+        return mHeadingFromAuto;
     }
 
     /**
@@ -350,6 +377,11 @@ public class Bot {
             mImu.Process();
             mOp.mTelemetry.addData("Heading ready", mImu.Ready());
             mOp.mTelemetry.addData("Yaw", mImu.GetYaw());
+            if (mHeadingFromAuto) {
+                mOp.mTelemetry.addLine("Forward: kept from the auto. Do not turn the robot. Circle re-sets it.");
+            } else {
+                mOp.mTelemetry.addLine("Forward: the way the robot faces now");
+            }
         }
 
         if (mProperties.launcherDisabled) {

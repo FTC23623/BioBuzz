@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.bot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.drivers.PrismLedDriver;
+import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
@@ -186,6 +188,56 @@ class BotTest {
             bot.Process();
             bot.EndLoop();
             verify(hardwareMap, never()).get(eq(DcMotorEx.class), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("heading from the auto (0046)")
+    class HeadingFromAuto {
+
+        @BeforeEach
+        void clearHandoff() {
+            HeadingHandoff.Clear();
+        }
+
+        @Test
+        @DisplayName("an auto just ended: INIT keeps its heading, and says so")
+        void kept() {
+            addDrive();
+            addLauncher();
+            HeadingHandoff.Save(-90, HeadingHandoff.NowSeconds());
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            bot.ShowStatus();
+            assertTrue(bot.HeadingFromAuto());
+            verify(telemetry).addData("Yaw", -90.0);
+            verify(telemetry).addLine(contains("kept from the auto"));
+        }
+
+        @Test
+        @DisplayName("no auto before: INIT zeroes the heading, as before")
+        void noAuto() {
+            addDrive();
+            addLauncher();
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            bot.ShowStatus();
+            assertFalse(bot.HeadingFromAuto());
+            verify(telemetry).addData("Yaw", 0.0);
+            verify(telemetry).addLine(contains("the way the robot faces now"));
+        }
+
+        @Test
+        @DisplayName("headingFromAuto off: zeroes the heading, and the auto's is still used up")
+        void switchedOff() {
+            addDrive();
+            addLauncher();
+            properties.headingFromAuto = false;
+            HeadingHandoff.Save(-90, HeadingHandoff.NowSeconds());
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            assertFalse(bot.HeadingFromAuto());
+            assertTrue(Double.isNaN(HeadingHandoff.Take(HeadingHandoff.NowSeconds(), 120)));
         }
     }
 

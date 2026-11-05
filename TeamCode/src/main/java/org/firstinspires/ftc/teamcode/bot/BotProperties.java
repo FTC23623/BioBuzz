@@ -83,6 +83,18 @@ public class BotProperties {
      * Practice TeleOps and Tool: Pose Recorder pick their own.
      */
     public boolean fieldCentricDrive = true;
+    /**
+     * true: TeleOp keeps the heading the auto left, so forward stays away from the driver
+     * even though the auto turned the robot (docs/decisions/0046). Each auto says which way
+     * it starts facing. Circle still re-sets forward. false: forward is the way the robot
+     * faces at INIT, as before.
+     */
+    public boolean headingFromAuto = true;
+    /**
+     * A heading the auto saved longer ago than this, in seconds, is not used: the robot may
+     * have been picked up and moved. A match goes from auto to TeleOp in well under this.
+     */
+    public double headingHandoffMaxSeconds = 120;
     /** How far a trigger has to be pulled before it counts as pressed. */
     public double trgBtnThresh = 0.05;
     /** Top drive power with no trigger held. The right trigger launches, so there is no boost. */

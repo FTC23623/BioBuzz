@@ -20,4 +20,10 @@ public interface Imu extends Subsystem {
 
     /** Make the direction the robot faces right now count as 0 degrees. */
     void ResetYaw();
+
+    /**
+     * Make the direction the robot faces right now count as {@code yawDeg}. TeleOp uses this
+     * to keep the heading the auto left (docs/decisions/0046). Call it once {@link #Ready()}.
+     */
+    void SetYaw(double yawDeg);
 }

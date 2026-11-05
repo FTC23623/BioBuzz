@@ -17,9 +17,11 @@ Change these, build green, deploy, then INIT HyDrive once and read section 2 top
 | `visionAnyTag` | `BotProperties.java` | `false` | Practice only. True at an event aims at the other alliance's hive. INIT shouts `EVERY TAG COUNTS` while it is on. |
 | `safeModeEnabled` | `BotProperties.java` | decide | `false` (today) is full speed, key or no key. `true` lets the key limit the drive to 25% in the pit. |
 
-OpModes for a match: `HyDrive`, and `Auto: StrategyA` / `B` / `C` / `D`. The `Backup` group
-(`... Red (backup)`, `... Blue (backup)`) is for a dead alliance sensor only. `Test:` and
-`Tool:` OpModes never run in a match.
+OpModes for a match: `Garden Side Auto A`, `Flower Side Auto B` or `Flower Side Auto C`
+(top of the list), then `HyDrive`. When the auto ends, the Driver Station picks HyDrive by
+itself: press INIT, then START. The `Backup` group (`... Red (backup)`, `... Blue
+(backup)`) is for a dead alliance sensor only, and each picks the HyDrive backup of its
+own color. `Test:` and `Tool:` OpModes never run in a match (0046).
 
 ## 2. At INIT, every match
 
@@ -32,6 +34,7 @@ Pinpoint calibrates. Then read the Driver Station top to bottom.
 | `Competition mode: dashboard off.` | that line | `PRACTICE MODE` = `competitionMode` is false. `DASHBOARD IS STILL ON` = Robot Controller menu, Disable Dashboard, INIT again. |
 | `SAFE MODE ...` or `FULL SPEED ...` | what the field needs | `SAFE MODE: key is in` on the field = pull the key, INIT again. |
 | `ALLIANCE: RED (magnet sensed)` or `BLUE (no magnet)` | our color | `NO SENSOR` = STOP, pick the Red or Blue backup OpMode. Wrong color = move the magnet; it re-reads until START. |
+| `Forward: kept from the auto` (TeleOp, right after the auto) | that line | `Forward: the way the robot faces now` right after an auto = the heading was not handed over. In the match, turn the robot to face away from you and press circle. (0046) |
 | `Heading ready: true` (TeleOp) | true | The screen stuck on `Pinpoint calibrating. Keep the robot still.` = the robot was moving. `Pinpoint FAULT` = a pod is unplugged. Autos do not show this line: check it in HyDrive first. |
 | `Camera: Limelight, pipeline 0` and `Limelight: pipeline 0 is apriltag` | both | `NO CAMERA FOUND` = Limelight missing or misnamed in the configuration. `NOT CONNECTED` = the USB cable. Any other pipeline type = fix it on the Limelight web page. |
 | `Indicator light: ...` and the light itself, robot pointed at our hive | blinking blue, blue or green | `BLINKING RED` = it sees only the other alliance's tags: check the magnet. Solid red = no tag in view. |

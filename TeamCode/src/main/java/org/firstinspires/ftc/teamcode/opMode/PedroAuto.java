@@ -13,6 +13,7 @@ import java.util.List;
 import org.firstinspires.ftc.teamcode.bot.Bot;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
+import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
 
 /**
@@ -146,10 +147,23 @@ public abstract class PedroAuto extends LinearOpMode {
         return new Pose(0, 0, 0);
     }
 
+    /**
+     * Which way the robot faces on its start spot, seen from the driver, in degrees: 0 away
+     * from the driver, 90 to the driver's left, -90 to the driver's right, 180 toward the
+     * driver. TeleOp uses it to keep "forward" away from the driver after the auto
+     * (docs/decisions/0046). NaN (the default) = not known: TeleOp then zeroes the heading
+     * at INIT, as before.
+     */
+    protected double StartFacingDeg() {
+        return Double.NaN;
+    }
+
     @Override
     public void runOpMode() {
         // In an auto, Pedro Pathing drives the wheels, so driver control is switched off.
         botProperties.driveDisabled = true;
+        // An old heading from an earlier auto must never reach TeleOp (docs/decisions/0046).
+        HeadingHandoff.Clear();
 
         Bot bot = new Bot(this, botProperties);
 
@@ -309,6 +323,11 @@ public abstract class PedroAuto extends LinearOpMode {
             bot.Process();
 
             Pose where = follower.pose();
+            // Every loop, so TeleOp gets the heading from the moment the auto stops.
+            if (!Double.isNaN(StartFacingDeg())) {
+                HeadingHandoff.Save(HeadingHandoff.TeleOpYaw(StartFacingDeg(),
+                        Math.toDegrees(where.heading())), HeadingHandoff.NowSeconds());
+            }
             telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
             telemetry.addData("Waiting for a tag", waitingForTag);
             telemetry.addData("Aiming at the tag", aiming);

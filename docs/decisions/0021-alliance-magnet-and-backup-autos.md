@@ -30,7 +30,8 @@ must only lock onto OUR hive. Competition Manual section 9.9 gives the tag ids:
 4. **Vision drops the other alliance's tags** before anything looks at them
    (`BotProperties.HiveTags`). Aim assist, the indicator light and `LAUNCH_WHEN_TAG_SEEN`
    all see only our hive.
-5. **Backup autos**, group "Backup": `Auto: StrategyA Red (backup)` and so on. Each sets
+5. **Backup autos**, group "Backup": `Garden Side Auto A Red (backup)` and so on (renamed
+   in 0046). Each sets
    `allianceOverride` and skips the sensor. Same paths both colors: the field is not
    mirrored for these strategies; only the hive changes. The normal autos read the magnet.
 

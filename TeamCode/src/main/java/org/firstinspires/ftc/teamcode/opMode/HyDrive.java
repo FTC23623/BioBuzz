@@ -30,8 +30,12 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * to spit out extra balls, <b>right trigger (hold)</b> lets a launch through with no camera
  * lock. See docs/decisions/0023, 0032, 0039 and 0040.
  */
-@TeleOp(name = "HyDrive")
+@TeleOp(name = HyDrive.NAME)
 public class HyDrive extends LinearOpMode {
+    /** The names on the Driver Station. The autos use them to pick their TeleOp. */
+    public static final String NAME = "HyDrive";
+    public static final String RED_NAME = "HyDrive Red (backup)";
+    public static final String BLUE_NAME = "HyDrive Blue (backup)";
 
     @Override
     public void runOpMode() {

@@ -13,7 +13,7 @@ import org.firstinspires.ftc.teamcode.types.Alliance;
  * working. This OpMode sets the alliance itself, the same way the backup autos do
  * (docs/decisions/0021).
  */
-@TeleOp(name = "HyDrive Red (backup)", group = "Backup")
+@TeleOp(name = HyDrive.RED_NAME, group = "Backup")
 public class HyDriveRed extends HyDrive {
     @Override
     protected void ChooseDriveOptions(BotProperties properties) {

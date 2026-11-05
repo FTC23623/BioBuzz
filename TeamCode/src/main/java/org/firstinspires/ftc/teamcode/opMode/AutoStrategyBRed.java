@@ -5,9 +5,11 @@ import org.firstinspires.ftc.teamcode.types.Alliance;
 
 /**
  * BACKUP: {@link AutoStrategyB}, always on the red alliance. The alliance magnet is not
- * read. Pick this only if the magnet sensor is not working (docs/decisions/0021).
+ * read. Pick this only if the magnet sensor is not working (docs/decisions/0021). At the
+ * end it picks HyDrive Red (backup), the TeleOp that is also always red.
  */
-@Autonomous(name = "Auto: StrategyB Red (backup)", group = "Backup")
+@Autonomous(name = AutoStrategyB.NAME + " Red (backup)", group = "Backup",
+        preselectTeleOp = HyDrive.RED_NAME)
 public class AutoStrategyBRed extends AutoStrategyB {
     public AutoStrategyBRed() {
         botProperties.allianceOverride = Alliance.RED;

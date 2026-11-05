@@ -25,8 +25,19 @@ import java.util.List;
  * <p>Pedro measures in inches: x grows as the robot drives forward, y grows as it drives left.
  * See {@link PedroAuto} for more.
  */
-@Autonomous(name = "Auto: StrategyC", group = "Basic")
+// No group: the Driver Station lists these first, before the "Backup" ones. At the end it
+// picks HyDrive, so the drivers only press INIT and START (docs/decisions/0046).
+@Autonomous(name = AutoStrategyC.NAME, preselectTeleOp = HyDrive.NAME)
 public class AutoStrategyC extends PedroAuto {
+    /** The name on the Driver Station. The backups add their color to it. */
+    public static final String NAME = "Flower Side Auto C";
+
+    /** The robot starts facing the driver's left. */
+    @Override
+    protected double StartFacingDeg() {
+        return 90;
+    }
+
 
     @Override
     protected List<Path> BuildPaths() {

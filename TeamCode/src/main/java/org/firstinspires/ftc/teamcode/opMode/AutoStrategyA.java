@@ -21,8 +21,19 @@ import java.util.List;
  * The robot starts facing the wall, so backing up is minus x and the garden (to its right) is
  * minus y. See {@link PedroAuto} for more.
  */
-@Autonomous(name = "Auto: StrategyA", group = "Basic")
+// No group: the Driver Station lists these first, before the "Backup" ones. At the end it
+// picks HyDrive, so the drivers only press INIT and START (docs/decisions/0046).
+@Autonomous(name = AutoStrategyA.NAME, preselectTeleOp = HyDrive.NAME)
 public class AutoStrategyA extends PedroAuto {
+    /** The name on the Driver Station. The backups add their color to it. */
+    public static final String NAME = "Garden Side Auto A";
+
+    /** The robot starts facing the driver's right. */
+    @Override
+    protected double StartFacingDeg() {
+        return -90;
+    }
+
     /** How far right the robot slides while it turns, in inches. */
     private static final double turnSlideIn = 3;
     /** How far right of the start the pollen run starts, in inches. */
