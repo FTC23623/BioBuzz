@@ -65,6 +65,12 @@ public class Vision_None implements Vision {
         return 0;
     }
 
+    /** This camera does not work out which side of the hive it is on: always 0, no offset. */
+    @Override
+    public double GetSideDegrees() {
+        return 0;
+    }
+
     @Override
     public int CountTags() {
         return 0;

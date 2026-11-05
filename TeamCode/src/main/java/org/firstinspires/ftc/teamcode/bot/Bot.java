@@ -124,7 +124,8 @@ public class Bot {
     static final String[] LiveTuningDrive = {
             "driveNormal", "driveSlow", "driveStrafeGain", "driveMotorSlewRate",
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
-            "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "arcStrafePower", "arcRangeKP", "arcMaxDrive",
+            "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "aimSideCenterDeg", "aimSideReversed",
+            "arcStrafePower", "arcRangeKP", "arcMaxDrive",
             "quietTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
@@ -554,6 +555,11 @@ public class Bot {
      */
     public double GetTagGroupBearing() {
         return mVision.GetGroupBearing();
+    }
+
+    /** Which side of the hive the robot stands, in degrees, left positive. 0 = not known. */
+    public double GetHiveSideDegrees() {
+        return mVision.GetSideDegrees();
     }
 
     /**

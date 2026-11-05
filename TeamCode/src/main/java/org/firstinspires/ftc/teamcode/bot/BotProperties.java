@@ -561,11 +561,12 @@ public class BotProperties {
     /** Within this many degrees of center, aim assist stops turning. Stops the wobble. */
     public double aimDoneDegrees = 1.0;
     /**
-     * Where the hive's middle should sit in the camera's view once aimed, in degrees, left
-     * positive like every bearing. The pollen launcher is mounted LEFT of the camera, so with
-     * the camera dead on the hive the pollen shot lands left of it. 1 = hold the hive 1 degree
-     * left of center, which turns the robot 1 degree further right (coach, 2026-11-03). Used by
-     * aim assist, the launch lock and the autos' aim. If shots now land right, make it smaller.
+     * How many degrees off the hive's middle to aim, depending on which side of the hive the
+     * robot stands (docs/decisions/0044). Standing LEFT of the hive, the robot turns this much
+     * further RIGHT; standing RIGHT of it, this much further LEFT; near straight in front
+     * (within aimSideCenterDeg), no offset (coach, 2026-11-04). Was one fixed 1-degree turn
+     * right, for the pollen launcher sitting left of the camera (2026-11-03), until shots from
+     * the right side missed. Used by aim assist, the launch lock and the autos' aim.
      */
     public double aimHiveBearingDeg = 1.0;
     /**
@@ -574,6 +575,18 @@ public class BotProperties {
      * 2026-11-02). false: the trigger only opens the gates; the right bumper still aims.
      */
     public boolean launchTriggerAims = true;
+    /**
+     * Within this many degrees of straight in front of the hive the robot counts as neither
+     * left nor right, and aims at the hive's middle with no offset. Stops the aim jumping from
+     * one side's offset to the other when the robot stands right in front. The Driver Station
+     * shows "Robot stands" in degrees, with the Limelight's lines.
+     */
+    public double aimSideCenterDeg = 5;
+    /**
+     * CHECK ON THE ROBOT: stand LEFT of the hive (as the robot faces it) and the Driver
+     * Station should say the robot stands to the LEFT. If it says right, set this true.
+     */
+    public boolean aimSideReversed = false;
     /**
      * true: the driver's launch trigger only opens the gates while the camera is LOCKED on
      * our hive: a tag of ours in view and the hive's middle within aimDoneDegrees. Pulled

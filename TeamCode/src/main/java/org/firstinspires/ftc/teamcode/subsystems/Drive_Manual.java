@@ -158,9 +158,11 @@ public class Drive_Manual extends Drive {
         boolean aimingAtHive = mAimHeld && mVision.SeesTag();
         if (aimingAtHive) {
             double hiveBearing = mVision.GetGroupBearing();
-            // The pollen launcher sits left of the camera, so aim the hive a little left of
-            // center (aimHiveBearingDeg), not dead center.
-            double aimError = AimAssist.AimError(hiveBearing, mProperties.aimHiveBearingDeg);
+            // Aim a little off the hive's middle, toward the side the robot stands on
+            // (aimHiveBearingDeg, docs/decisions/0044).
+            double aimAt = AimAssist.SideOffset(mVision.GetSideDegrees(),
+                    mProperties.aimHiveBearingDeg, mProperties.aimSideCenterDeg);
+            double aimError = AimAssist.AimError(hiveBearing, aimAt);
             mRotate = AimAssist.RotateToward(aimError, mProperties.aimKP,
                     mProperties.aimMaxRotate, mProperties.aimDoneDegrees);
             if (!mOp.mQuiet) {

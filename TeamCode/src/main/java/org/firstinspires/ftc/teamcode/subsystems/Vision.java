@@ -33,6 +33,13 @@ public interface Vision extends Subsystem {
      */
     double GetGroupBearing();
 
+    /**
+     * Which side of the hive the robot stands: degrees around the nearest tag from straight
+     * in front of it. Left is positive, as the robot faces the hive. 0 when no tag is seen or
+     * the camera can't tell. Aim uses it to pick which way to offset (docs/decisions/0044).
+     */
+    double GetSideDegrees();
+
     /** @return how many of our alliance's tags are in view right now */
     int CountTags();
 

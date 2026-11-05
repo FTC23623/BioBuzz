@@ -47,6 +47,30 @@ public final class AimAssist {
     }
 
     /**
+     * Where the hive should sit in the camera once aimed, by which side of the hive the robot
+     * stands (docs/decisions/0044). Feed it to {@link #AimError}.
+     *
+     * <pre>
+     *     offset 3, robot 20 deg to the LEFT of the hive:   3   hive sits left, robot turns 3 more right
+     *     offset 3, robot 20 deg to the RIGHT of the hive: -3   hive sits right, robot turns 3 more left
+     *     offset 3, robot 2 deg off (inside center 5):      0   aim at the middle
+     * </pre>
+     *
+     * @param sideDeg   which side of the hive the robot stands, left positive. 0 = not known.
+     * @param offsetDeg how far to aim off the middle ({@code aimHiveBearingDeg})
+     * @param centerDeg within this of straight in front, no offset ({@code aimSideCenterDeg})
+     */
+    public static double SideOffset(double sideDeg, double offsetDeg, double centerDeg) {
+        if (sideDeg > centerDeg) {
+            return offsetDeg;
+        }
+        if (sideDeg < -centerDeg) {
+            return -offsetDeg;
+        }
+        return 0;
+    }
+
+    /**
      * The drive that keeps the robot the same distance from the tag while it arcs around
      * it. Strafing sideways on its own slowly carries the robot away from the tag; this
      * pulls it back in.

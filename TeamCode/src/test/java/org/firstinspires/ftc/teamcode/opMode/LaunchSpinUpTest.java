@@ -41,10 +41,11 @@ class LaunchSpinUpTest {
     }
 
     @Test
-    @DisplayName("auto aim: with the hive dead ahead, the heading turns 1 deg right (the pollen offset)")
+    @DisplayName("auto aim, hive dead ahead: left of it turns 1 deg right, right of it 1 deg left, in front none")
     void autoAimHeading() {
-        double heading = PedroAuto.AimHeading(0, 0, properties);
-        org.junit.jupiter.api.Assertions.assertEquals(Math.toRadians(-1), heading, 1e-9);
-        org.junit.jupiter.api.Assertions.assertEquals(1.0, properties.aimHiveBearingDeg, 1e-9);
+        properties.aimHiveBearingDeg = 1;
+        org.junit.jupiter.api.Assertions.assertEquals(Math.toRadians(-1), PedroAuto.AimHeading(0, 0, 20, properties), 1e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(Math.toRadians(1), PedroAuto.AimHeading(0, 0, -20, properties), 1e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(0, PedroAuto.AimHeading(0, 0, 0, properties), 1e-9);
     }
 }

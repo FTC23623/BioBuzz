@@ -233,9 +233,10 @@ public abstract class PedroAuto extends LinearOpMode {
                 waitingForTag = false;
                 aiming = true;
                 Pose here = follower.pose();
-                // The pollen launcher sits left of the camera: aim the hive aimHiveBearingDeg
-                // left of center, which turns the robot that much further right.
-                aimHeading = AimHeading(here.heading(), bot.GetTagGroupBearing(), botProperties);
+                // Aim a little off the hive's middle, by the side the robot stands on
+                // (aimHiveBearingDeg, docs/decisions/0044).
+                aimHeading = AimHeading(here.heading(), bot.GetTagGroupBearing(),
+                        bot.GetHiveSideDegrees(), botProperties);
                 follower.hold(new Pose(here.x(), here.y(), aimHeading));
                 stepTimer.reset();
             }
@@ -379,10 +380,13 @@ public abstract class PedroAuto extends LinearOpMode {
     /**
      * The heading that aims the pollen launcher at the hive, from the heading now and the
      * hive's bearing in the camera: turn by the bearing, less where the hive should sit once
-     * aimed ({@code aimHiveBearingDeg}). Radians in and out, the bearing in degrees.
+     * aimed for the side the robot stands on ({@link AimAssist#SideOffset}). Radians in and
+     * out, the bearing and side in degrees.
      */
-    static double AimHeading(double headingNow, double hiveBearingDeg, BotProperties properties) {
-        double turnDeg = AimAssist.AimError(hiveBearingDeg, properties.aimHiveBearingDeg);
+    static double AimHeading(double headingNow, double hiveBearingDeg, double sideDeg,
+                             BotProperties properties) {
+        double aimAt = AimAssist.SideOffset(sideDeg, properties.aimHiveBearingDeg, properties.aimSideCenterDeg);
+        double turnDeg = AimAssist.AimError(hiveBearingDeg, aimAt);
         return headingNow + Math.toRadians(turnDeg);
     }
 

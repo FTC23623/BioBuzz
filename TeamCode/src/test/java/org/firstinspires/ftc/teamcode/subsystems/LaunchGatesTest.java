@@ -349,13 +349,26 @@ class LaunchGatesTest {
     }
 
     @Test
-    @DisplayName("pollen offset: locked when the hive sits 1 deg left, not when it is 1 deg right")
+    @DisplayName("left of the hive: locked when the hive sits 1 deg left, not when it is 1 deg right")
     void lockUsesThePollenOffset() {
         properties.aimHiveBearingDeg = 1;
         properties.aimDoneDegrees = 0.5;
+        when(vision.GetSideDegrees()).thenReturn(20.0);
         when(vision.GetGroupBearing()).thenReturn(1.2);
         org.junit.jupiter.api.Assertions.assertTrue(gates.CameraLocked());
         when(vision.GetGroupBearing()).thenReturn(-1.0);
+        assertFalse(gates.CameraLocked());
+    }
+
+    @Test
+    @DisplayName("right of the hive: the offset flips, locked when the hive sits 1 deg right")
+    void lockOffsetFlipsOnTheRight() {
+        properties.aimHiveBearingDeg = 1;
+        properties.aimDoneDegrees = 0.5;
+        when(vision.GetSideDegrees()).thenReturn(-20.0);
+        when(vision.GetGroupBearing()).thenReturn(-1.2);
+        org.junit.jupiter.api.Assertions.assertTrue(gates.CameraLocked());
+        when(vision.GetGroupBearing()).thenReturn(1.0);
         assertFalse(gates.CameraLocked());
     }
 }

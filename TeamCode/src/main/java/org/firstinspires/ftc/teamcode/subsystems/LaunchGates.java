@@ -175,8 +175,7 @@ public class LaunchGates implements Subsystem {
         if (!CameraLocked()) {
             // The hive is in view but off to one side. The trigger is turning the robot
             // toward it (launchTriggerAims); the gates open once it is facing the hive.
-            mLockStatus = String.format("turning to the hive, %.1f deg off",
-                    AimAssist.AimError(mVision.GetGroupBearing(), mProperties.aimHiveBearingDeg));
+            mLockStatus = String.format("turning to the hive, %.1f deg off", AimErrorNow());
             return false;
         }
         mLockStatus = "";
@@ -188,8 +187,14 @@ public class LaunchGates implements Subsystem {
         if (mVision == null || !mVision.SeesTag()) {
             return false;
         }
-        double aimError = AimAssist.AimError(mVision.GetGroupBearing(), mProperties.aimHiveBearingDeg);
-        return Math.abs(aimError) <= mProperties.aimDoneDegrees;
+        return Math.abs(AimErrorNow()) <= mProperties.aimDoneDegrees;
+    }
+
+    /** Degrees still to turn to the hive, with the offset for the side the robot is on. */
+    private double AimErrorNow() {
+        double aimAt = AimAssist.SideOffset(mVision.GetSideDegrees(),
+                mProperties.aimHiveBearingDeg, mProperties.aimSideCenterDeg);
+        return AimAssist.AimError(mVision.GetGroupBearing(), aimAt);
     }
 
     /** The camera's view the moment the gates were told to open. */

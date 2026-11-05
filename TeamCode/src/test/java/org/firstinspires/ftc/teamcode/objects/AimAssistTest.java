@@ -121,4 +121,19 @@ class AimAssistTest {
         assertEquals(-1, AimAssist.AimError(0, 1), EPS);
         assertEquals(0, AimAssist.AimError(1, 1), EPS);
     }
+
+    @Test
+    @DisplayName("side offset: left of the hive aims further right, right of it further left")
+    void sideOffsetFlips() {
+        assertEquals(3, AimAssist.SideOffset(20, 3, 5), EPS);
+        assertEquals(-3, AimAssist.SideOffset(-20, 3, 5), EPS);
+    }
+
+    @Test
+    @DisplayName("side offset: straight in front, or side not known, aims at the middle")
+    void sideOffsetCenter() {
+        assertEquals(0, AimAssist.SideOffset(4.9, 3, 5), EPS);
+        assertEquals(0, AimAssist.SideOffset(-5, 3, 5), EPS);
+        assertEquals(0, AimAssist.SideOffset(0, 3, 5), EPS);
+    }
 }

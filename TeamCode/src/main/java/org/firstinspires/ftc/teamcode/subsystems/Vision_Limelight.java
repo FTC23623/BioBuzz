@@ -48,6 +48,8 @@ public class Vision_Limelight implements Vision {
     /** Degrees to the middle of the nearest tag's group. */
     private double mGroupBearing = 0;
     private double mRange = 0;
+    /** Which side of the hive the robot stands, degrees, left positive. 0 = not known. */
+    private double mSide = 0;
     private double mArea = 0;
     /** What the newest result looked like, for the Driver Station. */
     private String mResultState = "none yet";
@@ -112,6 +114,7 @@ public class Vision_Limelight implements Vision {
                 mTagId = nearest.getFiducialId();
                 mBearing = -nearest.getTargetXDegrees();
                 mRange = RangeInches(nearest.getTargetPoseCameraSpace());
+                mSide = SideDegrees(nearest.getCameraPoseTargetSpace(), mProperties.aimSideReversed);
                 mArea = nearest.getTargetArea();
                 List<Integer> ids = new ArrayList<>();
                 List<Double> bearings = new ArrayList<>();
@@ -161,6 +164,35 @@ public class Vision_Limelight implements Vision {
         return Math.sqrt(flat);
     }
 
+    /**
+     * Which side of the tag the camera is on, from where the Limelight works out the camera
+     * sits as seen from the tag (target space: X to the right as you face the tag, Z straight
+     * out of it). Standing to the right is X positive; we count left as positive, so the sign
+     * is flipped, and flipped again when {@code reversed}.
+     *
+     * <pre>
+     *     camera 1 m right of the tag's middle, 2 m out:  atan(1 / 2) = 26.6 deg right = -26.6
+     * </pre>
+     *
+     * @return degrees around the tag from straight in front, left positive. 0 when the
+     *     Limelight did not work out a position.
+     */
+    static double SideDegrees(Pose3D cameraPose, boolean reversed) {
+        if (cameraPose == null) {
+            return 0;
+        }
+        Position position = cameraPose.getPosition();
+        if (position == null) {
+            return 0;
+        }
+        // Z can come out negative depending on the Limelight's setup; only its size matters.
+        double side = -Math.toDegrees(Math.atan2(position.x, Math.abs(position.z)));
+        if (reversed) {
+            side = -side;
+        }
+        return side;
+    }
+
     @Override
     public boolean SeesTag() {
         if (!mEverSeen) {
@@ -202,6 +234,14 @@ public class Vision_Limelight implements Vision {
     }
 
     @Override
+    public double GetSideDegrees() {
+        if (!SeesTag()) {
+            return 0;
+        }
+        return mSide;
+    }
+
+    @Override
     public int CountTags() {
         return mCount;
     }
@@ -239,6 +279,7 @@ public class Vision_Limelight implements Vision {
             mOp.mTelemetry.addData("Nearest tag", "id %d, %.1f deg to the %s, %.0f in away",
                     mTagId, Math.abs(mBearing), Side(mBearing), mRange);
             mOp.mTelemetry.addData("Group middle", "%.1f deg to the %s", Math.abs(mGroupBearing), Side(mGroupBearing));
+            mOp.mTelemetry.addData("Robot stands", "%.0f deg to the %s of the hive", Math.abs(mSide), Side(mSide));
             mOp.mTelemetry.addData("Tag fills", "%.1f%% of the picture", mArea);
             mOp.mTelemetry.addData("Tag last seen", "%.0f ms ago", mSinceSeen.milliseconds());
         } else {

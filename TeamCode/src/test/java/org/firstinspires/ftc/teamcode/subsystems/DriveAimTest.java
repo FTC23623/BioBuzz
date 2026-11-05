@@ -363,17 +363,36 @@ class DriveAimTest {
     }
 
     @Test
-    @DisplayName("pollen offset: with the hive dead ahead, the robot turns right until the hive sits 1 deg left")
+    @DisplayName("left of the hive: with the hive dead ahead, the robot turns right until the hive sits 1 deg left")
     void pollenOffsetTurnsRight() {
         properties.aimHiveBearingDeg = 1;
         properties.aimDoneDegrees = 0.1;
         tagAt(0);
+        when(vision.GetSideDegrees()).thenReturn(20.0);
         gamepad.right_bumper = true;
         runLoops();
         // 1 degree to go, to the right: 0.02 x -1 = -0.02.
         assertEquals(-0.02, frontLeft(), EPS);
         assertEquals(0.02, frontRight(), EPS);
         tagAt(1);   // now aimed
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("right of the hive: the offset flips, the robot turns left until the hive sits 1 deg right")
+    void rightSideTurnsLeft() {
+        properties.aimHiveBearingDeg = 1;
+        properties.aimDoneDegrees = 0.1;
+        tagAt(0);
+        when(vision.GetSideDegrees()).thenReturn(-20.0);
+        gamepad.right_bumper = true;
+        runLoops();
+        // 1 degree to go, to the left: 0.02 x 1 = 0.02.
+        assertEquals(0.02, frontLeft(), EPS);
+        assertEquals(-0.02, frontRight(), EPS);
+        tagAt(-1);   // now aimed
+        when(vision.GetSideDegrees()).thenReturn(-20.0);
         runLoops();
         assertEquals(0, frontLeft(), EPS);
     }

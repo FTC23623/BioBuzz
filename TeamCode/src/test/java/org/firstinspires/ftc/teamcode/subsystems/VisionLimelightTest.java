@@ -141,6 +141,24 @@ class VisionLimelightTest {
     }
 
     @Test
+    @DisplayName("side: camera right of the tag is negative (left is positive), left is positive")
+    void sideOfTheTag() {
+        Pose3D right = new Pose3D(new Position(DistanceUnit.METER, 1, 0, 2, 0), null);
+        assertEquals(-Math.toDegrees(Math.atan2(1, 2)), Vision_Limelight.SideDegrees(right, false), 1e-6);
+        Pose3D left = new Pose3D(new Position(DistanceUnit.METER, -1, 0, -2, 0), null);
+        assertEquals(Math.toDegrees(Math.atan2(1, 2)), Vision_Limelight.SideDegrees(left, false), 1e-6);
+    }
+
+    @Test
+    @DisplayName("side: reversed flips it; no pose is 0")
+    void sideReversedAndUnknown() {
+        Pose3D right = new Pose3D(new Position(DistanceUnit.METER, 1, 0, 2, 0), null);
+        assertEquals(Math.toDegrees(Math.atan2(1, 2)), Vision_Limelight.SideDegrees(right, true), 1e-6);
+        assertEquals(0, Vision_Limelight.SideDegrees(null, false), EPS);
+        assertEquals(0, Vision_Limelight.SideDegrees(new Pose3D(null, null), false), EPS);
+    }
+
+    @Test
     @DisplayName("red: a big blue-hive tag is ignored, our smaller red one is the target")
     void redIgnoresBlueTags() {
         op.mAlliance = Alliance.RED;
