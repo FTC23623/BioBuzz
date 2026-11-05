@@ -35,9 +35,9 @@ class LaunchSpinUpTest {
     }
 
     @Test
-    @DisplayName("the launch speed is 2950 RPM")
+    @DisplayName("the launch speed is 2800 RPM")
     void minRpm() {
-        org.junit.jupiter.api.Assertions.assertEquals(2950, properties.autoLaunchMinRpm, 1e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(2800, properties.autoLaunchMinRpm, 1e-9);
     }
 
     @Test

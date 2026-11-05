@@ -61,3 +61,5 @@ stay (5 s for the first launch, 2 s after), and a robot with no pollen wheel nev
 The Driver Station shows `yes, pollen 2650 of 2800 RPM, 1.2 of at most 5.0 s (first launch)`.
 
 **Same evening:** `autoLaunchMinRpm` raised to **2950**.
+
+**2026-11-04:** `autoLaunchMinRpm` lowered to **2800**, with the near launch speed 150 lower for the inertia wheel (docs/decisions/0038).

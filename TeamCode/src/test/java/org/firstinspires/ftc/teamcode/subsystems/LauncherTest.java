@@ -197,7 +197,7 @@ class LauncherTest {
         properties.launcherRangeTuning = true;
         tagAt(135);
         launcher.Process();
-        assertEquals(3232, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(3185, launcher.GetPollenTargetRpm(), EPS);
         assertEquals(1000, launcher.GetNectarTargetRpm(), EPS);
         tagAt(150);
         launcher.Process();
@@ -210,10 +210,10 @@ class LauncherTest {
         properties.launcherRangeTuning = true;
         tagAt(111);
         launcher.Process();
-        assertEquals(2900, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(2750, launcher.GetPollenTargetRpm(), EPS);
         when(vision.SeesTag()).thenReturn(false);
         launcher.Process();
-        assertEquals(2900, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(2750, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -226,10 +226,10 @@ class LauncherTest {
         tap(down -> gamepad.dpad_up = down);
         launcher.Process();
         assertEquals(100, properties.launcherRangeTrimRpm, EPS);
-        assertEquals(3084 + 100, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(2972 + 100, launcher.GetPollenTargetRpm(), EPS);
         tap(down -> gamepad.dpad_down = down);
         launcher.Process();
-        assertEquals(3084 + 50, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(2972 + 50, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -262,7 +262,7 @@ class LauncherTest {
         driver.right_trigger = 1;
         launcher.HandleUserInput();
         launcher.Process();
-        assertEquals(3084, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(2972, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test

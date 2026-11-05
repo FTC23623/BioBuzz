@@ -1,6 +1,6 @@
 # 0038: The pollen launcher's speed follows the distance to the tag
 
-Status: Accepted. Since 2026-11-03 a curve in 2-inch steps, 2900 at 110 in to 3325 at 140 in (see the update at the end). Two rows measured; the two between are guesses. Not yet shot.
+Status: Accepted. Since 2026-11-04 a curve in 2-inch steps, 2750 at 110 in to 3325 at 140 in, curve 1.25 (see the updates at the end). Two rows measured; the two between are guesses. Not yet shot.
 Date: 2026-11-02
 Adds to 0009 (speed control) and 0023 (the D-pad sets the speed).
 
@@ -66,3 +66,15 @@ dashboard's Launcher group. `Launcher.RpmForRange` is still the one place that r
 Tuning: a miss near the hive moves `launchNearRpm`, a miss far out moves `launchFarRpm`, and
 misses in the middle with both ends right move `launchCurve` (up if the middle falls short).
 
+## Update 2026-11-04: inertia wheel, near shot 150 lower
+
+An inertia wheel went on the pollen launcher. The near shot came down 150 RPM, to
+`launchNearRpm` 2750; the far shot stays `launchFarRpm` 3325. The middle had come down
+too, so `launchCurve` went from 1.1 to 1.25 to keep it low (coach).
+
+| in | 110 | 112 | 116 | 120 | 124 | 130 | 134 | 138 | 140+ |
+|---|---|---|---|---|---|---|---|---|---|
+| RPM | 2750 | 2769 | 2827 | 2896 | 2972 | 3096 | 3185 | 3277 | 3325 |
+
+`autoLaunchMinRpm` came down by the same 150, 2950 to 2800, so an auto's near launch
+does not sit out its spin-up wait (docs/decisions/0030).

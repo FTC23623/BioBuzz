@@ -215,7 +215,8 @@ public class BotProperties {
     // launcher's target follows the table below, so the wheel is already at the right speed
     // when the trigger is pulled. Measured by the coach, 2026-11-02: 2900 at 110 in, 3300
     // past 140 in; the far row raised 25 to 3325 on 2026-11-03. The rows between are a
-    // straight line from 2900 to 3325, rounded; tune each on the robot.
+    // straight line from 2900 to 3325, rounded; tune each on the robot. 2026-11-04: an inertia
+    // wheel went on, so the near shot came down 150 to 2750; the far shot stays 3325.
 
     /**
      * true: the pollen launcher's target follows the distance curve below whenever a tag of
@@ -228,19 +229,21 @@ public class BotProperties {
     //
     //     rpm = near + (far - near) x ((band start - nearIn) / (farIn - nearIn)) ^ launchCurve
     //
-    // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.1 is subtle:
-    // the steps grow from 22 RPM near the hive to 31 RPM at 140 in (coach, 2026-11-03).
+    // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.25 since
+    // 2026-11-04 (was 1.1): with the near shot 150 lower and the far one the same, the middle
+    // needs to stay low too, so the curve bends harder: 2750 at 110, 2896 at 120, 3096 at
+    // 130, 3325 at 140 (coach).
     // Nearer than nearIn uses the near speed; farther than farIn uses the far speed.
     /** The near measured shot: distance, in inches. */
     public double launchNearIn = 110;
-    /** The near measured shot: RPM that scored from there. */
-    public double launchNearRpm = 2900;
+    /** The near measured shot: RPM that scored from there (2900, less 150 for the inertia wheel). */
+    public double launchNearRpm = 2750;
     /** The far measured shot: distance, in inches. */
     public double launchFarIn = 140;
     /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03). */
     public double launchFarRpm = 3325;
-    /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.1 to start. */
-    public double launchCurve = 1.1;
+    /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.25 since 2026-11-04. */
+    public double launchCurve = 1.25;
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
     public double launchBandIn = 2;
     /**
@@ -451,8 +454,10 @@ public class BotProperties {
      * In an auto, a LAUNCH opens the gates once the pollen launcher is spinning at least this
      * fast, in RPM. The wheels did not hold within 50 RPM of the target long enough on the
      * robot, so the auto no longer waits for "at speed" (coach, 2026-11-03: 2800, then 2950).
+     * 2800 since 2026-11-04: the near shot came down 150 with the inertia wheel, and a
+     * near target of 2750 would never reach 2950.
      */
-    public double autoLaunchMinRpm = 2950;
+    public double autoLaunchMinRpm = 2800;
     /**
      * A LAUNCH_WHEN_TAG_SEEN step still waiting for one of our hive's tags this many seconds
      * after START launches anyway, facing the way it is. AUTO is 30 seconds (Competition
