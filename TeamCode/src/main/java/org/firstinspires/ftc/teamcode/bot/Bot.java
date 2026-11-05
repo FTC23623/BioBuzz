@@ -126,7 +126,7 @@ public class Bot {
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
             "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "aimSideCenterDeg", "aimSideReversed",
             "arcStrafePower", "arcRangeKP", "arcMaxDrive",
-            "quietTelemetry"};
+            "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
             "launchNearRpm", "launchFarRpm", "launchCurve", "launchBandIn", "launcherKF", "launcherKP", "launcherKI",
@@ -418,7 +418,7 @@ public class Bot {
 
     /** Every part reads the gamepads. TeleOp calls this each loop, before {@link #Process()}. */
     public void HandleUserInput() {
-        mOp.mQuiet = mProperties.quietTelemetry;
+        mOp.mQuiet = Quiet(mProperties);
         for (Subsystem system : mSystems) {
             system.HandleUserInput();
         }
@@ -426,9 +426,11 @@ public class Bot {
 
     /** Every part does its work for one loop. TeleOp and Auto both call this each loop. */
     public void Process() {
-        mOp.mQuiet = mProperties.quietTelemetry;
+        mOp.mQuiet = Quiet(mProperties);
         mLoopTimeAverage = mLoopTimeAverage + (mOp.mLoopTime - mLoopTimeAverage) / 50;
-        if (mOp.mQuiet) {
+        if (mProperties.launcherOnlyTelemetry) {
+            mOp.mTelemetry.addLine("LAUNCHER TELEMETRY: loop time, battery and launchers only (launcherOnlyTelemetry)");
+        } else if (mOp.mQuiet) {
             mOp.mTelemetry.addLine("QUIET TELEMETRY: only loop time and battery (quietTelemetry)");
         }
         mOp.mTelemetry.addData("LoopTime", mOp.mLoopTime);
@@ -441,6 +443,14 @@ public class Bot {
         for (Subsystem system : mSystems) {
             system.Process();
         }
+    }
+
+    /**
+     * true when the parts should skip their Driver Station lines: quietTelemetry, or
+     * launcherOnlyTelemetry (the launchers still show theirs, see Launcher).
+     */
+    static boolean Quiet(BotProperties properties) {
+        return properties.quietTelemetry || properties.launcherOnlyTelemetry;
     }
 
     /** Last line of every loop. Sends this loop's telemetry to the Driver Station. */

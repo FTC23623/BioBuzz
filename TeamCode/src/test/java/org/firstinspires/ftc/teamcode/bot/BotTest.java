@@ -561,4 +561,19 @@ class BotTest {
                     eq(org.firstinspires.ftc.teamcode.types.Alliance.RED), eq("magnet sensed"));
         }
     }
+
+    @Test
+    @DisplayName("launcher-only telemetry hushes the other parts, the same as quiet telemetry")
+    void launcherOnlyIsQuiet() {
+        BotProperties p = new BotProperties();
+        p.quietTelemetry = false;
+        p.launcherOnlyTelemetry = false;
+        org.junit.jupiter.api.Assertions.assertFalse(Bot.Quiet(p));
+        p.launcherOnlyTelemetry = true;
+        org.junit.jupiter.api.Assertions.assertTrue(Bot.Quiet(p));
+        p.launcherOnlyTelemetry = false;
+        p.quietTelemetry = true;
+        org.junit.jupiter.api.Assertions.assertTrue(Bot.Quiet(p));
+        org.junit.jupiter.api.Assertions.assertFalse(new BotProperties().launcherOnlyTelemetry);
+    }
 }

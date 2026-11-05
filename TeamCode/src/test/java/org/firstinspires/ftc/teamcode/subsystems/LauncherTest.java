@@ -380,4 +380,29 @@ class LauncherTest {
         half.Update(UPDATE_SECONDS);
         assertTrue(half.AtSpeed());
     }
+
+    @Test
+    @DisplayName("launcher-only telemetry: the screen is quiet, but the launchers still show their speeds")
+    void launcherOnlyTelemetryShowsTheLaunchers() {
+        Telemetry screen = mock(Telemetry.class);
+        HydraOpMode quiet = new HydraOpMode(screen, mock(HardwareMap.class), driver, gamepad);
+        quiet.mQuiet = true;
+        properties.launcherOnlyTelemetry = true;
+        Launcher l = new Launcher(quiet, properties, gamepad, vision);
+        l.Process();
+        verify(screen).addData(org.mockito.ArgumentMatchers.eq("Launcher speed from distance"),
+                org.mockito.ArgumentMatchers.<Object>any());
+    }
+
+    @Test
+    @DisplayName("quiet telemetry alone: the launchers print nothing")
+    void quietHidesTheLaunchers() {
+        Telemetry screen = mock(Telemetry.class);
+        HydraOpMode quiet = new HydraOpMode(screen, mock(HardwareMap.class), driver, gamepad);
+        quiet.mQuiet = true;
+        properties.launcherOnlyTelemetry = false;
+        Launcher l = new Launcher(quiet, properties, gamepad, vision);
+        l.Process();
+        org.mockito.Mockito.verifyNoInteractions(screen);
+    }
 }

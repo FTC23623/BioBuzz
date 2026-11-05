@@ -31,3 +31,12 @@ on in matches, or trimming the lines that cost the most.
   held shut by the camera lock (0040) looks like a broken launch. Only the gamepad buzz is
   left. Measure with quiet on, never drive a match with it.
 - Tests: `VisionLimelightTest` (no status read), `LaunchGatesTest` (nothing printed).
+
+## Update 2026-11-04: launcher-only telemetry
+
+**`launcherOnlyTelemetry`**, false by default, next to `quietTelemetry` on the dashboard's
+Drive group. Every other part goes quiet exactly as with `quietTelemetry`, but the
+launchers keep their numbers: speed from distance, and each wheel's target, actual and error
+RPM, power, F / P / I parts and at speed. The screen says `LAUNCHER TELEMETRY`. For tuning
+the launchers with the loop time near what a quiet robot runs (coach). `Bot.Quiet` is the one
+place that decides whether the parts are hushed.

@@ -108,6 +108,13 @@ public class BotProperties {
      */
     public boolean quietTelemetry = true;
     /**
+     * true: like quietTelemetry, but the launchers keep their lines: target, actual and error
+     * RPM, power and its parts, at speed, and the speed from distance. For tuning the
+     * launchers with the loop time as low as it goes. Off by default; on the dashboard's Drive
+     * group, next to quietTelemetry (docs/decisions/0041).
+     */
+    public boolean launcherOnlyTelemetry = false;
+    /**
      * How often the battery voltage is read, in milliseconds. Each read is an extra trip to
      * the hub, so not every loop. 250 = four times a second, more than enough for a graph.
      */

@@ -141,6 +141,9 @@ public class Launcher implements Subsystem {
         }
         if (!mOp.mQuiet) {
             ShowStatus();
+        } else if (mProperties.launcherOnlyTelemetry) {
+            // Everything else is hushed; the launchers keep their numbers, for tuning.
+            ShowStats();
         }
     }
 
@@ -282,6 +285,11 @@ public class Launcher implements Subsystem {
 
     private void ShowStatus() {
         mOp.mTelemetry.addLine("Launchers (gamepad 2): always on from START. D-pad up/down pollen, right/left nectar");
+        ShowStats();
+    }
+
+    /** The numbers only: speed from distance, and each wheel's speeds and power. */
+    private void ShowStats() {
         mOp.mTelemetry.addData("Launcher speed from distance", mRangeStatus);
         mPollen.ShowStatus();
         mNectar.ShowStatus();
