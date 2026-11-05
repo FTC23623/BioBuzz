@@ -216,7 +216,8 @@ public class BotProperties {
     // when the trigger is pulled. Measured by the coach, 2026-11-02: 2900 at 110 in, 3300
     // past 140 in; the far row raised 25 to 3325 on 2026-11-03. The rows between are a
     // straight line from 2900 to 3325, rounded; tune each on the robot. 2026-11-04: an inertia
-    // wheel went on, so the near shot came down 150 to 2750; the far shot stays 3325.
+    // wheel went on, so the near shot came down 150 to 2750; the far shot stayed 3325, then
+    // came down 100 to 3225 the same day.
 
     /**
      * true: the pollen launcher's target follows the distance curve below whenever a tag of
@@ -231,8 +232,8 @@ public class BotProperties {
     //
     // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.25 since
     // 2026-11-04 (was 1.1): with the near shot 150 lower and the far one the same, the middle
-    // needs to stay low too, so the curve bends harder: 2750 at 110, 2896 at 120, 3096 at
-    // 130, 3325 at 140 (coach).
+    // needs to stay low too, so the curve bends harder: 2750 at 110, 2870 at 120, 3036 at
+    // 130, 3225 at 140 (coach).
     // Nearer than nearIn uses the near speed; farther than farIn uses the far speed.
     /** The near measured shot: distance, in inches. */
     public double launchNearIn = 110;
@@ -240,8 +241,8 @@ public class BotProperties {
     public double launchNearRpm = 2750;
     /** The far measured shot: distance, in inches. */
     public double launchFarIn = 140;
-    /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03). */
-    public double launchFarRpm = 3325;
+    /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03, -100 on 2026-11-04). */
+    public double launchFarRpm = 3225;
     /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.25 since 2026-11-04. */
     public double launchCurve = 1.25;
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */

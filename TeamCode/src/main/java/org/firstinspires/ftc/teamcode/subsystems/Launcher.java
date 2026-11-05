@@ -27,7 +27,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
  * (right bumper) or launch (right trigger) and the camera sees our hive, the
  * pollen launcher's target follows a curve of inches to RPM in 2-inch
- * steps (2750 at 110 in, 3325 from 140 in, bending upward between), plus {@code launcherRangeTrimRpm}. The
+ * steps (2750 at 110 in, 3225 from 140 in, bending upward between), plus {@code launcherRangeTrimRpm}. The
  * wheel is then already at the right speed when the trigger is pulled. With no tag in view
  * the target stays where it was. {@code launcherRangeTuning = false} turns this off.
  *
@@ -183,8 +183,8 @@ public class Launcher implements Subsystem {
      *     step start = nearIn + whole steps past nearIn
      *     rpm = near + (far - near) x ((step start - nearIn) / (farIn - nearIn)) ^ curve
      *
-     *     near 110 in 2750, far 140 in 3325, curve 1.25, steps of 2 in:
-     *     110: 2750   112: 2769   120: 2896   130: 3096   139: 3277   140 and up: 3325
+     *     near 110 in 2750, far 140 in 3225, curve 1.25, steps of 2 in:
+     *     110: 2750   112: 2766   120: 2870   130: 3036   139: 3186   140 and up: 3225
      * </pre>
      *
      * Nearer than nearIn: the near speed. Farther than farIn: the far speed.
