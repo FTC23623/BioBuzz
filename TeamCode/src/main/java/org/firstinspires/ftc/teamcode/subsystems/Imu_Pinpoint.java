@@ -122,4 +122,12 @@ public class Imu_Pinpoint implements Imu {
         mHeadingAtReset = mPinpoint.getHeading(AngleUnit.DEGREES);
         mYawDegrees = 0;
     }
+
+    @Override
+    public void SetYaw(double yawDeg) {
+        mPinpoint.update();
+        // Raw heading less the reset point is the yaw, so this reset point makes it yawDeg.
+        mHeadingAtReset = mPinpoint.getHeading(AngleUnit.DEGREES) - yawDeg;
+        mYawDegrees = AngleUnit.normalizeDegrees(yawDeg);
+    }
 }

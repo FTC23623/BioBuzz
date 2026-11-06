@@ -8,9 +8,12 @@ import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathSegment;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.teamcode.bot.Bot;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.AimAssist;
+import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
 
 /**
@@ -30,6 +33,16 @@ import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
  * {@code follower.update()} reads where the robot is and sets the motor powers. When a path
  * is done, the follower stops "following" and holds the robot in place, and we start the
  * next path. See docs/decisions/0008.
+ *
+ * <p><b>Alliance</b>: read from the magnet on the robot, like TeleOp (docs/decisions/0021).
+ * The camera only sees our hive's tags. A backup auto (group "Backup") skips the magnet
+ * and sets the alliance itself, in case the sensor plays up.
+ *
+ * <p><b>Scoring</b>: with {@code autoRunScoring} on, the launchers spin and the transfer runs
+ * from START to the end. The intake roller stays off except during a FLOWER step
+ * ({@code autoIntakeRoller}, docs/decisions/0043), or between an INTAKE_ON and an INTAKE_OFF
+ * step (docs/decisions/0047). A LAUNCH step opens both launch gates,
+ * and the transfer feeds the launch at {@code launchFeedTransferScale} (30%).
  */
 public abstract class PedroAuto extends LinearOpMode {
 
@@ -44,9 +57,11 @@ public abstract class PedroAuto extends LinearOpMode {
 
     /**
      * Put this in the list from {@link #BuildPaths()} to stop and launch there. It is not a
-     * real path: when the auto reaches it, the robot holds still where the last path ended
-     * for {@code botProperties.autoLaunchSeconds}, then drives the next path. The indicator
-     * light blinks yellow during the stop and turns off after it.
+     * real path: when the auto reaches it, the robot holds still where the last path ended,
+     * waits for the launchers to reach speed (at most {@code autoSpinUpSeconds}), then opens
+     * both launch gates for {@code autoLaunchSeconds}. Once the gates are open, the intake and
+     * transfer push the balls in. Then the gates close and the next path starts. The
+     * indicator light blinks yellow for the whole stop.
      *
      * <pre>
      *     paths.add(driveToLaunchSpot);
@@ -58,6 +73,100 @@ public abstract class PedroAuto extends LinearOpMode {
     // never driven: the loop only checks "is this step LAUNCH?".
     protected static final Path LAUNCH = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
+    /**
+     * Like {@link #LAUNCH}, but the robot first holds still until the camera sees an
+     * AprilTag. The indicator light blinks orange while it waits. Once a tag is seen, the
+     * robot turns in place to face the middle of that tag's group, from
+     * {@code botProperties.tagGroups} (the light stays orange), then launches just like
+     * LAUNCH: blinks yellow for {@code botProperties.autoLaunchSeconds}. The aim is picked
+     * once, from the first look at the tag, and is not corrected during the launch. Only our
+     * hive's tags count (blue: 38-45). If none is seen by {@code autoLaunchAnywayAtSeconds}
+     * after START, it launches anyway, facing the way it is.
+     */
+    // A different marker from LAUNCH, so the loop can tell the two apart.
+    protected static final Path LAUNCH_WHEN_TAG_SEEN = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Put this in the list after the path to a flower to work it there (docs/decisions/0042).
+     * The intake runs, and from where the last path ended the robot:
+     * <ol>
+     *   <li>backs up {@code autoFlowerBackIn} (9 in), and holds that spot
+     *       {@code autoFlowerSettleSeconds} (0.3 s) so the robot has stopped,
+     *   <li>swings the extractor out, and holds still {@code autoExtractorSeconds} (0.5 s)
+     *       before the first stroke,
+     *   <li>strokes forward {@code autoFlowerStrokeIn} (8 in), holds there
+     *       {@code autoFlowerDwellSeconds} (1 s), strokes back, {@code autoFlowerPasses} times (1),
+     *   <li>swings the extractor in.
+     * </ol>
+     * Every move is along the way the robot faces, so it ends {@code autoFlowerBackIn} behind
+     * the spot, still facing the flower. Tool: Pose Recorder writes it after a circle press.
+     */
+    // A third marker, like LAUNCH, so the loop can tell it apart.
+    protected static final Path FLOWER = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Put this in the list to turn the intake on: the intake roller and the transfer both run
+     * from here on, until an {@link #INTAKE_OFF}. It takes no time: the next path starts
+     * straight away. Tool: Pose Recorder writes it after a D-pad up press.
+     *
+     * <pre>
+     *     paths.add(toBalls);
+     *     paths.add(INTAKE_ON);
+     *     paths.add(driveThroughBalls);
+     *     paths.add(INTAKE_OFF);
+     * </pre>
+     */
+    // Markers, like LAUNCH, so the loop can tell them apart.
+    protected static final Path INTAKE_ON = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Put this in the list to turn the intake roller off again. The transfer keeps running
+     * if {@code autoRunScoring} is on, so LAUNCH steps still feed. Takes no time. Tool: Pose
+     * Recorder writes it after a D-pad down press.
+     */
+    protected static final Path INTAKE_OFF = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** true while the intake roller should run between steps: INTAKE_ON / INTAKE_OFF set it. */
+    private boolean mRollerOn = false;
+    /** true while the intake and transfer should run between steps. */
+    private boolean mIntakeRunning = false;
+
+    /**
+     * One thing the FLOWER step does: drive to a spot, hold still for a time, or swing the
+     * extractor out or in (and hold still while it swings).
+     */
+    static final class FlowerAction {
+        static final int MOVE = 0;
+        static final int HOLD = 1;
+        static final int ARM_OUT = 2;
+        static final int ARM_IN = 3;
+
+        final int kind;
+        /** MOVE: where to drive. HOLD and the arm: where to hold still. */
+        final Pose spot;
+        /** HOLD and the arm: how long. */
+        final double seconds;
+        /** For the Driver Station: "back up", "settle", "stroke forward", ... */
+        final String name;
+
+        FlowerAction(int kind, Pose spot, double seconds, String name) {
+            this.kind = kind;
+            this.spot = spot;
+            this.seconds = seconds;
+            this.name = name;
+        }
+    }
+
+    // The FLOWER step's state while it runs.
+    private List<FlowerAction> mFlowerActions = new ArrayList<>();
+    private Pose mFlowerStart = new Pose(0, 0, 0);
+    /** Which action is running. -1 before the first; past the end when done. */
+    private int mFlowerIndex = 0;
+    private final ElapsedTime mFlowerTimer = new ElapsedTime();
+    private double mFlowerGiveUpSeconds = 0;
+    /** The robot's top speed, for each flower move's give-up time. Set in runOpMode. */
+    private double mTopSpeed = 1;
+
     /** The paths this auto drives, in order. Runs after {@link #properties} is set up. */
     protected abstract List<Path> BuildPaths();
 
@@ -66,12 +175,23 @@ public abstract class PedroAuto extends LinearOpMode {
         return new Pose(0, 0, 0);
     }
 
+    /**
+     * Which way the robot faces on its start spot, seen from the driver, in degrees: 0 away
+     * from the driver, 90 to the driver's left, -90 to the driver's right, 180 toward the
+     * driver. TeleOp uses it to keep "forward" away from the driver after the auto
+     * (docs/decisions/0046). NaN (the default) = not known: TeleOp then zeroes the heading
+     * at INIT, as before.
+     */
+    protected double StartFacingDeg() {
+        return Double.NaN;
+    }
+
     @Override
     public void runOpMode() {
         // In an auto, Pedro Pathing drives the wheels, so driver control is switched off.
         botProperties.driveDisabled = true;
-        // No auto uses the launcher yet.
-        botProperties.launcherDisabled = true;
+        // An old heading from an earlier auto must never reach TeleOp (docs/decisions/0046).
+        HeadingHandoff.Clear();
 
         Bot bot = new Bot(this, botProperties);
 
@@ -97,6 +217,7 @@ public abstract class PedroAuto extends LinearOpMode {
         // it is. Strafing is the robot's slower way to drive, so use that speed: it can only
         // give more time, never less.
         double topSpeed = PedroConstants.ForesightConfig().maxAchievableStrafeVelocity.get();
+        mTopSpeed = topSpeed;
         double[] giveUpSeconds = new double[paths.size()];
         for (int i = 0; i < paths.size(); i++) {
             giveUpSeconds[i] = GiveUpSeconds(paths.get(i), botProperties, topSpeed);
@@ -108,22 +229,106 @@ public abstract class PedroAuto extends LinearOpMode {
             bot.ShowStatus();
             telemetry.addLine("Put the robot on its start spot, facing forward.");
             telemetry.addData("Paths to drive", paths.size());
+            if (botProperties.autoSpeedScale < 1) {
+                telemetry.addLine(String.format("SLOW AUTO: %.0f%% speed. Put autoSpeedScale back to 1 for matches.",
+                        botProperties.autoSpeedScale * 100));
+            }
             bot.EndLoop();
+        }
+
+        // What the intake does between steps, until an INTAKE_ON or INTAKE_OFF changes it.
+        mIntakeRunning = botProperties.autoRunScoring;
+        mRollerOn = botProperties.autoIntakeRoller;
+        if (botProperties.autoRunScoring) {
+            // Spin up now, so the launchers are at speed by the first LAUNCH.
+            bot.SpinLaunchers(true);
+            // The transfer runs the whole auto. The intake roller only if autoIntakeRoller
+            // says so; otherwise FLOWER steps turn it on (docs/decisions/0043).
+            bot.RunIntake(true);
+            bot.SetIntakeRoller(botProperties.autoIntakeRoller);
         }
 
         // Times how long the robot has been on this step: a path, or a LAUNCH stop.
         ElapsedTime stepTimer = new ElapsedTime();
+        // Times the whole auto, from START, for "launch anyway".
+        ElapsedTime autoTimer = new ElapsedTime();
         int pathNumber = 0;
         int pathsGivenUp = 0;
+        // true while a LAUNCH_WHEN_TAG_SEEN step is still waiting for the camera.
+        boolean waitingForTag = paths.get(pathNumber) == LAUNCH_WHEN_TAG_SEEN;
+        // true while a LAUNCH_WHEN_TAG_SEEN step is turning to face the tag it saw.
+        boolean aiming = false;
+        // The heading that faces the tag, in radians. Picked once, when the tag is first seen.
+        double aimHeading = 0;
+        // true while a launch step waits for the launchers to reach speed, gates still shut.
+        boolean spinningUp = paths.get(pathNumber) == LAUNCH;
+        // How many launches have opened the gates so far. The first one waits longer.
+        int launchesDone = 0;
         StartStep(bot, follower, paths.get(pathNumber), stepTimer);
 
         while (opModeIsActive()) {
             bot.StartLoop();
             follower.update();
 
-            boolean launching = paths.get(pathNumber) == LAUNCH;
+            Path step = paths.get(pathNumber);
+            if (waitingForTag && bot.SeesTag()) {
+                // A tag! Aim at the middle of its group (a hive's tags), not just this one tag.
+                // Bearing is left-positive, like heading, so add it to face that middle.
+                // Hold at the same spot with that heading: the robot turns in place.
+                waitingForTag = false;
+                aiming = true;
+                Pose here = follower.pose();
+                // Aim a little off the hive's middle, by the side the robot stands on
+                // (aimHiveBearingDeg, docs/decisions/0044).
+                aimHeading = AimHeading(here.heading(), bot.GetTagGroupBearing(),
+                        bot.GetHiveSideDegrees(), botProperties);
+                follower.hold(new Pose(here.x(), here.y(), aimHeading));
+                stepTimer.reset();
+            }
+            if (waitingForTag && autoTimer.seconds() >= botProperties.autoLaunchAnywayAtSeconds) {
+                // No tag, and the auto is nearly over. Launch anyway, facing the way we are.
+                waitingForTag = false;
+                spinningUp = true;
+                bot.ShowWaitingForTag(false);
+                bot.ShowLaunching(true);
+                stepTimer.reset();
+            }
+            if (aiming) {
+                boolean onTarget = Math.abs(AngleBetween(follower.pose().heading(), aimHeading))
+                        <= Math.toRadians(botProperties.aimDoneDegrees);
+                boolean aimTookTooLong = stepTimer.seconds() >= botProperties.autoAimSeconds;
+                if (onTarget || aimTookTooLong) {
+                    // Facing the tag (or close enough). Now launch, like LAUNCH. The follower
+                    // keeps holding this heading; the camera is not asked again.
+                    aiming = false;
+                    spinningUp = true;
+                    bot.ShowWaitingForTag(false);
+                    bot.ShowLaunching(true);
+                    stepTimer.reset();
+                }
+            }
+            if (spinningUp) {
+                // Fast enough to launch: the pollen wheel at autoLaunchMinRpm or more.
+                boolean fastEnough = bot.PollenLauncherAtLeast(botProperties.autoLaunchMinRpm);
+                if (ReadyToOpen(fastEnough, stepTimer.seconds(), launchesDone == 0, botProperties)) {
+                    // Up to speed (or waited as long as allowed): open the gates. The launch
+                    // time counts from now. The rollers start once the gates are fully open.
+                    spinningUp = false;
+                    launchesDone = launchesDone + 1;
+                    bot.OpenLaunchGates(true);
+                    stepTimer.reset();
+                }
+            }
+            boolean launching = step == LAUNCH || step == LAUNCH_WHEN_TAG_SEEN;
             boolean pathFinished;
-            if (launching) {
+            if (waitingForTag || aiming || spinningUp) {
+                pathFinished = false;
+            } else if (step == FLOWER) {
+                pathFinished = FlowerStep(bot, follower);
+            } else if (step == INTAKE_ON || step == INTAKE_OFF) {
+                // Done the moment it starts: StartStep already switched the intake.
+                pathFinished = true;
+            } else if (launching) {
                 pathFinished = stepTimer.seconds() >= botProperties.autoLaunchSeconds;
             } else {
                 boolean tookTooLong = stepTimer.seconds() >= giveUpSeconds[pathNumber];
@@ -136,12 +341,15 @@ public abstract class PedroAuto extends LinearOpMode {
                 pathFinished = !follower.following();
             }
             if (launching && pathFinished) {
-                // The launch time is up: stop flashing the light.
+                // The launch time is up: close the gates and stop flashing the light.
                 bot.ShowLaunching(false);
+                bot.OpenLaunchGates(false);
             }
             boolean morePathsLeft = pathNumber + 1 < paths.size();
             if (pathFinished && morePathsLeft) {
                 pathNumber = pathNumber + 1;
+                waitingForTag = paths.get(pathNumber) == LAUNCH_WHEN_TAG_SEEN;
+                spinningUp = paths.get(pathNumber) == LAUNCH;
                 StartStep(bot, follower, paths.get(pathNumber), stepTimer);
             }
 
@@ -149,9 +357,35 @@ public abstract class PedroAuto extends LinearOpMode {
             bot.Process();
 
             Pose where = follower.pose();
+            // Every loop, so TeleOp gets the heading from the moment the auto stops.
+            if (!Double.isNaN(StartFacingDeg())) {
+                HeadingHandoff.Save(HeadingHandoff.TeleOpYaw(StartFacingDeg(),
+                        Math.toDegrees(where.heading())), HeadingHandoff.NowSeconds());
+            }
             telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
-            telemetry.addData("Launching", paths.get(pathNumber) == LAUNCH);
-            if (!launching) {
+            telemetry.addData("Waiting for a tag", waitingForTag);
+            telemetry.addData("Aiming at the tag", aiming);
+            if (spinningUp) {
+                double limit = botProperties.autoSpinUpSeconds;
+                if (launchesDone == 0) {
+                    limit = botProperties.autoFirstSpinUpSeconds;
+                }
+                telemetry.addData("Waiting for launchers to reach speed", "yes, pollen %.0f of %.0f RPM, %.1f of at most %.1f s%s",
+                        bot.PollenLauncherRpm(), botProperties.autoLaunchMinRpm,
+                        stepTimer.seconds(), limit, launchesDone == 0 ? " (first launch)" : "");
+            } else {
+                telemetry.addData("Waiting for launchers to reach speed", "no");
+            }
+            telemetry.addData("Launching", !waitingForTag && !aiming && !spinningUp && launching);
+            telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
+            telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
+            if (step == FLOWER) {
+                String doing = "done";
+                if (mFlowerIndex >= 0 && mFlowerIndex < mFlowerActions.size()) {
+                    doing = mFlowerActions.get(mFlowerIndex).name;
+                }
+                telemetry.addData("Flower", "%d of %d: %s", mFlowerIndex + 1, mFlowerActions.size(), doing);
+            } else if (!launching) {
                 telemetry.addData("Give up on this path after (s)", "%.1f", giveUpSeconds[pathNumber]);
             }
             telemetry.addData("Paths given up (took too long)", pathsGivenUp);
@@ -187,8 +421,7 @@ public abstract class PedroAuto extends LinearOpMode {
 
         // The heading change, from -180 to 180 degrees, so a turn from -90 to 180 counts
         // as the 90 it really is and not 270.
-        double headingChange = path.endPose().heading() - path.get(0).heading();
-        headingChange = Math.atan2(Math.sin(headingChange), Math.cos(headingChange));
+        double headingChange = AngleBetween(path.get(0).heading(), path.endPose().heading());
         double quarterTurns = Math.abs(headingChange) / Math.toRadians(90);
         double turnSeconds = quarterTurns * properties.autoQuarterTurnSeconds;
 
@@ -197,15 +430,211 @@ public abstract class PedroAuto extends LinearOpMode {
         return seconds * properties.autoGiveUpMargin + properties.autoGiveUpExtraSeconds;
     }
 
-    /** Start one step from the list: drive a path, or stop and launch. */
+    /**
+     * The heading that aims the pollen launcher at the hive, from the heading now and the
+     * hive's bearing in the camera: turn by the bearing, less where the hive should sit once
+     * aimed for the side the robot stands on ({@link AimAssist#SideOffset}). Radians in and
+     * out, the bearing and side in degrees.
+     */
+    static double AimHeading(double headingNow, double hiveBearingDeg, double sideDeg,
+                             BotProperties properties) {
+        double aimAt = AimAssist.SideOffset(sideDeg, properties.aimHiveBearingDeg, properties.aimSideCenterDeg);
+        double turnDeg = AimAssist.AimError(hiveBearingDeg, aimAt);
+        return headingNow + Math.toRadians(turnDeg);
+    }
+
+    /**
+     * May a LAUNCH step open the gates yet? Yes once the pollen launcher spins at
+     * autoLaunchMinRpm or faster. If it never gets there, yes anyway after autoSpinUpSeconds, or
+     * after autoFirstSpinUpSeconds for the first launch of the auto, so a slow or broken
+     * launcher can't freeze the auto.
+     *
+     * @param fastEnough    true when the pollen launcher is at autoLaunchMinRpm or faster
+     * @param waitedSeconds how long this launch has waited so far
+     * @param firstLaunch   true for the first launch of this auto
+     */
+    static boolean ReadyToOpen(boolean fastEnough, double waitedSeconds, boolean firstLaunch,
+                               BotProperties properties) {
+        if (fastEnough) {
+            return true;
+        }
+        double limit = properties.autoSpinUpSeconds;
+        if (firstLaunch) {
+            limit = properties.autoFirstSpinUpSeconds;
+        }
+        return waitedSeconds >= limit;
+    }
+
+    /**
+     * How far to turn from one heading to another, in radians, from -180 to 180 degrees.
+     * So a turn from -90 to 180 counts as the 90 it really is, not 270.
+     */
+    static double AngleBetween(double fromHeading, double toHeading) {
+        double change = toHeading - fromHeading;
+        return Math.atan2(Math.sin(change), Math.cos(change));
+    }
+
+    /** Start one step from the list: drive a path, stop and launch, or stop and wait for a tag. */
     private void StartStep(Bot bot, Follower follower, Path step, ElapsedTime stepTimer) {
         stepTimer.reset();
         if (step == LAUNCH) {
             // Nothing new to follow, so the follower keeps holding the robot where it is.
-            // The launcher is still off in autos, so the indicator light blinks yellow instead.
+            // Blink the light yellow. The gates open once the launchers are at speed.
             bot.ShowLaunching(true);
+        } else if (step == LAUNCH_WHEN_TAG_SEEN) {
+            // Hold still, like LAUNCH, but blink orange until the camera sees a tag.
+            bot.ShowWaitingForTag(true);
+        } else if (step == FLOWER) {
+            // Work the flower from here. The intake runs for the whole routine.
+            mFlowerStart = follower.pose();
+            mFlowerActions = FlowerActions(mFlowerStart, botProperties);
+            mFlowerIndex = -1;
+            bot.RunIntake(true);
+            bot.SetIntakeRoller(true);
+            NextFlowerAction(bot, follower);
+        } else if (step == INTAKE_ON) {
+            // Roller and transfer on. The follower keeps holding the robot where it is.
+            mIntakeRunning = true;
+            mRollerOn = true;
+            bot.RunIntake(true);
+            bot.SetIntakeRoller(true);
+        } else if (step == INTAKE_OFF) {
+            // Roller off. The transfer goes back to what the auto does (autoRunScoring).
+            mIntakeRunning = botProperties.autoRunScoring;
+            mRollerOn = false;
+            bot.RunIntake(mIntakeRunning);
+            bot.SetIntakeRoller(false);
         } else {
             follower.follow(step);
         }
+    }
+
+    /**
+     * Where each FLOWER move ends, worked out from where the robot is and the way it faces:
+     * first the back-up, then each stroke forward and back. Every pose keeps the heading.
+     *
+     * <pre>
+     *     facing 0 at (0, 0), back 9, strokes of 8, 2 passes (today's 1 pass stops after the third):
+     *     (-9, 0)  (-1, 0)  (-9, 0)  (-1, 0)  (-9, 0)
+     * </pre>
+     */
+    static List<Pose> FlowerMoves(Pose spot, BotProperties p) {
+        double heading = spot.heading();
+        // One inch "forward" on the field, for a robot facing this heading.
+        double forwardX = Math.cos(heading);
+        double forwardY = Math.sin(heading);
+        List<Pose> moves = new ArrayList<>();
+        double alongIn = -p.autoFlowerBackIn;
+        moves.add(new Pose(spot.x() + forwardX * alongIn, spot.y() + forwardY * alongIn, heading));
+        for (int pass = 0; pass < p.autoFlowerPasses; pass++) {
+            alongIn = alongIn + p.autoFlowerStrokeIn;
+            moves.add(new Pose(spot.x() + forwardX * alongIn, spot.y() + forwardY * alongIn, heading));
+            alongIn = alongIn - p.autoFlowerStrokeIn;
+            moves.add(new Pose(spot.x() + forwardX * alongIn, spot.y() + forwardY * alongIn, heading));
+        }
+        return moves;
+    }
+
+    /**
+     * The FLOWER step in order, from the recorded spot:
+     *
+     * <pre>
+     *     move: back up                 autoFlowerBackIn (9)
+     *     hold: settle                  autoFlowerSettleSeconds (0.3)
+     *     arm out                       autoExtractorSeconds (0.5)
+     *     move: stroke forward          autoFlowerStrokeIn (8)
+     *     hold: at the flower           autoFlowerDwellSeconds (1)
+     *     move: stroke back             autoFlowerStrokeIn (8)
+     *     ... again, if autoFlowerPasses (1) is more than 1 ...
+     *     arm in                        autoExtractorSeconds (0.5)
+     * </pre>
+     */
+    static List<FlowerAction> FlowerActions(Pose spot, BotProperties p) {
+        List<Pose> moves = FlowerMoves(spot, p);
+        List<FlowerAction> actions = new ArrayList<>();
+        Pose backedUp = moves.get(0);
+        actions.add(new FlowerAction(FlowerAction.MOVE, backedUp, 0, "back up"));
+        actions.add(new FlowerAction(FlowerAction.HOLD, backedUp, p.autoFlowerSettleSeconds, "settle"));
+        actions.add(new FlowerAction(FlowerAction.ARM_OUT, backedUp, p.autoExtractorSeconds, "arm out"));
+        // moves 1, 3, 5... are forward strokes; 2, 4, 6... are back strokes.
+        for (int i = 1; i < moves.size(); i++) {
+            Pose to = moves.get(i);
+            boolean forward = i % 2 == 1;
+            if (forward) {
+                actions.add(new FlowerAction(FlowerAction.MOVE, to, 0, "stroke forward"));
+                if (p.autoFlowerDwellSeconds > 0) {
+                    actions.add(new FlowerAction(FlowerAction.HOLD, to, p.autoFlowerDwellSeconds, "at the flower"));
+                }
+            } else {
+                actions.add(new FlowerAction(FlowerAction.MOVE, to, 0, "stroke back"));
+            }
+        }
+        Pose last = moves.get(moves.size() - 1);
+        actions.add(new FlowerAction(FlowerAction.ARM_IN, last, p.autoExtractorSeconds, "arm in"));
+        return actions;
+    }
+
+    /** Start the next FLOWER action. */
+    private void NextFlowerAction(Bot bot, Follower follower) {
+        mFlowerIndex = mFlowerIndex + 1;
+        mFlowerTimer.reset();
+        if (mFlowerIndex >= mFlowerActions.size()) {
+            return;
+        }
+        FlowerAction action = mFlowerActions.get(mFlowerIndex);
+        if (action.kind == FlowerAction.MOVE) {
+            // From where the last action meant the robot to be, not where it happens to be.
+            Pose from = mFlowerStart;
+            if (mFlowerIndex > 0) {
+                from = mFlowerActions.get(mFlowerIndex - 1).spot;
+            }
+            if (Math.hypot(action.spot.x() - from.x(), action.spot.y() - from.y()) < 0.01) {
+                // A zero-inch move (a setting of 0): Pedro won't build it, so skip it.
+                NextFlowerAction(bot, follower);
+                return;
+            }
+            Path path = line(from, action.spot).constant(mFlowerStart.heading());
+            mFlowerGiveUpSeconds = GiveUpSeconds(path, botProperties, mTopSpeed);
+            follower.follow(path);
+            return;
+        }
+        // HOLD and the arm: hold the PLANNED spot, not wherever the robot was when the last
+        // move ended: it may still be braking short of it.
+        follower.hold(action.spot);
+        if (action.kind == FlowerAction.ARM_OUT) {
+            bot.SetFlowerExtractor(true);
+        } else if (action.kind == FlowerAction.ARM_IN) {
+            bot.SetFlowerExtractor(false);
+        }
+    }
+
+    /** One loop of the FLOWER step. @return true once the arm is back in. */
+    private boolean FlowerStep(Bot bot, Follower follower) {
+        if (mFlowerIndex >= mFlowerActions.size()) {
+            return true;
+        }
+        FlowerAction action = mFlowerActions.get(mFlowerIndex);
+        boolean actionDone;
+        if (action.kind == FlowerAction.MOVE) {
+            boolean tookTooLong = mFlowerTimer.seconds() >= mFlowerGiveUpSeconds;
+            if (follower.following() && tookTooLong) {
+                // Stuck on the flower: stop pushing and carry on.
+                follower.hold(follower.pose());
+            }
+            actionDone = !follower.following();
+        } else {
+            actionDone = mFlowerTimer.seconds() >= action.seconds;
+        }
+        if (actionDone) {
+            NextFlowerAction(bot, follower);
+        }
+        if (mFlowerIndex >= mFlowerActions.size()) {
+            // Done. The intake goes back to what it did before the flower: the start
+            // settings, or the last INTAKE_ON / INTAKE_OFF.
+            bot.RunIntake(mIntakeRunning);
+            bot.SetIntakeRoller(mRollerOn);
+            return true;
+        }
+        return false;
     }
 }

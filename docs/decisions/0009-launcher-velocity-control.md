@@ -1,6 +1,6 @@
 # 0009: The launcher holds a speed with our own control loop
 
-Status: Accepted. Not yet tried on the robot. The gains are Decode's starting numbers.
+Status: Accepted. Not yet tried on the robot. The gains are Decode's starting numbers. 0038: the pollen target follows the distance to the tag.
 Date: 2026-10-03
 
 ## Context

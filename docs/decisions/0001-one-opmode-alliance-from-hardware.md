@@ -1,6 +1,6 @@
 # 0001: One OpMode; alliance comes from a badge switch
 
-Status: Accepted. The switch is not built yet.
+Status: Accepted. Partly replaced by 0021 (one magnet sensor, backup autos per color).
 Date: 2026-09-26
 
 ## Context

@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.bot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.drivers.PrismLedDriver;
+import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
@@ -68,6 +70,8 @@ class BotTest {
         when(motor.getPower()).thenAnswer(call -> last[0]);
         // doReturn, not when(...): calling get() here would throw (see setUp).
         doReturn(motor).when(hardwareMap).get(DcMotorEx.class, name);
+        // Parts that may be missing look motors up with tryGet, which gives null when absent.
+        doReturn(motor).when(hardwareMap).tryGet(DcMotorEx.class, name);
     }
 
     private String[] driveMotorNames() {
@@ -89,6 +93,7 @@ class BotTest {
 
     private void addLauncher() {
         addMotor(properties.cfgLaunchNectar);
+        addMotor(properties.cfgLaunchPollen);
     }
 
     /** One TeleOp loop, the way an OpMode writes it. */
@@ -130,7 +135,11 @@ class BotTest {
             for (String name : driveMotorNames()) {
                 verify(hardwareMap).get(DcMotorEx.class, name);
             }
-            verify(hardwareMap).get(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgLaunchPollen);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgIntake);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgTransfer);
+            verify(hardwareMap).tryGet(Servo.class, properties.cfgPollenServo);
         }
 
         @Test
@@ -148,7 +157,7 @@ class BotTest {
             }
             verify(hardwareMap, never()).get(eq(IMU.class), anyString());
             verify(hardwareMap, never()).tryGet(eq(GoBildaPinpointDriver.class), anyString());
-            verify(hardwareMap).get(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap).tryGet(DcMotorEx.class, properties.cfgLaunchNectar);
             verify(telemetry).addLine(contains("Driver control: OFF"));
         }
 
@@ -162,9 +171,9 @@ class BotTest {
             bot.ShowStatus();
             teleOpLoop(bot);
 
-            verify(hardwareMap, never()).get(DcMotorEx.class, properties.cfgLaunchNectar);
+            verify(hardwareMap, never()).tryGet(DcMotorEx.class, properties.cfgLaunchNectar);
             verify(hardwareMap).get(DcMotorEx.class, properties.cfgDriveFrontLeft);
-            verify(telemetry).addLine(contains("Launcher: OFF"));
+            verify(telemetry).addLine(contains("Launchers: OFF"));
         }
 
         @Test
@@ -179,6 +188,56 @@ class BotTest {
             bot.Process();
             bot.EndLoop();
             verify(hardwareMap, never()).get(eq(DcMotorEx.class), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("heading from the auto (0046)")
+    class HeadingFromAuto {
+
+        @BeforeEach
+        void clearHandoff() {
+            HeadingHandoff.Clear();
+        }
+
+        @Test
+        @DisplayName("an auto just ended: INIT keeps its heading, and says so")
+        void kept() {
+            addDrive();
+            addLauncher();
+            HeadingHandoff.Save(-90, HeadingHandoff.NowSeconds());
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            bot.ShowStatus();
+            assertTrue(bot.HeadingFromAuto());
+            verify(telemetry).addData("Yaw", -90.0);
+            verify(telemetry).addLine(contains("kept from the auto"));
+        }
+
+        @Test
+        @DisplayName("no auto before: INIT zeroes the heading, as before")
+        void noAuto() {
+            addDrive();
+            addLauncher();
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            bot.ShowStatus();
+            assertFalse(bot.HeadingFromAuto());
+            verify(telemetry).addData("Yaw", 0.0);
+            verify(telemetry).addLine(contains("the way the robot faces now"));
+        }
+
+        @Test
+        @DisplayName("headingFromAuto off: zeroes the heading, and the auto's is still used up")
+        void switchedOff() {
+            addDrive();
+            addLauncher();
+            properties.headingFromAuto = false;
+            HeadingHandoff.Save(-90, HeadingHandoff.NowSeconds());
+            Bot bot = new Bot(opMode, properties);
+            bot.Init();
+            assertFalse(bot.HeadingFromAuto());
+            assertTrue(Double.isNaN(HeadingHandoff.Take(HeadingHandoff.NowSeconds(), 120)));
         }
     }
 
@@ -244,7 +303,7 @@ class BotTest {
             Bot bot = new Bot(opMode, properties);
             bot.Init();
             teleOpLoop(bot);
-            verify(hardwareMap, never()).tryGet(eq(Servo.class), anyString());
+            verify(hardwareMap, never()).tryGet(Servo.class, properties.cfgIndicator);
         }
     }
 
@@ -285,18 +344,21 @@ class BotTest {
         void overrideReachesThePart() {
             addLauncher();
             properties.driveDisabled = true;
-            properties.launcherStartRpm = 4000;
+            properties.pollenLauncherRpm = 4000;
             new Bot(opMode, properties).ShowStatus();
-            verify(telemetry).addData("Launcher target RPM", "%.0f", 4000.0);
+            verify(telemetry).addData("Launcher target RPM (pollen / nectar)", "%.0f / %.0f", 4000.0,
+                    properties.nectarLauncherRpm);
         }
 
         @Test
-        @DisplayName("normal settings: the launcher starts at 1000 RPM")
+        @DisplayName("normal settings: the screen shows the BotProperties launcher speeds")
         void normalStartSpeed() {
             addLauncher();
             properties.driveDisabled = true;
+            BotProperties normal = new BotProperties();
             new Bot(opMode, properties).ShowStatus();
-            verify(telemetry).addData("Launcher target RPM", "%.0f", 1000.0);
+            verify(telemetry).addData("Launcher target RPM (pollen / nectar)", "%.0f / %.0f",
+                    normal.pollenLauncherRpm, normal.nectarLauncherRpm);
         }
     }
 
@@ -487,5 +549,84 @@ class BotTest {
             new Bot(opMode, properties).Init();
             verify(hubImu, times(1)).initialize(any());
         }
+    }
+
+    @Nested
+    @DisplayName("competition (rule R704.D)")
+    class Competition {
+
+        @Test
+        @DisplayName("practice: says how to switch competition mode on")
+        void practiceLine() {
+            assertTrue(Bot.CompetitionStatus(false, true).startsWith("PRACTICE MODE"));
+        }
+
+        @Test
+        @DisplayName("competition with the dashboard still on: tells the drive team how to turn it off")
+        void dashboardStillOn() {
+            assertTrue(Bot.CompetitionStatus(true, true).contains("Disable Dashboard"));
+        }
+
+        @Test
+        @DisplayName("competition with the dashboard off: all clear")
+        void allClear() {
+            assertEquals("Competition mode: dashboard off.", Bot.CompetitionStatus(true, false));
+        }
+
+        @Test
+        @DisplayName("every live-tuning name is a real BotProperties field, so none silently vanish")
+        void liveTuningNamesAreReal() throws Exception {
+            String[][] lists = {Bot.LiveTuningDrive, Bot.LiveTuningLauncher, Bot.LiveTuningIntake};
+            for (String[] list : lists) {
+                for (String name : list) {
+                    BotProperties.class.getField(name);
+                }
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("alliance")
+    class AllianceRead {
+
+        @Test
+        @DisplayName("no alliance sensor: blue, and the Driver Station says so")
+        void noSensorIsBlue() {
+            properties.driveDisabled = true;
+            properties.launcherDisabled = true;
+            Bot bot = new Bot(opMode, properties);
+            bot.ShowStatus();
+            verify(telemetry).addData(eq("ALLIANCE"), anyString(),
+                    eq(org.firstinspires.ftc.teamcode.types.Alliance.BLUE), contains("NO SENSOR"));
+        }
+
+        @Test
+        @DisplayName("magnet sensed: red")
+        void magnetIsRed() {
+            TouchSensor magnet = mock(TouchSensor.class);
+            when(magnet.isPressed()).thenReturn(true);
+            doReturn(magnet).when(hardwareMap).tryGet(TouchSensor.class, properties.cfgAllianceSensor);
+            properties.driveDisabled = true;
+            properties.launcherDisabled = true;
+            new Bot(opMode, properties).ShowStatus();
+            verify(telemetry).addData(eq("ALLIANCE"), anyString(),
+                    eq(org.firstinspires.ftc.teamcode.types.Alliance.RED), eq("magnet sensed"));
+        }
+    }
+
+    @Test
+    @DisplayName("launcher-only telemetry hushes the other parts, the same as quiet telemetry")
+    void launcherOnlyIsQuiet() {
+        BotProperties p = new BotProperties();
+        p.quietTelemetry = false;
+        p.launcherOnlyTelemetry = false;
+        org.junit.jupiter.api.Assertions.assertFalse(Bot.Quiet(p));
+        p.launcherOnlyTelemetry = true;
+        org.junit.jupiter.api.Assertions.assertTrue(Bot.Quiet(p));
+        p.launcherOnlyTelemetry = false;
+        p.quietTelemetry = true;
+        org.junit.jupiter.api.Assertions.assertTrue(Bot.Quiet(p));
+        // On by default since the first competition build: loop time, battery and launchers only.
+        org.junit.jupiter.api.Assertions.assertTrue(new BotProperties().launcherOnlyTelemetry);
     }
 }

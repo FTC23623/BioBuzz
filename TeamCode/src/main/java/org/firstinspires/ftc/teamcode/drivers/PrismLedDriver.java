@@ -98,8 +98,13 @@ public class PrismLedDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
         WriteLayer(layer, SUB_PRIMARY_COLOR, new byte[] {(byte) red, (byte) green, (byte) blue});
     }
 
-    /** Nothing on this layer. LEDs no layer paints stay dark. */
+    /**
+     * Nothing on this layer. LEDs no layer paints stay dark. Two writes, belt and braces
+     * (docs/decisions/0036): brightness 0 first, so a layer that keeps showing its last
+     * frame goes dark anyway, then "no animation".
+     */
     public void ClearLayer(int layer) {
+        WriteLayer(layer, SUB_BRIGHTNESS, new byte[] {0});
         WriteLayer(layer, SUB_ANIMATION, new byte[] {(byte) ANIMATION_NONE});
     }
 

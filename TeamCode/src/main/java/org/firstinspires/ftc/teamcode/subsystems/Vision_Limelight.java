@@ -7,10 +7,13 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 
 /**
@@ -22,7 +25,9 @@ import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
  *
  * <p><b>Nearest tag:</b> the tag that fills the most of the picture. Nearer tags look
  * bigger. <b>Bearing:</b> the Limelight counts right as positive ({@code tx}); we count
- * left as positive, like yaw, so the sign is flipped here. Ported from Decode
+ * left as positive, like yaw, so the sign is flipped here. <b>Only our hive's tags count</b>
+ * (docs/decisions/0021): the other alliance's are dropped before anything else looks.
+ * Ported from Decode
  * subsystems/LimelightVision.java, without the pipeline-per-alliance switch.
  */
 public class Vision_Limelight implements Vision {
@@ -36,9 +41,23 @@ public class Vision_Limelight implements Vision {
     /** Every tag in the newest picture, so the Driver Station can list them. */
     private List<LLResultTypes.FiducialResult> mInView = new ArrayList<>();
     private int mCount = 0;
+    /** Tags in the picture that are not our hive's, so they were ignored. */
+    private int mIgnored = 0;
+    /** Their ids, so the Driver Station can say which tag the camera DID see. */
+    private List<Integer> mIgnoredIds = new ArrayList<>();
     private int mTagId = 0;
     private double mBearing = 0;
+    /** Degrees to the middle of the nearest tag's group. */
+    private double mGroupBearing = 0;
     private double mRange = 0;
+    /** Inches, averaged over the nearest tag's group (docs/decisions/0048). */
+    private double mGroupRange = 0;
+    /** The nearest tag's angles in the camera, degrees, for its tilt (0049). NaN = not known. */
+    private double mTagPitch = Double.NaN;
+    private double mTagRoll = Double.NaN;
+    private double mTagYaw = Double.NaN;
+    /** Which side of the hive the robot stands, degrees, left positive. 0 = not known. */
+    private double mSide = 0;
     private double mArea = 0;
     /** What the newest result looked like, for the Driver Station. */
     private String mResultState = "none yet";
@@ -72,6 +91,8 @@ public class Vision_Limelight implements Vision {
     @Override
     public void Process() {
         mCount = 0;
+        mIgnored = 0;
+        mIgnoredIds = new ArrayList<>();
         mInView = new ArrayList<>();
         LLResult result = mLimelight.getLatestResult();
         if (!mLimelight.isConnected()) {
@@ -84,7 +105,16 @@ public class Vision_Limelight implements Vision {
             mResultState = "target found, " + result.getStaleness() + " ms old";
         }
         if (result != null && result.isValid()) {
-            List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+            List<LLResultTypes.FiducialResult> tags = new ArrayList<>();
+            int[] ourTags = mProperties.HiveTags(mOp.mAlliance);
+            for (LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
+                if (AimAssist.InRange(tag.getFiducialId(), ourTags)) {
+                    tags.add(tag);
+                } else {
+                    mIgnored = mIgnored + 1;
+                    mIgnoredIds.add(tag.getFiducialId());
+                }
+            }
             mInView = tags;
             mCount = tags.size();
             LLResultTypes.FiducialResult nearest = Biggest(tags);
@@ -92,12 +122,35 @@ public class Vision_Limelight implements Vision {
                 mTagId = nearest.getFiducialId();
                 mBearing = -nearest.getTargetXDegrees();
                 mRange = RangeInches(nearest.getTargetPoseCameraSpace());
+                YawPitchRollAngles angles = Angles(nearest.getTargetPoseCameraSpace());
+                mTagPitch = Double.NaN;
+                mTagRoll = Double.NaN;
+                mTagYaw = Double.NaN;
+                if (angles != null) {
+                    mTagPitch = angles.getPitch(AngleUnit.DEGREES);
+                    mTagRoll = angles.getRoll(AngleUnit.DEGREES);
+                    mTagYaw = angles.getYaw(AngleUnit.DEGREES);
+                }
+                mSide = SideDegrees(nearest.getCameraPoseTargetSpace(), mProperties.aimSideReversed);
                 mArea = nearest.getTargetArea();
+                List<Integer> ids = new ArrayList<>();
+                List<Double> bearings = new ArrayList<>();
+                List<Double> ranges = new ArrayList<>();
+                for (LLResultTypes.FiducialResult tag : tags) {
+                    ids.add(tag.getFiducialId());
+                    bearings.add(-tag.getTargetXDegrees());
+                    ranges.add(RangeInches(tag.getTargetPoseCameraSpace()));
+                }
+                mGroupBearing = AimAssist.GroupCenterBearing(ids, bearings, mTagId, mProperties.tagGroups);
+                // A tag with no distance (0) is left out of the average.
+                mGroupRange = AimAssist.GroupAverage(ids, ranges, mTagId, mProperties.tagGroups, true);
                 mEverSeen = true;
                 mSinceSeen.reset();
             }
         }
-        ShowStatus();
+        if (!mOp.mQuiet) {
+            ShowStatus();
+        }
     }
 
     /** The tag that fills the most of the picture, or null when the list is empty. */
@@ -132,6 +185,35 @@ public class Vision_Limelight implements Vision {
         return Math.sqrt(flat);
     }
 
+    /**
+     * Which side of the tag the camera is on, from where the Limelight works out the camera
+     * sits as seen from the tag (target space: X to the right as you face the tag, Z straight
+     * out of it). Standing to the right is X positive; we count left as positive, so the sign
+     * is flipped, and flipped again when {@code reversed}.
+     *
+     * <pre>
+     *     camera 1 m right of the tag's middle, 2 m out:  atan(1 / 2) = 26.6 deg right = -26.6
+     * </pre>
+     *
+     * @return degrees around the tag from straight in front, left positive. 0 when the
+     *     Limelight did not work out a position.
+     */
+    static double SideDegrees(Pose3D cameraPose, boolean reversed) {
+        if (cameraPose == null) {
+            return 0;
+        }
+        Position position = cameraPose.getPosition();
+        if (position == null) {
+            return 0;
+        }
+        // Z can come out negative depending on the Limelight's setup; only its size matters.
+        double side = -Math.toDegrees(Math.atan2(position.x, Math.abs(position.z)));
+        if (reversed) {
+            side = -side;
+        }
+        return side;
+    }
+
     @Override
     public boolean SeesTag() {
         if (!mEverSeen) {
@@ -157,6 +239,14 @@ public class Vision_Limelight implements Vision {
     }
 
     @Override
+    public double GetGroupBearing() {
+        if (!SeesTag()) {
+            return 0;
+        }
+        return mGroupBearing;
+    }
+
+    @Override
     public double GetRange() {
         if (!SeesTag()) {
             return 0;
@@ -165,8 +255,48 @@ public class Vision_Limelight implements Vision {
     }
 
     @Override
+    public double GetGroupRange() {
+        if (!SeesTag()) {
+            return 0;
+        }
+        return mGroupRange;
+    }
+
+    @Override
+    public double GetTagTiltDegrees() {
+        if (!SeesTag()) {
+            return Double.NaN;
+        }
+        if (mProperties.tagTiltFromRoll) {
+            return mTagRoll;
+        }
+        return mTagPitch;
+    }
+
+    /** The tag's angles from its pose, or null when the Limelight did not work them out. */
+    static YawPitchRollAngles Angles(Pose3D tagPose) {
+        if (tagPose == null) {
+            return null;
+        }
+        return tagPose.getOrientation();
+    }
+
+    @Override
+    public double GetSideDegrees() {
+        if (!SeesTag()) {
+            return 0;
+        }
+        return mSide;
+    }
+
+    @Override
     public int CountTags() {
         return mCount;
+    }
+
+    @Override
+    public int CountIgnoredTags() {
+        return mIgnored;
     }
 
     private void ShowStatus() {
@@ -181,6 +311,8 @@ public class Vision_Limelight implements Vision {
         }
         mOp.mTelemetry.addData("Limelight result", mResultState);
         mOp.mTelemetry.addData("Tags in view", mCount);
+        mOp.mTelemetry.addData("Other alliance's tags ignored", mIgnored);
+        ShowIgnored(mOp, mProperties, mIgnoredIds);
         // One line per tag, so a test with several tags shows which one was picked and why.
         for (LLResultTypes.FiducialResult tag : mInView) {
             String line = String.format("  tag %d: fills %.1f%%, %.1f deg to the %s",
@@ -194,6 +326,12 @@ public class Vision_Limelight implements Vision {
         if (SeesTag()) {
             mOp.mTelemetry.addData("Nearest tag", "id %d, %.1f deg to the %s, %.0f in away",
                     mTagId, Math.abs(mBearing), Side(mBearing), mRange);
+            mOp.mTelemetry.addData("Group middle", "%.1f deg to the %s, %.0f in away (average)",
+                    Math.abs(mGroupBearing), Side(mGroupBearing), mGroupRange);
+            mOp.mTelemetry.addData("Tag tilt", "pitch %.0f, roll %.0f, yaw %.0f deg (tipped: %.0f to %.0f on %s)",
+                    mTagPitch, mTagRoll, mTagYaw, mProperties.tagTippedMinDeg, mProperties.tagTippedMaxDeg,
+                    mProperties.tagTiltFromRoll ? "roll" : "pitch");
+            mOp.mTelemetry.addData("Robot stands", "%.0f deg to the %s of the hive", Math.abs(mSide), Side(mSide));
             mOp.mTelemetry.addData("Tag fills", "%.1f%% of the picture", mArea);
             mOp.mTelemetry.addData("Tag last seen", "%.0f ms ago", mSinceSeen.milliseconds());
         } else {
@@ -206,5 +344,21 @@ public class Vision_Limelight implements Vision {
             return "left";
         }
         return "right";
+    }
+
+    /**
+     * Which tags the camera saw but dropped, and why. The usual reason the light stays red
+     * with a tag right in front of the camera: the tag is not one of ours (wrong alliance,
+     * or last season's tag). Both cameras use this.
+     */
+    static void ShowIgnored(HydraOpMode op, BotProperties properties, List<Integer> ignoredIds) {
+        if (!ignoredIds.isEmpty()) {
+            int[] ours = properties.HiveTags(op.mAlliance);
+            op.mTelemetry.addLine("  seen but NOT OURS: " + AimAssist.TagList(ignoredIds) + ". We are "
+                    + op.mAlliance + "; ours are " + ours[0] + " to " + ours[1] + ".");
+        }
+        if (properties.visionAnyTag) {
+            op.mTelemetry.addLine("EVERY TAG COUNTS: visionAnyTag is on. Practice only. Set it false for matches.");
+        }
     }
 }

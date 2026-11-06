@@ -18,15 +18,32 @@ package org.firstinspires.ftc.teamcode.objects;
  * tests can check it on a laptop.
  */
 public class VelocityController {
-    private final double mKF;
-    private final double mKP;
-    private final double mKI;
+    private double mKF;
+    private double mKP;
+    private double mKI;
 
     private double mTargetRpm = 0;
     /** Error added up over time (RPM x seconds). Starts over when the target changes. */
     private double mErrorOverTime = 0;
 
+    // The three parts of the last power, kept so the screen and the dashboard can show
+    // which part is doing the work. Tuning is mostly reading these.
+    private double mLastError = 0;
+    private double mLastFeedForward = 0;
+    private double mLastProportional = 0;
+    private double mLastIntegral = 0;
+
     public VelocityController(double kF, double kP, double kI) {
+        mKF = kF;
+        mKP = kP;
+        mKI = kI;
+    }
+
+    /**
+     * Change the gains. Called every update, so a gain changed on the dashboard counts on
+     * the next update.
+     */
+    public void SetGains(double kF, double kP, double kI) {
         mKF = kF;
         mKP = kP;
         mKI = kI;
@@ -67,7 +84,32 @@ public class VelocityController {
         // Like Decode: the integral part can never add or remove more than full power.
         integral = Math.max(-1, Math.min(integral, 1));
 
+        mLastError = error;
+        mLastFeedForward = feedForward;
+        mLastProportional = proportional;
+        mLastIntegral = integral;
+
         double power = feedForward + proportional + integral;
         return Math.max(0, Math.min(power, 1));
+    }
+
+    /** Target minus measured, at the last update. Plus means too slow. */
+    public double GetLastError() {
+        return mLastError;
+    }
+
+    /** The kF part of the last power. */
+    public double GetLastFeedForward() {
+        return mLastFeedForward;
+    }
+
+    /** The kP part of the last power. */
+    public double GetLastProportional() {
+        return mLastProportional;
+    }
+
+    /** The kI part of the last power. */
+    public double GetLastIntegral() {
+        return mLastIntegral;
     }
 }

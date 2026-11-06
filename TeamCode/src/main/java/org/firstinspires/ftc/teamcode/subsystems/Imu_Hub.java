@@ -24,6 +24,8 @@ public class Imu_Hub implements Imu {
     private boolean mReady;
     /** Heading read this loop, so every reader in the loop sees the same number. */
     private double mYawDegrees;
+    /** Added to the hub's yaw. 0, unless TeleOp kept the heading the auto left. */
+    private double mYawOffsetDegrees;
 
     public Imu_Hub(HydraOpMode op, BotProperties properties) {
         mOp = op;
@@ -32,6 +34,7 @@ public class Imu_Hub implements Imu {
         mStartAttempted = false;
         mReady = false;
         mYawDegrees = 0;
+        mYawOffsetDegrees = 0;
     }
 
     /**
@@ -67,7 +70,9 @@ public class Imu_Hub implements Imu {
     @Override
     public void Process() {
         if (mReady) {
-            mYawDegrees = mImu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+            double hubYaw = mImu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+            // Keep the answer between -180 and 180.
+            mYawDegrees = AngleUnit.normalizeDegrees(hubYaw + mYawOffsetDegrees);
         }
     }
 
@@ -84,6 +89,15 @@ public class Imu_Hub implements Imu {
     @Override
     public void ResetYaw() {
         mImu.resetYaw();
+        mYawOffsetDegrees = 0;
         mYawDegrees = 0;
+    }
+
+    @Override
+    public void SetYaw(double yawDeg) {
+        // The hub can only reset to 0, so reset it and add the rest on every read.
+        mImu.resetYaw();
+        mYawOffsetDegrees = yawDeg;
+        mYawDegrees = AngleUnit.normalizeDegrees(yawDeg);
     }
 }

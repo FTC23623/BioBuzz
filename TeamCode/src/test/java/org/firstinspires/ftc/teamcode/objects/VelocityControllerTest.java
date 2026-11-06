@@ -114,4 +114,26 @@ class VelocityControllerTest {
             assertEquals(1, control.Calculate(0, 0.05), EPS);
         }
     }
+
+    @Test
+    @DisplayName("the three parts of the power are kept, for the screen and the dashboard")
+    void partsAreKept() {
+        VelocityController control = new VelocityController(0.0002, 0.001, 0);
+        control.SetTargetRpm(1000);
+        double power = control.Calculate(900, 0.05);
+        assertEquals(100, control.GetLastError(), EPS);
+        assertEquals(0.2, control.GetLastFeedForward(), EPS);
+        assertEquals(0.1, control.GetLastProportional(), EPS);
+        assertEquals(power,
+                control.GetLastFeedForward() + control.GetLastProportional() + control.GetLastIntegral(), EPS);
+    }
+
+    @Test
+    @DisplayName("new gains count at the next calculation")
+    void setGains() {
+        VelocityController control = new VelocityController(0.0002, 0, 0);
+        control.SetTargetRpm(1000);
+        control.SetGains(0.0005, 0, 0);
+        assertEquals(0.5, control.Calculate(1000, 0.05), EPS);
+    }
 }

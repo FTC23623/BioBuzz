@@ -53,6 +53,6 @@ class VisionSelectorTest {
         assertInstanceOf(Vision_None.class, vision);
         assertFalse(vision.SeesTag());
         vision.Init();
-        verify(telemetry).addLine(contains("No camera"));
+        verify(telemetry).addLine(contains("NO CAMERA FOUND"));
     }
 }

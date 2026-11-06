@@ -27,6 +27,40 @@ public interface Vision extends Subsystem {
     /** @return inches from the camera to the nearest tag, or 0 when the camera can't tell */
     double GetRange();
 
-    /** @return how many tags are in view right now */
+    /**
+     * @return inches from the camera, averaged over every tag in view from the nearest tag's
+     *     group (our hive), so it doesn't jump when a different tag is the biggest. 0 when
+     *     the camera can't tell. Used by steady range (docs/decisions/0048).
+     */
+    double GetGroupRange();
+
+    /**
+     * @return the nearest tag's tilt in the camera, degrees: its pitch, or its roll with
+     *     {@code tagTiltFromRoll}. NaN when no tag is seen or the camera can't tell. Used to
+     *     tell whether the hive has tipped up (docs/decisions/0049).
+     */
+    double GetTagTiltDegrees();
+
+    /**
+     * @return degrees to the middle of the tag group the nearest tag is in (see
+     *     {@code tagGroups} in BotProperties). Left is positive. 0 when no tag is seen.
+     */
+    double GetGroupBearing();
+
+    /**
+     * Which side of the hive the robot stands: degrees around the nearest tag from straight
+     * in front of it. Left is positive, as the robot faces the hive. 0 when no tag is seen or
+     * the camera can't tell. Aim uses it to pick which way to offset (docs/decisions/0044).
+     */
+    double GetSideDegrees();
+
+    /** @return how many of our alliance's tags are in view right now */
     int CountTags();
+
+    /**
+     * @return how many tags are in view right now that are NOT ours (the other alliance's),
+     *     so they were ignored. The indicator light blinks red when this is all the camera
+     *     sees: the camera works, but the alliance is probably set wrong.
+     */
+    int CountIgnoredTags();
 }

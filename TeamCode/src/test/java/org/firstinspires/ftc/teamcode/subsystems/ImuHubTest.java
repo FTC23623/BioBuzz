@@ -142,5 +142,47 @@ class ImuHubTest {
             assertEquals(0, imu.GetYaw(), 1e-9);
             verify(hubImu, times(2)).resetYaw();
         }
+
+        @Test
+        @DisplayName("SetYaw: the hub reads 0 after its reset, the heading reads the auto's, and turns from there")
+        void setYaw() {
+            when(hubImu.initialize(any())).thenReturn(true);
+            Imu_Hub imu = new Imu_Hub(op, properties);
+            imu.Init();
+            imu.SetYaw(-90);
+            assertEquals(-90, imu.GetYaw(), 1e-9);
+            hubYawReads(30);
+            imu.Process();
+            assertEquals(-60, imu.GetYaw(), 1e-9);
+            // Past 180 it comes back round to -180.
+            imu.SetYaw(170);
+            hubYawReads(20);
+            imu.Process();
+            assertEquals(-170, imu.GetYaw(), 1e-9);
+            // ResetYaw drops the auto's heading.
+            imu.ResetYaw();
+            imu.Process();
+            assertEquals(20, imu.GetYaw(), 1e-9);
+        }
+    }
+
+    @Nested
+    @DisplayName("Imu_Pinpoint")
+    class Pinpoint {
+
+        @Test
+        @DisplayName("SetYaw: the heading reads the auto's, and turns from there")
+        void setYaw() {
+            GoBildaPinpointDriver pinpoint = mock(GoBildaPinpointDriver.class);
+            when(hardwareMap.get(GoBildaPinpointDriver.class, properties.cfgPinpoint))
+                    .thenReturn(pinpoint);
+            Imu_Pinpoint imu = new Imu_Pinpoint(op, properties);
+            when(pinpoint.getHeading(AngleUnit.DEGREES)).thenReturn(10.0);
+            imu.SetYaw(90);
+            assertEquals(90, imu.GetYaw(), 1e-9);
+            when(pinpoint.getHeading(AngleUnit.DEGREES)).thenReturn(40.0);
+            imu.Process();
+            assertEquals(120, imu.GetYaw(), 1e-9);
+        }
     }
 }

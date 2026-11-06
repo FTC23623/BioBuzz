@@ -121,6 +121,28 @@ class ShapeAutosTest {
         }
     }
 
+    @Nested
+    @DisplayName("Forward: One Tile")
+    class ForwardOneTile {
+        private final List<Path> paths = new AutoForwardOneTile().BuildPaths();
+
+        @Test
+        @DisplayName("is one straight line from the start spot to one tile ahead")
+        void oneLine() {
+            assertEquals(1, paths.size());
+            assertPose(0, 0, 0, paths.get(0).get(0));
+            assertPose(24, 0, 0, paths.get(0).endPose());
+        }
+
+        @Test
+        @DisplayName("faces forward the whole way")
+        void alwaysForward() {
+            for (double t = 0; t <= 1.0; t += 0.25) {
+                assertPose(24 * t, 0, 0, paths.get(0).get(t));
+            }
+        }
+    }
+
     @Test
     @DisplayName("every auto starts at (0, 0) facing forward unless it says otherwise")
     void startPose() {

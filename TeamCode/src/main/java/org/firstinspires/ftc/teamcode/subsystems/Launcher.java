@@ -1,66 +1,104 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import java.util.Locale;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.RpmTable;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
-import org.firstinspires.ftc.teamcode.objects.VelocityController;
 
 /**
- * The nectar launcher: one wheel, held at a target speed.
+ * The two launcher wheels, pollen and nectar, each held at its own target speed.
  *
- * <p>Controls:
+ * <p>The launchers spin from START to the end: HyDrive and the autos call
+ * {@code Bot.SpinLaunchers(true)} the moment START is pressed, so the first shot is ready,
+ * and there is no button to turn them off (coach, 2026-11-02 and 2026-11-03). A launcher
+ * stopped for spinning the wrong way (docs/decisions/0029) therefore stays stopped until
+ * the OpMode is restarted.
+ *
+ * <p>Controls (operator, gamepad 2):
  * <ul>
- *   <li><b>Hold right trigger</b>: spin the launcher at the target speed. Let go: power off.
- *   <li><b>Right bumper</b>: target speed up 50 RPM. <b>Left bumper</b>: down 50 RPM.
+ *   <li><b>D-pad up / down</b>: pollen launcher 50 RPM faster / slower. With range tuning
+ *       on (below) this trims the distance table instead, by the same 50.
+ *   <li><b>D-pad right / left</b>: nectar launcher target up / down 50 RPM.
+ *   <li><b>Cross / A</b>: steady range on / off (docs/decisions/0048). One rumble on, two off.
+ *   <li><b>Circle / B</b>: always-track range on / off (docs/decisions/0049): the speed
+ *       follows the distance whenever a tipped-up tag of ours is seen, not only while aiming.
  * </ul>
  *
- * <p>The target normally starts at 1000 RPM. Every 50 ms (while the trigger is held), the
- * launcher measures the wheel's speed and asks the {@link VelocityController} for a new
- * power. Every number here is a launcher setting in BotProperties.
- * See docs/decisions/0009-launcher-velocity-control.md.
+ * <p><b>Steady range</b> ({@code steadyRange}, off unless switched on): the distance is the
+ * average of our hive's tags in view, not just the biggest one ({@code steadyRangeAverage}),
+ * and the speed only moves to the next 2-inch step once the distance is
+ * {@code launchBandHoldIn} past that step's edge, so a reading that wobbles on an edge does
+ * not flip the speed every loop.
  *
- * <p>Ported from Decode subsystems/Launcher.java and objects/LaunchMotor.java: the speed
- * loop only. Turret, vision, auto-range, the feed servo and Road Runner actions come later.
+ * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
+ * (right bumper) or launch (right trigger) and the camera sees our hive, the
+ * pollen launcher's target follows a curve of inches to RPM in 2-inch
+ * steps (2800 at 110 in, 3275 from 140 in, bending upward between), plus {@code launcherRangeTrimRpm}. The
+ * wheel is then already at the right speed when the trigger is pulled. With no tag in view
+ * the target stays where it was. {@code launcherRangeTuning = false} turns this off.
+ *
+ * <p>The targets ARE {@code pollenLauncherRpm} and {@code nectarLauncherRpm} in
+ * BotProperties. The D-pad and the distance table change them there, so the dashboard shows
+ * the change, and a change on the dashboard reaches the wheel. Every 50 ms each
+ * {@link LauncherWheel} measures its speed and picks a new power. See docs/decisions/0009
+ * and 0023.
+ *
+ * <p>The balls are let go by {@link LaunchGates}, on the driver's right trigger.
  */
 public class Launcher implements Subsystem {
     private final HydraOpMode mOp;
     private final BotProperties mProperties;
     private final Gamepad mGamepad;
-    private final DcMotorEx mMotor;
-    private final VelocityController mSpeedControl;
-    private final Debouncer mFasterButton;
-    private final Debouncer mSlowerButton;
+    /** The camera, for the speed-from-distance table. null when there is none. */
+    private final Vision mVision;
+    private final LauncherWheel mPollen;
+    private final LauncherWheel mNectar;
+    private final Debouncer mPollenFasterButton;
+    private final Debouncer mPollenSlowerButton;
+    private final Debouncer mNectarFasterButton;
+    private final Debouncer mNectarSlowerButton;
+    private final Debouncer mSteadyRangeButton;
+    private final Debouncer mAlwaysTrackButton;
     private final ElapsedTime mTimeSinceUpdate;
 
-    private boolean mTriggerHeld = false;
-    private boolean mWasRunning = false;
-    private double mMeasuredRpm = 0;
-    private double mPower = 0;
+    private boolean mSpinning = false;
+    // TeleOp only: the camera sets the speed only while the driver holds aim or launch
+    // (coach, 2026-11-03). An auto never calls HandleUserInput, so it keeps following.
+    private boolean mFromGamepad = false;
+    private boolean mDriverAiming = false;
+    /** What the distance table last said, for the Driver Station. */
+    private String mRangeStatus = "no tag seen yet";
+    /** Steady range: the step start, in inches, the speed is held on. NaN = none yet. */
+    private double mHeldStepIn = Double.NaN;
+    /** The curve, one RPM per step, looked up each loop instead of worked out. */
+    private final RpmTable mRpmTable = new RpmTable();
 
-    public Launcher(HydraOpMode op, BotProperties properties, Gamepad gamepad) {
+    /**
+     * @param vision the camera, so the pollen launcher's speed can follow the distance to the
+     *               tag. null for a robot with no camera: the table is then never used.
+     */
+    public Launcher(HydraOpMode op, BotProperties properties, Gamepad gamepad, Vision vision) {
         mOp = op;
         mProperties = properties;
         mGamepad = gamepad;
-        mMotor = op.mHardwareMap.get(DcMotorEx.class, mProperties.cfgLaunchNectar);
-        // Same set-up as Decode: our code picks the power, the encoder only measures speed.
-        mMotor.setDirection(DcMotor.Direction.REVERSE);
-        mMotor.setPower(0);
-        mMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        mMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        // FLOAT: when the power stops, the wheel coasts down instead of braking hard.
-        mMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        mVision = vision;
 
-        mSpeedControl = new VelocityController(
-                mProperties.launcherKF, mProperties.launcherKP, mProperties.launcherKI);
-        mSpeedControl.SetTargetRpm(mProperties.launcherStartRpm);
-        mFasterButton = new Debouncer(mProperties.debounce);
-        mSlowerButton = new Debouncer(mProperties.debounce);
+        // FORWARD, unless BotProperties says a motor is reversed.
+        mPollen = new LauncherWheel("Pollen launcher", op, properties, properties.cfgLaunchPollen,
+                LauncherWheel.Direction(properties.pollenLauncherReversed));
+        mNectar = new LauncherWheel("Nectar launcher", op, properties, properties.cfgLaunchNectar,
+                LauncherWheel.Direction(properties.nectarLauncherReversed));
+
+        mPollenFasterButton = new Debouncer(properties.debounce);
+        mPollenSlowerButton = new Debouncer(properties.debounce);
+        mNectarFasterButton = new Debouncer(properties.debounce);
+        mNectarSlowerButton = new Debouncer(properties.debounce);
+        mSteadyRangeButton = new Debouncer(properties.debounce);
+        mAlwaysTrackButton = new Debouncer(properties.debounce);
         mTimeSinceUpdate = new ElapsedTime();
     }
 
@@ -72,81 +110,323 @@ public class Launcher implements Subsystem {
 
     @Override
     public void HandleUserInput() {
-        mTriggerHeld = mGamepad.right_trigger_pressed;
+        mFromGamepad = true;
+        Gamepad driver = mOp.mDriverGamepad;
+        mDriverAiming = driver.right_bumper || driver.right_trigger > mProperties.trgBtnThresh;
+        // Each press counts once, however long it is held. With range tuning on, up / down
+        // nudge the whole distance table; the table then sets the target. Off, they set the
+        // target itself.
+        if (Pressed(mPollenFasterButton, mGamepad.dpad_up)) {
+            if (mProperties.launcherRangeTuning) {
+                mProperties.launcherRangeTrimRpm = mProperties.launcherRangeTrimRpm + mProperties.launcherRpmStep;
+            } else {
+                ChangePollenRpm(mProperties.launcherRpmStep);
+            }
+        }
+        if (Pressed(mPollenSlowerButton, mGamepad.dpad_down)) {
+            if (mProperties.launcherRangeTuning) {
+                mProperties.launcherRangeTrimRpm = mProperties.launcherRangeTrimRpm - mProperties.launcherRpmStep;
+            } else {
+                ChangePollenRpm(-mProperties.launcherRpmStep);
+            }
+        }
+        if (Pressed(mNectarFasterButton, mGamepad.dpad_right)) {
+            ChangeNectarRpm(mProperties.launcherRpmStep);
+        }
+        if (Pressed(mNectarSlowerButton, mGamepad.dpad_left)) {
+            ChangeNectarRpm(-mProperties.launcherRpmStep);
+        }
+        // Cross: steady range on / off, to compare the two on the field. Rumble 1 on, 2 off.
+        if (Pressed(mSteadyRangeButton, mGamepad.cross)) {
+            mProperties.steadyRange = !mProperties.steadyRange;
+            if (mProperties.steadyRange) {
+                mGamepad.rumbleBlips(1);
+            } else {
+                mGamepad.rumbleBlips(2);
+            }
+        }
+        // Circle: always-track range on / off. Rumble 1 on, 2 off.
+        if (Pressed(mAlwaysTrackButton, mGamepad.circle)) {
+            mProperties.rangeAlwaysTracks = !mProperties.rangeAlwaysTracks;
+            if (mProperties.rangeAlwaysTracks) {
+                mGamepad.rumbleBlips(1);
+            } else {
+                mGamepad.rumbleBlips(2);
+            }
+        }
+    }
 
-        // Each bumper press changes the target once, however long it is held.
-        mFasterButton.In(mGamepad.right_bumper);
-        if (mFasterButton.Out()) {
-            mFasterButton.Used();
-            ChangeTargetRpm(mProperties.launcherRpmStep);
+    /** true once per press: the button was held long enough, and this press is now used up. */
+    private static boolean Pressed(Debouncer button, boolean down) {
+        button.In(down);
+        if (button.Out()) {
+            button.Used();
+            return true;
         }
-        mSlowerButton.In(mGamepad.left_bumper);
-        if (mSlowerButton.Out()) {
-            mSlowerButton.Used();
-            ChangeTargetRpm(-mProperties.launcherRpmStep);
-        }
+        return false;
     }
 
     @Override
     public void Process() {
+        FollowDistance();
         // Update every 50 ms, like Decode. Measuring more often than that gives noisy speeds.
         double secondsPassed = mTimeSinceUpdate.seconds();
         if (secondsPassed * 1000 >= mProperties.launcherUpdateMs) {
             mTimeSinceUpdate.reset();
             Update(secondsPassed);
         }
-        ShowStatus();
-    }
-
-    /** Measure the speed and set the power. Process() calls this every 50 ms. */
-    void Update(double secondsPassed) {
-        mMeasuredRpm = ReadRpm();
-
-        if (mTriggerHeld) {
-            if (!mWasRunning) {
-                // Starting again: don't carry over error from the last time it ran.
-                mSpeedControl.ClearIntegral();
-            }
-            mPower = mSpeedControl.Calculate(mMeasuredRpm, secondsPassed);
-        } else {
-            mPower = 0;
+        if (!mOp.mQuiet) {
+            ShowStatus();
+        } else if (mProperties.launcherOnlyTelemetry) {
+            // Everything else is hushed; the launchers keep their numbers, for tuning.
+            ShowStats();
         }
-        mWasRunning = mTriggerHeld;
-        mMotor.setPower(mPower);
     }
 
-    /** Raise or lower the target speed, staying between 0 and the maximum. */
-    public void ChangeTargetRpm(double change) {
-        double newTarget = mSpeedControl.GetTargetRpm() + change;
-        newTarget = Math.max(0, Math.min(newTarget, mProperties.launcherMaxRpm));
-        mSpeedControl.SetTargetRpm(newTarget);
+    /**
+     * The pollen launcher's target from the distance to the tag, while a tag of ours is in
+     * view. With no tag the target stays where it was, so a shot can still be taken.
+     */
+    private void FollowDistance() {
+        if (!mProperties.launcherRangeTuning) {
+            mRangeStatus = "OFF (launcherRangeTuning): D-pad sets the speed";
+            return;
+        }
+        if (mFromGamepad && !mDriverAiming) {
+            // TeleOp, no aim button down: the speed holds, unless always-track is on and a
+            // tag of ours is seen, tipped up (docs/decisions/0049).
+            String why = AlwaysTrackBlocked();
+            if (why != null) {
+                mRangeStatus = String.format(Locale.US, "not tracking (%s), holding %.0f",
+                        why, mProperties.pollenLauncherRpm);
+                return;
+            }
+        }
+        if (mVision == null || !mVision.SeesTag()) {
+            // The held step is forgotten: the next tag starts on its own step.
+            mHeldStepIn = Double.NaN;
+            mRangeStatus = String.format(Locale.US, "no tag in view, holding %.0f", mProperties.pollenLauncherRpm);
+            return;
+        }
+        boolean steady = mProperties.steadyRange;
+        double rangeIn = mVision.GetRange();
+        if (steady && mProperties.steadyRangeAverage) {
+            rangeIn = mVision.GetGroupRange();
+        }
+        if (rangeIn <= 0) {
+            // The camera sees the tag but could not work out how far it is.
+            mRangeStatus = String.format(Locale.US, "tag seen, no distance, holding %.0f", mProperties.pollenLauncherRpm);
+            return;
+        }
+        double tableRpm;
+        String mode;
+        if (steady && mProperties.launchBandHoldIn > 0) {
+            mHeldStepIn = StepFor(rangeIn, mHeldStepIn, mProperties);
+            mRpmTable.UpdateFrom(mProperties);
+            tableRpm = mRpmTable.Rpm(mHeldStepIn);
+            mode = String.format(Locale.US, "STEADY (%d tags, step %.0f in) ", mVision.CountTags(), mHeldStepIn);
+        } else {
+            mHeldStepIn = Double.NaN;
+            mRpmTable.UpdateFrom(mProperties);
+            tableRpm = mRpmTable.Rpm(StepStart(rangeIn, mProperties));
+            if (steady) {
+                mode = String.format(Locale.US, "STEADY (%d tags) ", mVision.CountTags());
+            } else {
+                mode = "raw ";
+            }
+        }
+        if (mFromGamepad && !mDriverAiming) {
+            // Following with no aim button down: always-track did it.
+            mode = "ALWAYS " + mode;
+        }
+        mProperties.pollenLauncherRpm = KeepInRange(tableRpm + mProperties.launcherRangeTrimRpm);
+        mRangeStatus = String.format(Locale.US, "%s%.0f in -> %.0f RPM, trim %+.0f = %.0f",
+                mode, rangeIn, tableRpm, mProperties.launcherRangeTrimRpm, mProperties.pollenLauncherRpm);
     }
 
-    public double GetTargetRpm() {
-        return mSpeedControl.GetTargetRpm();
+    /**
+     * Why always-track may not follow the distance right now, or null when it may.
+     * Only asked in TeleOp with no aim button down.
+     */
+    private String AlwaysTrackBlocked() {
+        if (!mProperties.rangeAlwaysTracks) {
+            return "hold aim or launch";
+        }
+        if (mVision == null || !mVision.SeesTag()) {
+            return "always-track: no tag";
+        }
+        if (mProperties.rangeNeedsTipped && !Tipped(mVision.GetTagTiltDegrees(), mProperties)) {
+            return String.format(Locale.US, "always-track: tag not tipped, tilt %.0f", mVision.GetTagTiltDegrees());
+        }
+        return null;
     }
 
-    public double GetMeasuredRpm() {
-        return mMeasuredRpm;
+    /**
+     * true when a tag's tilt says the hive has tipped up: from tagTippedMinDeg to
+     * tagTippedMaxDeg. An unknown tilt (NaN) is never tipped.
+     */
+    static boolean Tipped(double tiltDeg, BotProperties p) {
+        if (Double.isNaN(tiltDeg)) {
+            return false;
+        }
+        return tiltDeg >= p.tagTippedMinDeg && tiltDeg <= p.tagTippedMaxDeg;
     }
 
-    /** true when the wheel is spinning within 50 RPM of the target. */
+    /**
+     * Steady range: the step the speed sits on, in inches, with some give at the edges. The
+     * step only changes once the distance is {@code launchBandHoldIn} past its edge.
+     *
+     * <pre>
+     *     steps of 2 in, hold 1 in, held on the 120 step (120 to 122):
+     *     119.2 -> stays 120    122.8 -> stays 120    118.9 -> 118    123.1 -> 122
+     * </pre>
+     *
+     * @param heldStepIn the step held last loop, or NaN for none yet
+     * @return the start of the step to use, in inches
+     */
+    static double StepFor(double rangeIn, double heldStepIn, BotProperties p) {
+        double plainStep = StepStart(rangeIn, p);
+        if (Double.isNaN(heldStepIn)) {
+            return plainStep;
+        }
+        double lowEdge = heldStepIn - p.launchBandHoldIn;
+        double highEdge = heldStepIn + p.launchBandIn + p.launchBandHoldIn;
+        if (rangeIn >= lowEdge && rangeIn <= highEdge) {
+            return heldStepIn;
+        }
+        return plainStep;
+    }
+
+    /**
+     * Where the step a distance falls in starts, in inches. Nearer than nearIn is nearIn,
+     * farther than farIn is farIn, so the ends never change step.
+     */
+    static double StepStart(double rangeIn, BotProperties p) {
+        if (rangeIn <= p.launchNearIn) {
+            return p.launchNearIn;
+        }
+        if (rangeIn >= p.launchFarIn) {
+            return p.launchFarIn;
+        }
+        if (p.launchBandIn <= 0) {
+            return rangeIn;
+        }
+        double steps = Math.floor((rangeIn - p.launchNearIn) / p.launchBandIn);
+        return p.launchNearIn + steps * p.launchBandIn;
+    }
+
+    /**
+     * The RPM for a distance, from the curve through the two measured shots in BotProperties,
+     * in steps of launchBandIn inches:
+     *
+     * <pre>
+     *     step start = nearIn + whole steps past nearIn
+     *     rpm = near + (far - near) x ((step start - nearIn) / (farIn - nearIn)) ^ curve
+     *
+     *     near 110 in 2800, far 140 in 3275, curve 1.1, steps of 2 in:
+     *     110: 2800   112: 2824   120: 2942   130: 3104   139: 3240   140 and up: 3275
+     * </pre>
+     *
+     * Nearer than nearIn: the near speed. Farther than farIn: the far speed.
+     *
+     * @return whole RPM
+     */
+    public static double RpmForRange(double rangeIn, BotProperties p) {
+        return RpmForStep(StepStart(rangeIn, p), p);
+    }
+
+    /**
+     * The RPM on the curve for a step that starts at stepStartIn inches, worked out. The
+     * launcher itself looks it up in an {@link RpmTable}; this is for tests and tools.
+     *
+     * @return whole RPM
+     */
+    static double RpmForStep(double stepStartIn, BotProperties p) {
+        return RpmTable.CurveRpm(stepStartIn, p.launchNearIn, p.launchNearRpm,
+                p.launchFarIn, p.launchFarRpm, p.launchCurve);
+    }
+
+    /** Measure both speeds and set both powers. Process() calls this every 50 ms. */
+    void Update(double secondsPassed) {
+        mPollen.Update(mProperties.pollenLauncherRpm, secondsPassed);
+        mNectar.Update(mProperties.nectarLauncherRpm, secondsPassed);
+    }
+
+    /**
+     * true: both wheels spin at their targets. false: both off. HyDrive and the autos call
+     * this with true at START. Nothing on a gamepad calls it with false.
+     */
+    public void SetSpinning(boolean spinning) {
+        mSpinning = spinning;
+        mPollen.SetOn(spinning);
+        mNectar.SetOn(spinning);
+    }
+
+    public boolean IsSpinning() {
+        return mSpinning;
+    }
+
+    /** Raise or lower the pollen target, staying between 0 and the maximum. */
+    public void ChangePollenRpm(double change) {
+        mProperties.pollenLauncherRpm = KeepInRange(mProperties.pollenLauncherRpm + change);
+    }
+
+    /** Raise or lower the nectar target, staying between 0 and the maximum. */
+    public void ChangeNectarRpm(double change) {
+        mProperties.nectarLauncherRpm = KeepInRange(mProperties.nectarLauncherRpm + change);
+    }
+
+    private double KeepInRange(double rpm) {
+        return Math.max(0, Math.min(rpm, mProperties.launcherMaxRpm));
+    }
+
+    public double GetPollenTargetRpm() {
+        return mProperties.pollenLauncherRpm;
+    }
+
+    public double GetNectarTargetRpm() {
+        return mProperties.nectarLauncherRpm;
+    }
+
+    /** true when the pollen wheel spins at least this fast, or is not in the configuration. */
+    public boolean PollenAtLeast(double rpm) {
+        if (!mPollen.IsPresent()) {
+            return true;
+        }
+        return mPollen.GetMeasuredRpm() >= rpm;
+    }
+
+    public double GetPollenMeasuredRpm() {
+        return mPollen.GetMeasuredRpm();
+    }
+
+    public double GetNectarMeasuredRpm() {
+        return mNectar.GetMeasuredRpm();
+    }
+
+    /**
+     * true when every wheel on the robot is spinning within launcherAtSpeedRpm of its target.
+     * A wheel missing from the robot configuration does not count, so it can't hold up a launch.
+     * With neither wheel there, false.
+     */
     public boolean AtSpeed() {
-        double difference = Math.abs(GetTargetRpm() - mMeasuredRpm);
-        return difference <= mProperties.launcherAtSpeedRpm;
-    }
-
-    /** The encoder counts ticks per second. Turn that into turns per minute (RPM). */
-    private double ReadRpm() {
-        double ticksPerSecond = mMotor.getVelocity();
-        double turnsPerSecond = ticksPerSecond / mProperties.launcherTicksPerRev;
-        return turnsPerSecond * 60;
+        if (!mPollen.IsPresent() && !mNectar.IsPresent()) {
+            return false;
+        }
+        boolean pollenReady = !mPollen.IsPresent() || mPollen.AtSpeed();
+        boolean nectarReady = !mNectar.IsPresent() || mNectar.AtSpeed();
+        return pollenReady && nectarReady;
     }
 
     private void ShowStatus() {
-        mOp.mTelemetry.addData("Launcher target RPM", "%.0f", GetTargetRpm());
-        mOp.mTelemetry.addData("Launcher actual RPM", "%.0f", mMeasuredRpm);
-        mOp.mTelemetry.addData("Launcher power", "%.2f", mPower);
-        mOp.mTelemetry.addData("Launcher at speed", AtSpeed());
+        mOp.mTelemetry.addLine("Launchers (gamepad 2): always on from START. D-pad up/down pollen, right/left nectar");
+        ShowStats();
+    }
+
+    /** The numbers only: speed from distance, and each wheel's speeds and power. */
+    private void ShowStats() {
+        mOp.mTelemetry.addData("Launcher speed from distance", mRangeStatus);
+        mPollen.ShowStatus();
+        mNectar.ShowStatus();
     }
 }
