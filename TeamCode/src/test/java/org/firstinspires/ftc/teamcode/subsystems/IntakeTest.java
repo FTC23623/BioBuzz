@@ -111,7 +111,7 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("square held: both run backward at their reverse speeds, even when off")
+    @DisplayName("square held: only the intake runs backward, even when off; the transfer is left alone")
     void squareReverses() {
         properties.intakeReverseRpm = 120;
         properties.transferReverseRpm = 180;
@@ -119,7 +119,17 @@ class IntakeTest {
         loop();
         assertTrue(rollers.IsReversing());
         assertEquals(-TicksPerSecond(120), intake.velocity, EPS);
-        assertEquals(-TicksPerSecond(180), transfer.velocity, EPS);
+        assertEquals(0, transfer.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("square held while intaking: the intake runs backward, the transfer keeps going forward")
+    void squareLeavesARunningTransferOn() {
+        tap(down -> gamepad.left_bumper = down);
+        gamepad.square = true;
+        loop();
+        assertEquals(-TicksPerSecond(properties.intakeReverseRpm), intake.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
     }
 
     @Test
@@ -201,7 +211,7 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("launching with the rollers off: intake and transfer both run forward, at their feed shares (intake half, transfer 30%)")
+    @DisplayName("launching with the rollers off: intake and transfer both run forward, at their feed shares (intake half, transfer 60%)")
     void launchFeedsBoth() {
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
@@ -229,7 +239,7 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top; the launch feed is half of it for the intake and 30% for the transfer")
+    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top; the launch feed is half of it for the intake and 60% for the transfer")
     void speedsFitTheMotor() {
         assertEquals(1150, properties.intakeMaxRpm, EPS);
         assertTrue(properties.intakeRpm <= properties.intakeMaxRpm);
@@ -237,16 +247,21 @@ class IntakeTest {
         assertTrue(properties.intakeReverseRpm <= properties.intakeMaxRpm);
         assertTrue(properties.transferReverseRpm <= properties.intakeMaxRpm);
         assertEquals(0.5, properties.launchFeedIntakeScale, EPS);
-        assertEquals(0.3, properties.launchFeedTransferScale, EPS);
+        assertEquals(0.6, properties.launchFeedTransferScale, EPS);
     }
 
     @Test
-    @DisplayName("square still wins while launching: reverse is for jams")
+    @DisplayName("square while launching: the intake runs backward, the transfer keeps feeding")
     void reverseWinsOverLaunch() {
         when(gates.IsFullyOpen()).thenReturn(true);
+        loop();
+        double feedSpeed = TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale);
+        assertEquals(feedSpeed, transfer.velocity, EPS);
+
         gamepad.square = true;
         loop();
-        assertEquals(-TicksPerSecond(properties.transferReverseRpm), transfer.velocity, EPS);
+        assertEquals(-TicksPerSecond(properties.intakeReverseRpm), intake.velocity, EPS);
+        assertEquals(feedSpeed, transfer.velocity, EPS);
     }
 
     @Test
@@ -284,13 +299,15 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("square still wins while the gate opens: reverse is for jams")
+    @DisplayName("square while the gate opens: the intake runs backward, and a running transfer does not pause")
     void reverseWinsOverGateOpening() {
+        tap(down -> gamepad.left_bumper = down);
         when(gates.IsOpen()).thenReturn(true);
         when(gates.IsFullyOpen()).thenReturn(false);
         gamepad.square = true;
         loop();
-        assertEquals(-TicksPerSecond(properties.transferReverseRpm), transfer.velocity, EPS);
+        assertEquals(-TicksPerSecond(properties.intakeReverseRpm), intake.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
     }
 
     // ---- Auto-reject an extra ball (0040) ----
@@ -412,14 +429,14 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("auto launch: the transfer feeds at 30%, the intake roller stays off")
-    void autoLaunchFeedsAtThirtyPercent() {
+    @DisplayName("auto launch: the transfer feeds at 60%, the intake roller stays off")
+    void autoLaunchFeedsAtSixtyPercent() {
         rollers.SetOn(true);
         rollers.SetIntakeRollerOn(false);
         when(gates.IsFullyOpen()).thenReturn(true);
         rollers.Process();
-        assertEquals(0.3, properties.launchFeedTransferScale, EPS);
-        assertEquals(TicksPerSecond(properties.transferRpm * 0.3), transfer.velocity, EPS);
+        assertEquals(0.6, properties.launchFeedTransferScale, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm * 0.6), transfer.velocity, EPS);
         assertEquals(0, intake.power, EPS);
     }
 

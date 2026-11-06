@@ -626,6 +626,7 @@ class BotTest {
         p.launcherOnlyTelemetry = false;
         p.quietTelemetry = true;
         org.junit.jupiter.api.Assertions.assertTrue(Bot.Quiet(p));
-        org.junit.jupiter.api.Assertions.assertFalse(new BotProperties().launcherOnlyTelemetry);
+        // On by default since the first competition build: loop time, battery and launchers only.
+        org.junit.jupiter.api.Assertions.assertTrue(new BotProperties().launcherOnlyTelemetry);
     }
 }
