@@ -191,7 +191,7 @@ class VisualizerExportTest {
         PedroAuto auto = new AutoStrategyA();
         String json = VisualizerFile(auto, auto.FieldStartBlue());
         assertTrue(json.contains("\"version\": \"2.0.0\""));
-        assertTrue(json.contains("\"startPoint\": {\"x\":103.75,\"y\":9.00,\"headingDeg\":-90.00}"), json);
+        assertTrue(json.contains("\"startPoint\": {\"x\":55.75,\"y\":9.00,\"headingDeg\":-90.00}"), json);
         assertTrue(json.contains("\"name\":\"LAUNCH\""));
         assertTrue(json.contains("\"name\":\"FLOWER\""));
         assertTrue(json.contains("\"kind\":\"atomic\""));

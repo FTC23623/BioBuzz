@@ -27,13 +27,15 @@ they need one more number to be drawn on the field: where they start.
 
   | Auto | Blue start (x, y, heading) |
   |---|---|
-  | Garden Side Auto A | (103.75, 9, -90): bottom wall, east of the seam at 94.75 |
+  | Garden Side Auto A | (55.75, 9, -90): bottom wall, east of the seam at 46.75 |
   | Flower Side Auto B | (55.75, 132.5, 90): top wall, east of the seam at 46.75 |
   | Flower Side Auto C | (55.75, 132.5, 90) |
 
   Which wall: B and C only stay on the field from the top wall, and from there their
   FLOWER stops land in front of the top and left wall cells. A faces the opposite way, the
   bottom wall. This matches the TeleOp hand-over (0046): the blue driver on the east wall.
+  A was first put beside the bottom-wall cell (x 103.75); the coach moved it two tiles left
+  the same day. From there its FLOWER stops land at the left and top wall cells too.
 - **Our autos → visualizer**: `VisualizerExportTest` writes `TeamCode/build/visualizer/
   <auto> Blue.pp` and `... Red.pp` every test run, from the autos' own `BuildPaths()`.
   LAUNCH, LAUNCH WHEN TAG SEEN, FLOWER, INTAKE_ON and INTAKE_OFF go in as named waits.

@@ -28,17 +28,18 @@ public class AutoStrategyA extends PedroAuto {
     /** The name on the Driver Station. The backups add their color to it. */
     public static final String NAME = "Garden Side Auto A";
 
-    /** The robot starts facing the driver's left (was -90 until 2026-11-05: backwards). */
     /**
-     * Garden side: front against the bottom wall, in front of the cell there, on the
-     * tile east of the seam (x 94.75), toward the blue alliance wall. The robot is 18 x 18, so its center is
-     * 9 in off the wall and 9 in from the seam. Blue; red is turned half a turn (0051).
+     * Garden side: front against the bottom wall, on the tile east of the seam at x 46.75
+     * (coach, 2026-11-06: two tiles left of the first guess at 94.75). The robot is 18 x 18,
+     * so its center is 9 in off the wall and 9 in from the seam. Blue; red is turned half a
+     * turn (0051).
      */
     @Override
     protected Pose FieldStartBlue() {
-        return new Pose(103.75, 9, Math.toRadians(-90));
+        return new Pose(55.75, 9, Math.toRadians(-90));
     }
 
+    /** The robot starts facing the driver's left (was -90 until 2026-11-05: backwards). */
     @Override
     protected double StartFacingDeg() {
         return 90;

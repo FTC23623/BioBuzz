@@ -28,7 +28,6 @@ public class AutoStrategyB extends PedroAuto {
     /** The name on the Driver Station. The backups add their color to it. */
     public static final String NAME = "Flower Side Auto B";
 
-    /** The robot starts facing the driver's right (was 90 until 2026-11-05: backwards). */
     /**
      * Flower side: front against the top wall, in front of the cell there, on the tile
      * east of the seam (x 46.75), toward the blue alliance wall. The robot is 18 x 18, so its center is
@@ -39,6 +38,7 @@ public class AutoStrategyB extends PedroAuto {
         return new Pose(55.75, 132.5, Math.toRadians(90));
     }
 
+    /** The robot starts facing the driver's right (was 90 until 2026-11-05: backwards). */
     @Override
     protected double StartFacingDeg() {
         return -90;
