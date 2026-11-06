@@ -118,14 +118,14 @@ public class BotProperties {
      * (no dashboard) always has the full screen. INIT shows everything either way
      * (docs/decisions/0041).
      */
-    public boolean quietTelemetry = true;
+    public boolean quietTelemetry = false;
     /**
      * true: like quietTelemetry, but the launchers keep their lines: target, actual and error
      * RPM, power and its parts, at speed, and the speed from distance. For tuning the
      * launchers with the loop time as low as it goes. Off by default; on the dashboard's Drive
      * group, next to quietTelemetry (docs/decisions/0041).
      */
-    public boolean launcherOnlyTelemetry = false;
+    public boolean launcherOnlyTelemetry = true;
     /**
      * How often the battery voltage is read, in milliseconds. Each read is an extra trip to
      * the hub, so not every loop. 250 = four times a second, more than enough for a graph.
@@ -287,7 +287,7 @@ public class BotProperties {
      * wheel is already at speed when aiming starts. Gamepad 2 circle flips it. false (today):
      * only while aiming, as before.
      */
-    public boolean rangeAlwaysTracks = false;
+    public boolean rangeAlwaysTracks = true;
     /**
      * With rangeAlwaysTracks: only follow while the tag reads as tipped up, by its tilt
      * below. The hive's tags can be seen before the basket tips (coach, 2026-11-05). While
@@ -373,7 +373,7 @@ public class BotProperties {
      * The transfer's share while feeding a launch: 0.3. At half the balls ran into each
      * other at the launcher (coach, 2026-11-03).
      */
-    public double launchFeedTransferScale = 0.3;
+    public double launchFeedTransferScale = 0.6;
     // Reverse is SLOWER than forward on purpose: at full speed one tap of square emptied the
     // robot. About a third of forward lets the operator let out one ball at a time (coach,
     // 2026-11-02). Both are on the dashboard's Intake group: tune them there, then write the
@@ -392,7 +392,7 @@ public class BotProperties {
     /** true: reject an extra ball by itself. false: the operator watches for it. */
     public boolean pollenAutoReject = true;
     /** Pollen must stay detected this long while intaking, in seconds, before a reject. */
-    public double pollenRejectAfterSeconds = 1.0;
+    public double pollenRejectAfterSeconds = 0.75;
     /** How long the intake runs backward (transfer forward) to spit the ball out, in seconds. */
     public double pollenRejectSeconds = 0.75;
     /** How much one D-pad press changes a roller's speed in Test: Motor Tuning. Same as the launchers'. */
@@ -563,9 +563,9 @@ public class BotProperties {
 
     // Speed control gains. Tune on the robot: kF first, then kP, then kI (see 0009).
     /** Feed forward: power per RPM of target. Does most of the work. 0.000242 x 2475 = 0.60. */
-    public double launcherKF = 0.000242;
+    public double launcherKF = 0.0002;
     /** Proportional: extra power per RPM the wheel is too slow. */
-    public double launcherKP = 0.003;
+    public double launcherKP = 0.0025;
     /**
      * Integral: extra power for being too slow for a long time. Starts at 0: Decode's was
      * 0.0001, but FTCLib capped it so hard it never added more than 0.0001 power. Raise it
@@ -627,7 +627,7 @@ public class BotProperties {
      * right, for the pollen launcher sitting left of the camera (2026-11-03), until shots from
      * the right side missed. Used by aim assist, the launch lock and the autos' aim.
      */
-    public double aimHiveBearingDeg = 1.0;
+    public double aimHiveBearingDeg = 3.0;
     /**
      * true: the driver's launch trigger also turns the robot to face the middle of our hive's
      * tags while it is held, the way an auto aims before LAUNCH_WHEN_TAG_SEEN (coach,

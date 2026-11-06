@@ -125,7 +125,7 @@ public class Intake implements Subsystem {
         WatchForAnExtraBall();
         if (mReverseHeld) {
             mIntake.SetRpm(-mProperties.intakeReverseRpm);
-            mTransfer.SetRpm(-mProperties.transferReverseRpm);
+//            mTransfer.SetRpm(-mProperties.transferReverseRpm);
         } else if (IsGateOpening()) {
             // The driver just pulled the trigger and the gate is still swinging open. Stop
             // the transfer so it is not pushing a ball against the gate. The intake drops to

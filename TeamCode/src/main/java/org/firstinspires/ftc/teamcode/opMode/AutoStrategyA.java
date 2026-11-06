@@ -53,71 +53,41 @@ public class AutoStrategyA extends PedroAuto {
 
     @Override
     protected List<Path> BuildPaths() {
-        // Half speed while we check this path on the field. Put it back to 1 for matches.
-        botProperties.autoSpeedScale = 0.5;
+        Pose spot1 = new Pose(-11.0, -0.1);   // heading -1 deg
+        Pose spot2 = new Pose(-38.5, -27.6);   // heading -89 deg
+        Pose spot3 = new Pose(-38.7, -41.8);   // heading -91 deg
+        Pose spot4 = new Pose(-35.9, -28.1);   // heading -88 deg
+        Pose spot5 = new Pose(-111.1, -20.6);   // heading -185 deg
+        Pose spot6 = new Pose(-111.1, 5.1);   // heading -184 deg
+        Pose spot7 = new Pose(-119.6, -6.2);   // heading -177 deg
+        Pose spot8 = new Pose(-116.3, 3.8);   // heading -180 deg
+        Pose spot9 = new Pose(-106.3, -31.2);   // heading -159 deg
 
-        double length = botProperties.frameLengthIn;
-        double width = botProperties.frameWidthIn;
-        double faceWall = 0;
-        double faceRight = Math.toRadians(-90);
-        double faceMiddle = Math.toRadians(-180);
-        // Heading grows turning left, so add.
-        double faceTag = faceMiddle + Math.toRadians(aimTurnDeg);
-
-        // A spinning robot sweeps a circle out to its corners. Its front starts on the wall, so
-        // it must back up by (half the diagonal - half the length) before it can turn.
-        double halfDiagonal = Math.hypot(length, width) / 2;
-        double distanceFromWall = halfDiagonal - (length / 2) + botProperties.turnClearanceIn;
-
-        // After turning right 90, the LEFT side faces the wall. The front was half the length
-        // from the center, the left side is half the width, so this x puts the left side on it.
-        double leftSideOnWallX = (length / 2) - (width / 2);
-
-        // Right of the start is minus y, so every garden y is negative.
-        Pose start = StartPose();
-        Pose launchSpot = new Pose(-distanceFromWall, 0);
-        Pose turned = new Pose(-distanceFromWall, -turnSlideIn);
-        Pose collectStart = new Pose(leftSideOnWallX, -collectStartIn);
-        Pose collectEnd = new Pose(leftSideOnWallX, -collectEndIn);
-        Pose offWallAgain = new Pose(-distanceFromWall, -collectEndIn);
-        // Sliding back toward the start adds to y.
-        Pose turnedAgain = new Pose(-distanceFromWall, -collectEndIn + flowerClearanceIn);
-        Pose nearMiddle = new Pose(-distanceFromWall - driveToMiddleIn, -collectEndIn + flowerClearanceIn);
-        // Facing the middle, the robot's right is plus y.
-        Pose strafed = new Pose(nearMiddle.x(), nearMiddle.y() + strafeRightIn - aimTurnSlideIn);
-        Pose aimed = new Pose(nearMiddle.x(), nearMiddle.y() + strafeRightIn);
-
-        // Step 1: back up off the wall, still facing it.
-        Path backUpToLaunch = line(start, launchSpot).constant(faceWall);
-        // Step 3: turn right while sliding a little right. Off the wall, so no corner hits.
-        Path turnRightOffWall = line(launchSpot, turned).heading(Interpolator.linear(faceWall, faceRight));
-        // Step 4: drive right and toward the wall, ending with the left side on it at the garden.
-        Path driveToGarden = line(turned, collectStart).constant(faceRight);
-        // Step 5: drive forward along the wall to collect pollen.
-        Path collectPollen = line(collectStart, collectEnd).constant(faceRight);
-        // Step 6: move off the wall again, far enough to turn.
-        Path moveOffWall = line(collectEnd, offWallAgain).constant(faceRight);
-        // Step 7: turn right again to face the middle, sliding toward the start to miss the flower.
-        Path turnToMiddle = line(offWallAgain, turnedAgain).heading(Interpolator.linear(faceRight, faceMiddle));
-        // Step 8: drive forward, toward the middle of the field.
-        Path driveToMiddle = line(turnedAgain, nearMiddle).constant(faceMiddle);
-        // Step 9: slide right, still facing the far side.
-        Path strafeRight = line(nearMiddle, strafed).constant(faceMiddle);
-        // Step 10: turn left 20, toward the hive, to see the AprilTag, sliding the last bit of the strafe.
-        Path aimAtTag = line(strafed, aimed).heading(Interpolator.linear(faceMiddle, faceTag));
+        Path toSpot1 = line(StartPose(), spot1).constant(Math.toRadians(-1));
+        Path toSpot2 = line(spot1, spot2).heading(Interpolator.linear(Math.toRadians(-1), Math.toRadians(-89)));
+        Path toSpot3 = line(spot2, spot3).heading(Interpolator.linear(Math.toRadians(-89), Math.toRadians(-91)));
+        Path toSpot4 = line(spot3, spot4).heading(Interpolator.linear(Math.toRadians(-91), Math.toRadians(-88)));
+        Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-88), Math.toRadians(-185)));
+        Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-185), Math.toRadians(-184)));
+        Path toSpot7 = line(spot6, spot7).heading(Interpolator.linear(Math.toRadians(-184), Math.toRadians(-177)));
+        Path toSpot8 = line(spot7, spot8).heading(Interpolator.linear(Math.toRadians(-177), Math.toRadians(-180)));
+        Path toSpot9 = line(spot8, spot9).heading(Interpolator.linear(Math.toRadians(-180), Math.toRadians(-159)));
 
         List<Path> paths = new ArrayList<>();
-        paths.add(backUpToLaunch);
-        paths.add(LAUNCH);              // Step 2: stop and launch
-        paths.add(turnRightOffWall);
-        paths.add(driveToGarden);
-        paths.add(collectPollen);
-        paths.add(moveOffWall);
-        paths.add(turnToMiddle);
-        paths.add(driveToMiddle);
-        paths.add(strafeRight);
-        paths.add(aimAtTag);
-        paths.add(LAUNCH_WHEN_TAG_SEEN);    // Step 11: wait for the tag, aim, then launch
+        paths.add(toSpot1);
+        paths.add(LAUNCH);
+        paths.add(toSpot2);
+        paths.add(toSpot3);
+        paths.add(FLOWER);
+        paths.add(toSpot4);
+        paths.add(toSpot5);
+        paths.add(toSpot6);
+        paths.add(LAUNCH);
+        paths.add(toSpot7);
+        paths.add(FLOWER);
+        paths.add(toSpot8);
+        paths.add(LAUNCH);
+        paths.add(toSpot9);
         return paths;
     }
 }
