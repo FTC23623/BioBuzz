@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.TagPosition;
 
 /**
  * The Vision for a robot with no camera. It never sees a tag, so aim assist does nothing,
@@ -68,6 +69,12 @@ public class Vision_None implements Vision {
     @Override
     public double GetTagTiltDegrees() {
         return Double.NaN;
+    }
+
+    /** This camera doesn't work out a position: never known. */
+    @Override
+    public TagPosition GetPosition() {
+        return TagPosition.UNKNOWN;
     }
 
     @Override

@@ -11,7 +11,7 @@ Change these, build green, deploy, then INIT HyDrive once and read section 2 top
 
 | Setting | Where | For an event | Why |
 |---|---|---|---|
-| `competitionMode` | `BotProperties.java`, last line | `true` | Rule R704.D: nothing may stream to FTC Dashboard in a match. The code stops sending; the dashboard itself is switched off in the Robot Controller app (menu, Disable Dashboard). INIT must then say `Competition mode: dashboard off.` (0022) |
+| `competitionMode` | set by the build | match build (`matchBuild=true`) | Rule R704.D: nothing may stream to FTC Dashboard in a match. A match build is always competition mode (0053); the dashboard itself is switched off in the Robot Controller app (menu, Disable Dashboard). INIT must then say `Competition mode: dashboard off.` and `Match build: ...` (0022) |
 | `botProperties.autoSpeedScale = 0.5` | any auto's `BuildPaths()` | none left (2026-11-06) | Half speed is for checking a path on the field. If one comes back, take it out once that path has run clean three times at full speed. INIT says `SLOW AUTO` while one is there. |
 | `testLog`, `testTelemetry`, `launcherOnlyTelemetry` | `BotProperties.java` | `false` | Testing only, they cost loop time. See `match-day-settings.md`. |
 | `frameLengthIn`, `frameWidthIn` | `BotProperties.java` | the competition frame, bumpers on | StrategyA backs up by half the frame's diagonal before its first turn. Measure, write the numbers in, then watch that turn clear the wall. |

@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.ShotTracker;
+import org.firstinspires.ftc.teamcode.objects.TagPosition;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
 /**
@@ -59,6 +60,11 @@ public class TestLog implements Subsystem {
     /** The camera's distance when the last shot started, inches. */
     private double mLastShotRangeIn = 0;
     private double mShotStartRangeIn = 0;
+    /** Where the robot was, from the tags, when the last shot started (0054). */
+    private TagPosition mLastShotPosition = TagPosition.UNKNOWN;
+    private TagPosition mShotStartPosition = TagPosition.UNKNOWN;
+    private double mLastShotHeadingDeg = Double.NaN;
+    private double mShotStartHeadingDeg = Double.NaN;
     /** 1 the last shot was marked made, -1 missed, 0 not marked. */
     private int mLastShotMark = 0;
     private final Debouncer mMadeButton;
@@ -134,6 +140,15 @@ public class TestLog implements Subsystem {
         return false;
     }
 
+    /** Where the robot is from the tags, or "not known" with no camera. */
+    private TagPosition Where() {
+        TagPosition where = mVision == null ? null : mVision.GetPosition();
+        if (where == null) {
+            return TagPosition.UNKNOWN;
+        }
+        return where;
+    }
+
     /** Watch the pollen speed for the next ball. */
     private void TrackShots() {
         if (mLauncher == null) {
@@ -146,10 +161,14 @@ public class TestLog implements Subsystem {
         if (!wasInShot && mShots.InShot()) {
             // Where the robot was when the ball went, not after.
             mShotStartRangeIn = mVision != null && mVision.SeesTag() ? mVision.GetGroupRange() : 0;
+            mShotStartPosition = Where();
+            mShotStartHeadingDeg = mImu != null && mImu.Ready() ? mImu.GetYaw() : Double.NaN;
         }
         if (shot != null) {
             mLastShot = shot;
             mLastShotRangeIn = mShotStartRangeIn;
+            mLastShotPosition = mShotStartPosition;
+            mLastShotHeadingDeg = mShotStartHeadingDeg;
             mLastShotMark = 0;
         }
     }
@@ -241,6 +260,16 @@ public class TestLog implements Subsystem {
         Add("heading_deg", mImu != null && mImu.Ready() ? mImu.GetYaw() : Double.NaN);
         Add("side_deg", sees ? mVision.GetSideDegrees() : Double.NaN);
 
+        // Where the robot is from the tags alone, no odometry (0054).
+        TagPosition where = Where();
+        Add("hive_left_in", where.hiveLeftIn);
+        Add("hive_out_in", where.hiveOutIn);
+        Add("hive_yaw_deg", where.hiveYawDeg);
+        Add("field_x_in", where.fieldXIn);
+        Add("field_y_in", where.fieldYIn);
+        Add("field_yaw_deg", where.fieldYawDeg);
+        Add("field_tags", where.fieldTags);
+
         // The last shot (0052). Its numbers stay until the next one.
         boolean shot = mLastShot != null;
         Add("shots", mShots.Count());
@@ -250,6 +279,10 @@ public class TestLog implements Subsystem {
         Add("shot_recovery_s", shot ? mLastShot.recoverySeconds : 0);
         Add("shot_recovered", shot && mLastShot.recovered);
         Add("shot_range_in", shot ? mLastShotRangeIn : 0);
+        Add("shot_hive_left_in", shot ? mLastShotPosition.hiveLeftIn : Double.NaN);
+        Add("shot_hive_out_in", shot ? mLastShotPosition.hiveOutIn : Double.NaN);
+        Add("shot_hive_yaw_deg", shot ? mLastShotPosition.hiveYawDeg : Double.NaN);
+        Add("shot_heading_deg", shot ? mLastShotHeadingDeg : Double.NaN);
         Add("shot_mark", mLastShotMark);
     }
 

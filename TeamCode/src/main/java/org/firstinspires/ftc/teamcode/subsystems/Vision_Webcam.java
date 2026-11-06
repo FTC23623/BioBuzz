@@ -10,6 +10,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.TagPosition;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -211,6 +212,12 @@ public class Vision_Webcam implements Vision {
     @Override
     public double GetTagTiltDegrees() {
         return Double.NaN;
+    }
+
+    /** This camera doesn't work out a position: never known. */
+    @Override
+    public TagPosition GetPosition() {
+        return TagPosition.UNKNOWN;
     }
 
     /** This camera does not work out which side of the hive it is on: always 0, no offset. */

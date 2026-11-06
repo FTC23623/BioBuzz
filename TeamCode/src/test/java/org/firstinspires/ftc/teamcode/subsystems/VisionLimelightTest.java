@@ -240,6 +240,25 @@ class VisionLimelightTest {
     }
 
     @Test
+    @DisplayName("position from the tags: left of the hive is plus, out is the distance, field pose only with tags")
+    void positionFromTags() {
+        Pose3D camera = new Pose3D(new Position(DistanceUnit.INCH, -14, 0, -120, 0),
+                new YawPitchRollAngles(AngleUnit.DEGREES, 6, 0, 0, 0));
+        Pose3D field = new Pose3D(new Position(DistanceUnit.METER, 1, -0.5, 0, 0),
+                new YawPitchRollAngles(AngleUnit.DEGREES, 45, 0, 0, 0));
+        org.firstinspires.ftc.teamcode.objects.TagPosition where = Vision_Limelight.Position(camera, field, 2, false);
+        assertEquals(14, where.hiveLeftIn, 1e-6);   // camera 14 in to the tag's left
+        assertEquals(120, where.hiveOutIn, 1e-6);
+        assertEquals(6, where.hiveYawDeg, 1e-6);
+        assertEquals(DistanceUnit.METER.toInches(1), where.fieldXIn, 1e-6);
+        assertEquals(45, where.fieldYawDeg, 1e-6);
+        assertEquals(-14, Vision_Limelight.Position(camera, field, 2, true).hiveLeftIn, 1e-6);
+        org.firstinspires.ftc.teamcode.objects.TagPosition noMap = Vision_Limelight.Position(camera, field, 0, false);
+        assertTrue(Double.isNaN(noMap.fieldXIn));
+        assertTrue(Double.isNaN(Vision_Limelight.Position(null, null, 0, false).hiveLeftIn));
+    }
+
+    @Test
     @DisplayName("quiet telemetry: still sees the tag, but never asks the Limelight for its status")
     void quietSkipsTheStatusRead() {
         op.mQuiet = true;

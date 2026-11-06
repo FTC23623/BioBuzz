@@ -132,6 +132,8 @@ class TestLogTest {
         when(gates.IsOpen()).thenReturn(true);
         when(vision.SeesTag()).thenReturn(true);
         when(vision.GetGroupRange()).thenReturn(126.0);
+        when(vision.GetPosition()).thenReturn(new org.firstinspires.ftc.teamcode.objects.TagPosition(
+                -14, 120, 6, Double.NaN, Double.NaN, Double.NaN, 0));
         when(launcher.GetPollenMeasuredRpm()).thenReturn(2990.0);
         loop();
         when(launcher.GetPollenMeasuredRpm()).thenReturn(2750.0);   // a ball going through
@@ -143,6 +145,10 @@ class TestLogTest {
         assertEquals("1", log.Value("shots"));
         assertEquals("380", log.Value("shot_dip_rpm"));
         assertEquals("126", log.Value("shot_range_in"));
+        // Where the robot stood when the ball went, from the tags: 14 in right of the hive.
+        assertEquals("-14", log.Value("shot_hive_left_in"));
+        assertEquals("120", log.Value("shot_hive_out_in"));
+        assertEquals("", log.Value("field_x_in"));   // no field map: not known
         assertEquals("0", log.Value("shot_mark"));
         for (int i = 0; i < properties.debounce + 2; i++) {
             driver.cross = true;

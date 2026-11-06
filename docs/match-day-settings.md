@@ -1,5 +1,33 @@
 # Match-day settings
 
+## The short way: the match build (0053)
+
+1. Turn on the match build:
+   - **Android Studio**: in `gradle.properties` (top of the project) set `matchBuild=true`,
+     then Run as usual. (Or Settings > Build, Execution, Deployment > Compiler >
+     Command-line Options: `-PmatchBuild`.)
+   - **Command line**: `./gradlew :TeamCode:installDebug -PmatchBuild`
+2. Robot Controller app menu: **Disable Dashboard**. Code can't safely switch the dashboard
+   server off; this one stays by hand.
+3. INIT HyDrive and check the top lines say `Match build: only the match OpModes are
+   installed.` and `Competition mode: dashboard off.`
+
+A match build does all of this for you:
+
+- **Only the match OpModes** on the Driver Station: the Auto / Blue / Red autos and the
+  three HyDrives.
+- **`competitionMode` on** (B1 below): nothing goes to FTC Dashboard, no live tuning, no
+  Limelight web relay.
+- **Testing settings off**, whatever is set in the code: `testLog`, `testTelemetry`,
+  `tuningMarks`, `launcherOnlyTelemetry`, `driveCoastWhenIdle`, `visionAnyTag`
+  (`BotProperties.ApplyMatchBuild`).
+
+Still your choice: `quietTelemetry` (A4), and the rest of `event-checklist.md` section 1.
+After the event set `matchBuild=false` again to get the test and tool OpModes back; the
+tests only run with it false.
+
+The lists below are what the match build covers, for a build without it.
+
 Two checklists: **A** turns off everything that slows the loop down, **B** is what the
 competition rules need. Do both before an event, build, deploy, then INIT HyDrive and read
 the screen as in `event-checklist.md` section 2.

@@ -22,11 +22,23 @@ wiggle*).
 - `set Launcher.name=value ...`: change settings now; the next loop uses them. Every
   change is logged to `tools/tuning/runs/changes.log`.
 - `record SECONDS`: save the telemetry to `tools/tuning/runs/run_<time>.jsonl`.
-- `shots FILE`: one line per shot: distance, target RPM, dip, recovery, aim bearing, side
-  of the hive, heading, made / MISSED / ?.
+- `shots FILE`: one line per shot: distance, where the robot stood (left of the hive's
+  tag, out from it, yaw against it), target RPM, dip, recovery, aim bearing, side of the
+  hive, heading, made / MISSED / ?.
 - `summary FILE`: shots grouped by 5-inch distance bands.
 
 You may also read any file (recordings are plain JSON lines, one dashboard packet each).
+
+## Where the robot is
+
+The robot's position comes from the AprilTags, not the odometry pods, so the team can just
+slide it around by hand between shots: in Tool: Launch Tuning the wheels coast. Per shot
+you get, from the hive's nearest tag: `left` (inches left of the tag as the robot faces
+the hive, right is minus), `out` (inches out from it) and `yaw` (the camera against the
+tag, the Limelight's angle; check its sign once by turning the robot a little). The live
+lines also have `T field_x_in`, `T field_y_in`, `T field_yaw_deg` and `T field_tags`, the
+Limelight's own field position, only when the field map is loaded on the Limelight.
+Ask for spots by these numbers ("about 125 out, 20 left"), and read them back to check.
 
 ## Safety: never break these
 

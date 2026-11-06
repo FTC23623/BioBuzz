@@ -174,7 +174,8 @@ class DashTest(unittest.TestCase):
         telemetry = [
             packet(shots=0, shot_mark=0),
             packet(shots=1, shot_range_in=124, shot_target_rpm=3005, shot_dip_rpm=290,
-                   shot_recovery_s=0.21, shot_recovered=1, hive_bearing_deg=1.5, side_deg=-12, heading_deg=88, shot_mark=0),
+                   shot_recovery_s=0.21, shot_recovered=1, hive_bearing_deg=1.5, side_deg=-12, shot_heading_deg=88,
+                   shot_hive_left_in=-14, shot_hive_out_in=120, shot_hive_yaw_deg=6, shot_mark=0),
             packet(shots=1, shot_mark=1),
             packet(shots=2, shot_range_in=126, shot_target_rpm=3005, shot_dip_rpm=410,
                    shot_recovery_s=0.4, shot_recovered=1, hive_bearing_deg=0.2, side_deg=-11, heading_deg=88, shot_mark=0),
@@ -190,6 +191,7 @@ class DashTest(unittest.TestCase):
         lines = out.strip().splitlines()
         self.assertEqual(3, len(lines), out)
         self.assertTrue(lines[1].rstrip().endswith("made"), out)
+        self.assertIn(" -14.0  120.0    6.0", lines[1], out)
         self.assertTrue(lines[2].rstrip().endswith("MISSED"), out)
         code, out = run(fake, "summary", out_file)
         self.assertIn("120-125", out)

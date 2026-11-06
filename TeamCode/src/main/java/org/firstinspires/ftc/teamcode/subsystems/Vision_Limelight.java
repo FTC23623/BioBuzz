@@ -15,6 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.TagPosition;
 
 /**
  * AprilTags from a Limelight 3A, the camera Decode's robot carried.
@@ -56,6 +57,8 @@ public class Vision_Limelight implements Vision {
     private double mTagPitch = Double.NaN;
     private double mTagRoll = Double.NaN;
     private double mTagYaw = Double.NaN;
+    /** Where the robot is from the tags (0054). */
+    private TagPosition mPosition = TagPosition.UNKNOWN;
     /** Which side of the hive the robot stands, degrees, left positive. 0 = not known. */
     private double mSide = 0;
     private double mArea = 0;
@@ -132,6 +135,8 @@ public class Vision_Limelight implements Vision {
                     mTagYaw = angles.getYaw(AngleUnit.DEGREES);
                 }
                 mSide = SideDegrees(nearest.getCameraPoseTargetSpace(), mProperties.aimSideReversed);
+                mPosition = Position(nearest.getCameraPoseTargetSpace(), result.getBotpose(),
+                        result.getBotposeTagCount(), mProperties.aimSideReversed);
                 mArea = nearest.getTargetArea();
                 List<Integer> ids = new ArrayList<>();
                 List<Double> bearings = new ArrayList<>();
@@ -271,6 +276,52 @@ public class Vision_Limelight implements Vision {
             return mTagRoll;
         }
         return mTagPitch;
+    }
+
+    @Override
+    public TagPosition GetPosition() {
+        if (!SeesTag()) {
+            return TagPosition.UNKNOWN;
+        }
+        return mPosition;
+    }
+
+    /**
+     * Where the robot is, from the nearest tag's camera pose (target space: X to the right as
+     * you face the tag, Z straight out of it, like {@link #SideDegrees}) and the Limelight's
+     * field pose. Meters become inches. Left is plus, as the robot faces the hive; flipped
+     * again with {@code reversed}, like the side.
+     */
+    static TagPosition Position(Pose3D cameraPose, Pose3D fieldPose, int fieldTags, boolean reversed) {
+        double left = Double.NaN;
+        double out = Double.NaN;
+        double yaw = Double.NaN;
+        if (cameraPose != null && cameraPose.getPosition() != null && cameraPose.getPosition().unit != null) {
+            Position inches = cameraPose.getPosition().toUnit(DistanceUnit.INCH);
+            left = -inches.x;
+            if (reversed) {
+                left = -left;
+            }
+            out = Math.abs(inches.z);
+            if (cameraPose.getOrientation() != null) {
+                yaw = cameraPose.getOrientation().getYaw(AngleUnit.DEGREES);
+            }
+        }
+        double fieldX = Double.NaN;
+        double fieldY = Double.NaN;
+        double fieldYaw = Double.NaN;
+        int tags = 0;
+        if (fieldTags > 0 && fieldPose != null && fieldPose.getPosition() != null
+                && fieldPose.getPosition().unit != null) {
+            Position inches = fieldPose.getPosition().toUnit(DistanceUnit.INCH);
+            fieldX = inches.x;
+            fieldY = inches.y;
+            if (fieldPose.getOrientation() != null) {
+                fieldYaw = fieldPose.getOrientation().getYaw(AngleUnit.DEGREES);
+            }
+            tags = fieldTags;
+        }
+        return new TagPosition(left, out, yaw, fieldX, fieldY, fieldYaw, tags);
     }
 
     /** The tag's angles from its pose, or null when the Limelight did not work them out. */

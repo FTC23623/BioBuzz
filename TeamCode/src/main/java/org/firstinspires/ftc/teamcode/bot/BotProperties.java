@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.bot;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import org.firstinspires.ftc.teamcode.BuildConfig;
 import org.firstinspires.ftc.teamcode.types.Alliance;
 
 /**
@@ -83,6 +84,12 @@ public class BotProperties {
      * Practice TeleOps and Tool: Pose Recorder pick their own.
      */
     public boolean fieldCentricDrive = true;
+    /**
+     * false (every match OpMode): the wheels brake when the sticks are let go. true (only
+     * Tool: Launch Tuning): they coast, so the robot can be slid around by hand while
+     * tuning; the camera works out where it is from the tags (docs/decisions/0054).
+     */
+    public boolean driveCoastWhenIdle = false;
     /**
      * true: TeleOp keeps the heading the auto left, so forward stays away from the driver
      * even though the auto turned the robot (docs/decisions/0046). Each auto says which way
@@ -894,6 +901,30 @@ public class BotProperties {
      * the webcam does not stream to it, and the Limelight web page relay does not start.
      * The Driver Station warns until the dashboard is also switched off in the Robot
      * Controller app's menu (Disable Dashboard). false at practice.
+     *
+     * <p>Set by the build (docs/decisions/0053): a match build (matchBuild=true) is always
+     * competition mode, the normal build never is. Nothing to edit here.
      */
-    public static final boolean competitionMode = false;
+    public static final boolean competitionMode = BuildConfig.MATCH_BUILD;
+
+    /**
+     * A match build (docs/decisions/0053) turns off everything for testing that costs loop
+     * time or isn't for matches, whatever an OpMode or this file says: the test log and
+     * test telemetry, shot marks, launcher-only telemetry, coasting wheels and "every tag
+     * counts". The Bot calls this once, before building anything. quietTelemetry is left as
+     * set: a full screen or the fastest loop is the coach's choice.
+     *
+     * @param matchBuild {@code BuildConfig.MATCH_BUILD}; false does nothing
+     */
+    public void ApplyMatchBuild(boolean matchBuild) {
+        if (!matchBuild) {
+            return;
+        }
+        testLog = false;
+        testTelemetry = false;
+        tuningMarks = false;
+        launcherOnlyTelemetry = false;
+        driveCoastWhenIdle = false;
+        visionAnyTag = false;
+    }
 }

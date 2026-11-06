@@ -44,11 +44,16 @@ public class Drive implements Subsystem {
 
         SetAllMotorMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        // Hold still instead of coasting when the stick is released.
-        mFrontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        mBackLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        mFrontRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        mBackRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        // Hold still instead of coasting when the stick is released. Tool: Launch Tuning
+        // coasts instead (driveCoastWhenIdle), so the robot can be slid by hand (0054).
+        DcMotor.ZeroPowerBehavior idle = DcMotor.ZeroPowerBehavior.BRAKE;
+        if (properties.driveCoastWhenIdle) {
+            idle = DcMotor.ZeroPowerBehavior.FLOAT;
+        }
+        mFrontLeftMotor.setZeroPowerBehavior(idle);
+        mBackLeftMotor.setZeroPowerBehavior(idle);
+        mFrontRightMotor.setZeroPowerBehavior(idle);
+        mBackRightMotor.setZeroPowerBehavior(idle);
     }
 
     @Override

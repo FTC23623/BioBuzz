@@ -342,7 +342,10 @@ def read_shots(path):
                     "recovered": number(data, "T shot_recovered") == 1,
                     "bearing_deg": number(data, "T hive_bearing_deg"),
                     "side_deg": number(data, "T side_deg"),
-                    "heading_deg": number(data, "T heading_deg"),
+                    "heading_deg": number(data, "T shot_heading_deg"),
+                    "left_in": number(data, "T shot_hive_left_in"),
+                    "out_in": number(data, "T shot_hive_out_in"),
+                    "yaw_deg": number(data, "T shot_hive_yaw_deg"),
                     "mark": 0,
                 })
             if shots:
@@ -360,10 +363,13 @@ def cmd_shots(args):
     if not shots:
         print("No shots in this recording.")
         return 1
-    print(f"{'#':>3} {'range':>6} {'target':>7} {'dip':>5} {'back s':>6} {'bear':>6} {'side':>6} {'head':>6}  result")
+    # left / out / yaw: where the robot stood when the ball went, from the hive's tag (0054).
+    print(f"{'#':>3} {'range':>6} {'left':>6} {'out':>6} {'yaw':>6} {'target':>7} {'dip':>5} {'back s':>6} "
+          f"{'bear':>6} {'side':>6} {'head':>6}  result")
     for s in shots:
         back = f"{s['recovery_s']:.2f}" if s["recovered"] else "never"
-        print(f"{s['shot']:>3} {s['range_in']:>6.0f} {s['target_rpm']:>7.0f} {s['dip_rpm']:>5.0f} {back:>6} "
+        print(f"{s['shot']:>3} {s['range_in']:>6.0f} {s['left_in']:>6.1f} {s['out_in']:>6.1f} {s['yaw_deg']:>6.1f} "
+              f"{s['target_rpm']:>7.0f} {s['dip_rpm']:>5.0f} {back:>6} "
               f"{s['bearing_deg']:>6.1f} {s['side_deg']:>6.1f} {s['heading_deg']:>6.1f}  {MARKS[s['mark']]}")
     return 0
 

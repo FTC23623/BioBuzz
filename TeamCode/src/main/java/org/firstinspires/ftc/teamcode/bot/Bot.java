@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
+import org.firstinspires.ftc.teamcode.BuildConfig;
 import org.firstinspires.ftc.teamcode.objects.DashboardTuning;
 import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
@@ -153,6 +154,8 @@ public class Bot {
     public Bot(LinearOpMode opMode, BotProperties properties) {
         mLinearOpMode = opMode;
         mProperties = properties;
+        // A match build turns the test and tuning settings off, whatever was set (0053).
+        mProperties.ApplyMatchBuild(BuildConfig.MATCH_BUILD);
         Telemetry telemetry = opMode.telemetry;
         // At an event, nothing goes to the dashboard (rule R704.D, docs/decisions/0022).
         if (!BotProperties.competitionMode) {
@@ -435,6 +438,15 @@ public class Bot {
         FtcDashboard dashboard = FtcDashboard.getInstance();
         boolean dashboardOn = dashboard != null && dashboard.isEnabled();
         mOp.mTelemetry.addLine(CompetitionStatus(BotProperties.competitionMode, dashboardOn));
+        mOp.mTelemetry.addLine(BuildStatus(BuildConfig.MATCH_BUILD));
+    }
+
+    /** Which build is on the robot (docs/decisions/0053). No hardware, so a test can check it. */
+    static String BuildStatus(boolean matchBuild) {
+        if (matchBuild) {
+            return "Match build: only the match OpModes are installed.";
+        }
+        return "Full build: test and tool OpModes installed. For events, install the match build (matchBuild=true).";
     }
 
     /** The competition line for the Driver Station. No hardware, so a test can check it. */
