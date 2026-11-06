@@ -21,12 +21,13 @@ import java.util.List;
  * The robot starts facing the wall, so backing up is minus x and the garden (to its right) is
  * minus y. See {@link PedroAuto} for more.
  */
-// No group: the Driver Station lists these first, before the "Backup" ones. At the end it
-// picks HyDrive, so the drivers only press INIT and START (docs/decisions/0046).
-@Autonomous(name = AutoStrategyA.NAME, preselectTeleOp = HyDrive.NAME)
+// Group "Auto" (it reads the alliance magnet): the Driver Station lists it before the
+// "Blue" and "Red" backups. At the end it picks HyDrive, so the drivers only press INIT and
+// START (docs/decisions/0046, 0053).
+@Autonomous(name = "Auto: " + AutoStrategyA.NAME, group = "Auto", preselectTeleOp = HyDrive.NAME)
 public class AutoStrategyA extends PedroAuto {
-    /** The name on the Driver Station. The backups add their color to it. */
-    public static final String NAME = "Garden Side Auto A";
+    /** The auto's name. On the Driver Station: "Auto: ", "Blue: " or "Red: " in front. */
+    public static final String NAME = "Garden Side A";
 
     /**
      * Garden side: front against the bottom wall, on the tile east of the seam at x 46.75

@@ -16,8 +16,8 @@ point it straight. The coach asked for three things:
 
 ## Decision
 
-- **Names**: StrategyA is `Garden Side Auto A`, B is `Flower Side Auto B`, C is
-  `Flower Side Auto C`. The backups add their color: `Garden Side Auto A Red (backup)` and
+- **Names** (renamed again in 0053: `Auto: Garden Side A`, `Blue: ...`, `Red: ...`):
+  StrategyA is `Garden Side Auto A`, B is `Flower Side Auto B`, C is `Flower Side Auto C`. The backups add their color: `Garden Side Auto A Red (backup)` and
   so on. Each name is a `NAME` constant in the auto's class, and the backups build theirs
   from it. StrategyD is left as it is: the team is not running it.
 - **Order**: the three color-sensing autos have no group. The Driver Station lists the

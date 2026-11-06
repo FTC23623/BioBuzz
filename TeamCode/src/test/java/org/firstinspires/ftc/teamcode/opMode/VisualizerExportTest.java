@@ -123,8 +123,10 @@ class VisualizerExportTest {
         return turn;
     }
 
+    /** The auto's name for a file: "Auto: Garden Side A" becomes "Garden Side A". */
     private static String Name(PedroAuto auto) {
-        return auto.getClass().getAnnotation(Autonomous.class).name();
+        String name = auto.getClass().getAnnotation(Autonomous.class).name();
+        return name.replaceFirst("^Auto: ", "");
     }
 
     @Test

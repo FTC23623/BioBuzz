@@ -19,11 +19,13 @@ Change these, build green, deploy, then INIT HyDrive once and read section 2 top
 | `visionAnyTag` | `BotProperties.java` | `false` | Practice only. True at an event aims at the other alliance's hive. INIT shouts `EVERY TAG COUNTS` while it is on. |
 | `safeModeEnabled` | `BotProperties.java` | decide | `false` (today) is full speed, key or no key. `true` lets the key limit the drive to 25% in the pit. |
 
-OpModes for a match: `Garden Side Auto A`, `Flower Side Auto B` or `Flower Side Auto C`
-(top of the list), then `HyDrive`. When the auto ends, the Driver Station picks HyDrive by
-itself: press INIT, then START. The `Backup` group (`... Red (backup)`, `... Blue
-(backup)`) is for a dead alliance sensor only, and each picks the HyDrive backup of its
-own color. `Test:` and `Tool:` OpModes never run in a match (0046).
+OpModes for a match: `Auto: Garden Side A`, `Auto: Flower Side B` or `Auto: Flower Side C`
+(the `Auto` group, top of the list), then `HyDrive`. When the auto ends, the Driver Station
+picks HyDrive by itself: press INIT, then START. The `Blue` and `Red` groups (`Blue: Garden
+Side A`, ...) are for a dead alliance sensor only, and each picks the HyDrive backup of its
+own color (0046, 0053). Install the **match build** for an event
+(`./gradlew :TeamCode:installDebug -PmatchBuild`): it leaves the `Test:`, `Tool:`,
+`Practice:` and shape OpModes out, so only these are on the list.
 
 ## 2. At INIT, every match
 

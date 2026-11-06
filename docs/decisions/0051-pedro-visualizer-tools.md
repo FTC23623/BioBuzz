@@ -54,7 +54,7 @@ they need one more number to be drawn on the field: where they start.
 
 ## CHECK
 
-1. Open `Garden Side Auto A Blue.pp` in the visualizer (BIOBUZZ field). The start should
+1. Open `Garden Side A Blue.pp` in the visualizer (BIOBUZZ field). The start should
    match where the robot is put on the field. If not, fix `FieldStartBlue()` in that auto.
 2. Flower Side Auto B ends next to the red garden on the blue alliance. If that's not
    where it should go, the start spot or the recording is off.

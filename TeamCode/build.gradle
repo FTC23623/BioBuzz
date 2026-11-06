@@ -28,3 +28,23 @@ android {
 dependencies {
     implementation project(':FtcRobotController')
 }
+
+// Match build (docs/decisions/0053):
+//
+//     ./gradlew :TeamCode:installDebug -PmatchBuild
+//
+// leaves every OpMode listed in match-build-excludes.txt out of the app, so the Driver
+// Station shows only the match autos and HyDrive. Without -PmatchBuild everything is in, as
+// always. The unit tests need every OpMode, so they don't run in a match build.
+if (project.hasProperty('matchBuild')) {
+    def excluded = file('match-build-excludes.txt').readLines()
+            .collect { it.trim() }
+            .findAll { it && !it.startsWith('#') }
+    android.sourceSets.main.java.exclude(excluded.collect { "**/opMode/${it}.java".toString() })
+    println "MATCH BUILD: leaving out ${excluded.size()} OpModes (match-build-excludes.txt)"
+    gradle.taskGraph.whenReady { graph ->
+        if (graph.allTasks.any { it.project == project && it.name.contains('UnitTest') }) {
+            throw new GradleException('The tests need every OpMode: run them without -PmatchBuild.')
+        }
+    }
+}

@@ -4,8 +4,8 @@ Paths for the [Pedro Pathing Visualizer](https://visualizer.pedropathing.com/), 
 top-down field planner for the path library our autos use (docs/decisions/0051).
 
 **See our autos on the field.** Run the tests (`./gradlew :TeamCode:testDebugUnitTest`).
-Each run writes one file per auto and alliance to `TeamCode/build/visualizer/`, from the
-autos' own code. In the visualizer pick the BIOBUZZ field, then open a file with its file
+Each run writes one file per auto and alliance to `TeamCode/build/visualizer/` (`Garden Side
+A Blue.pp`, ...), from the autos' own code. In the visualizer pick the BIOBUZZ field, then open a file with its file
 menu. LAUNCH, FLOWER and INTAKE steps show as named waits.
 
 **Plan a new auto there.** Draw it in the visualizer. Put a wait where the robot should

@@ -59,6 +59,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0050](0050-roller-power-launch-lock-test-log.md) | Roller power mode, launch RPM lock, test log and test telemetry, match-day settings | Accepted, all off by default |
 | [0051](0051-pedro-visualizer-tools.md) | Autos on the field: start spots, export to and import from the Pedro Pathing Visualizer | Accepted, laptop tools only |
 | [0052](0052-launch-tuning-sessions.md) | Launch tuning sessions: Claude changes settings and reads shots over FTC Dashboard; Tool: Launch Tuning | Accepted, practice only, not yet run |
+| [0053](0053-match-build-and-auto-names.md) | Match build (`-PmatchBuild`) leaves test, tool and practice OpModes out; autos named Auto / Blue / Red | Accepted |
 
 ## TODO: confirm on the robot after this week's tuning
 

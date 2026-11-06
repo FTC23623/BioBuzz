@@ -6,7 +6,8 @@ what the robot measured, and asks you to launch and mark shots. See
 
 ## Before
 
-- The robot: code with Tool: Launch Tuning on it (`./gradlew installDebug`, or Android Studio).
+- The robot: the normal build, with Tool: Launch Tuning on it (`./gradlew :TeamCode:installDebug`,
+  or Android Studio). The match build (`-PmatchBuild`) leaves it out.
 - The Robot Controller app's menu: **Enable Dashboard**. `competitionMode` must be `false`.
 - The laptop: on the robot's Wi-Fi, with this repo, Python 3 and Claude Code (`claude`).
 - Balls, a hive, and two people: one drives and launches, one places balls.

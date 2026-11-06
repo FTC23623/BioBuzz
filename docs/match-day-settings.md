@@ -36,12 +36,13 @@ then turn things back on one at a time to see what each costs.
 | 2 | Robot Controller app menu: **Disable Dashboard** | disabled | Same rule. INIT says `Competition mode: dashboard off.` only when both 1 and 2 are done; `DASHBOARD IS STILL ON` means do 2, then INIT again. |
 | 3 | `visionAnyTag` | `false` | `true` aims at the other alliance's hive. INIT shouts `EVERY TAG COUNTS` while it is on. |
 | 4 | `testLog`, `testTelemetry` | `false` | The log stays on the hub, which the rules allow, but it costs loop time and fills the storage. |
-| 5 | OpModes | `Garden Side Auto A`, `Flower Side Auto B` or `C`, then `HyDrive` | `Test:` and `Tool:` OpModes never run in a match. A color backup only for a dead alliance sensor (0021). |
+| 5 | OpModes | install the match build: `./gradlew :TeamCode:installDebug -PmatchBuild` | Only `Auto: Garden Side A`, `Auto: Flower Side B` / `C`, their `Blue:` / `Red:` backups and the three HyDrives are on the Driver Station; `Test:`, `Tool:`, `Practice:` and shape OpModes are left out (0053). A color backup only for a dead alliance sensor (0021). |
 | 6 | Laptop | off the robot's Wi-Fi | So nothing but the Driver Station talks to the robot in a match. Check the Competition Manual's wireless rules for the exact wording. |
 
 Then the rest of `event-checklist.md` section 1 (frame size, launch curve, Safe Mode).
 
 ## After the event
 
+Install the normal build again (no `-PmatchBuild`) to get the test and tool OpModes back.
 Put back what you use for practice: `competitionMode` `false`, Robot Controller menu
 **Enable Dashboard**, and `testLog` / `testTelemetry` / `launcherOnlyTelemetry` as needed.
