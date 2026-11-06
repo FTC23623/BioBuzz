@@ -201,6 +201,12 @@ public class Vision_Webcam implements Vision {
         return mRange;
     }
 
+    /** The webcam keeps only the nearest tag's distance, so the group range is that one. */
+    @Override
+    public double GetGroupRange() {
+        return GetRange();
+    }
+
     /** This camera does not work out which side of the hive it is on: always 0, no offset. */
     @Override
     public double GetSideDegrees() {

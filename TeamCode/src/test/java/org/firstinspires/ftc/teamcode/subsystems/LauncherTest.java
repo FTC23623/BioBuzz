@@ -67,6 +67,10 @@ class LauncherTest {
         properties.launcherKI = 0;
         // The D-pad tests below set the speed directly. The distance table has its own tests.
         properties.launcherRangeTuning = false;
+        // Steady range (0048) is off unless a test turns it on.
+        properties.steadyRange = false;
+        properties.steadyRangeAverage = true;
+        properties.launchBandHoldIn = 1;
         HardwareMap hardwareMap = mock(HardwareMap.class);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgLaunchPollen)).thenReturn(pollen.motor);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgLaunchNectar)).thenReturn(nectar.motor);
@@ -202,6 +206,75 @@ class LauncherTest {
         tagAt(150);
         launcher.Process();
         assertEquals(3225, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("steady hold: the step only changes once the distance is 1 in past its edge")
+    void stepForHolds() {
+        // Held on the 120 step (120 to 122), steps of 2, hold 1.
+        assertEquals(120, Launcher.StepFor(119.2, 120, properties), EPS);
+        assertEquals(120, Launcher.StepFor(122.8, 120, properties), EPS);
+        assertEquals(118, Launcher.StepFor(118.9, 120, properties), EPS);
+        assertEquals(122, Launcher.StepFor(123.1, 120, properties), EPS);
+        // Nothing held yet: the plain step.
+        assertEquals(124, Launcher.StepFor(125, Double.NaN, properties), EPS);
+        // The ends: the far speed holds just inside 140, the near speed below 110.
+        assertEquals(140, Launcher.StepFor(139.5, 140, properties), EPS);
+        assertEquals(110, Launcher.StepFor(100, Double.NaN, properties), EPS);
+    }
+
+    @Test
+    @DisplayName("steady range off (today): the biggest tag's distance and plain steps, as before")
+    void steadyOffIsUnchanged() {
+        properties.launcherRangeTuning = true;
+        tagAt(121);
+        when(vision.GetGroupRange()).thenReturn(131.0);
+        launcher.Process();
+        assertEquals(2892, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("steady range on: the speed comes from the average of our tags")
+    void steadyUsesTheGroupRange() {
+        properties.launcherRangeTuning = true;
+        properties.steadyRange = true;
+        properties.launchBandHoldIn = 0;
+        tagAt(121);
+        when(vision.GetGroupRange()).thenReturn(131.0);
+        launcher.Process();
+        assertEquals(Launcher.RpmForRange(131, properties), launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("steady range on: a distance wobbling on a step edge keeps one speed")
+    void steadyHoldsOnAnEdge() {
+        properties.launcherRangeTuning = true;
+        properties.steadyRange = true;
+        properties.steadyRangeAverage = false;
+        tagAt(121.9);
+        launcher.Process();
+        double onTheEdge = launcher.GetPollenTargetRpm();
+        assertEquals(2892, onTheEdge, EPS);
+        tagAt(122.3);
+        launcher.Process();
+        assertEquals(onTheEdge, launcher.GetPollenTargetRpm(), EPS, "122.3 is inside the 1-in hold");
+        tagAt(121.8);
+        launcher.Process();
+        assertEquals(onTheEdge, launcher.GetPollenTargetRpm(), EPS);
+        tagAt(123.2);
+        launcher.Process();
+        assertEquals(Launcher.RpmForRange(122, properties), launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("gamepad 2 cross: steady range on (one rumble), again off (two)")
+    void crossTogglesSteady() {
+        tap(down -> gamepad.cross = down);
+        assertTrue(properties.steadyRange);
+        verify(gamepad).rumbleBlips(1);
+        tap(down -> gamepad.cross = down);
+        assertFalse(properties.steadyRange);
+        verify(gamepad).rumbleBlips(2);
     }
 
     @Test

@@ -48,6 +48,8 @@ public class Vision_Limelight implements Vision {
     /** Degrees to the middle of the nearest tag's group. */
     private double mGroupBearing = 0;
     private double mRange = 0;
+    /** Inches, averaged over the nearest tag's group (docs/decisions/0048). */
+    private double mGroupRange = 0;
     /** Which side of the hive the robot stands, degrees, left positive. 0 = not known. */
     private double mSide = 0;
     private double mArea = 0;
@@ -118,11 +120,15 @@ public class Vision_Limelight implements Vision {
                 mArea = nearest.getTargetArea();
                 List<Integer> ids = new ArrayList<>();
                 List<Double> bearings = new ArrayList<>();
+                List<Double> ranges = new ArrayList<>();
                 for (LLResultTypes.FiducialResult tag : tags) {
                     ids.add(tag.getFiducialId());
                     bearings.add(-tag.getTargetXDegrees());
+                    ranges.add(RangeInches(tag.getTargetPoseCameraSpace()));
                 }
                 mGroupBearing = AimAssist.GroupCenterBearing(ids, bearings, mTagId, mProperties.tagGroups);
+                // A tag with no distance (0) is left out of the average.
+                mGroupRange = AimAssist.GroupAverage(ids, ranges, mTagId, mProperties.tagGroups, true);
                 mEverSeen = true;
                 mSinceSeen.reset();
             }
@@ -234,6 +240,14 @@ public class Vision_Limelight implements Vision {
     }
 
     @Override
+    public double GetGroupRange() {
+        if (!SeesTag()) {
+            return 0;
+        }
+        return mGroupRange;
+    }
+
+    @Override
     public double GetSideDegrees() {
         if (!SeesTag()) {
             return 0;
@@ -278,7 +292,8 @@ public class Vision_Limelight implements Vision {
         if (SeesTag()) {
             mOp.mTelemetry.addData("Nearest tag", "id %d, %.1f deg to the %s, %.0f in away",
                     mTagId, Math.abs(mBearing), Side(mBearing), mRange);
-            mOp.mTelemetry.addData("Group middle", "%.1f deg to the %s", Math.abs(mGroupBearing), Side(mGroupBearing));
+            mOp.mTelemetry.addData("Group middle", "%.1f deg to the %s, %.0f in away (average)",
+                    Math.abs(mGroupBearing), Side(mGroupBearing), mGroupRange);
             mOp.mTelemetry.addData("Robot stands", "%.0f deg to the %s of the hive", Math.abs(mSide), Side(mSide));
             mOp.mTelemetry.addData("Tag fills", "%.1f%% of the picture", mArea);
             mOp.mTelemetry.addData("Tag last seen", "%.0f ms ago", mSinceSeen.milliseconds());

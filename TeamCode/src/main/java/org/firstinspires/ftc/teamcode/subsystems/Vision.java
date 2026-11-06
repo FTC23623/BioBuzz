@@ -28,6 +28,13 @@ public interface Vision extends Subsystem {
     double GetRange();
 
     /**
+     * @return inches from the camera, averaged over every tag in view from the nearest tag's
+     *     group (our hive), so it doesn't jump when a different tag is the biggest. 0 when
+     *     the camera can't tell. Used by steady range (docs/decisions/0048).
+     */
+    double GetGroupRange();
+
+    /**
      * @return degrees to the middle of the tag group the nearest tag is in (see
      *     {@code tagGroups} in BotProperties). Left is positive. 0 when no tag is seen.
      */

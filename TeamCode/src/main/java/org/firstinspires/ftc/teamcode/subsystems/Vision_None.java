@@ -61,6 +61,11 @@ public class Vision_None implements Vision {
     }
 
     @Override
+    public double GetGroupRange() {
+        return 0;
+    }
+
+    @Override
     public double GetGroupBearing() {
         return 0;
     }

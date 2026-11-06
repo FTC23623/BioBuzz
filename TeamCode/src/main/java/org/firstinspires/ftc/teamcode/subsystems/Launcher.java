@@ -22,7 +22,14 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *   <li><b>D-pad up / down</b>: pollen launcher 50 RPM faster / slower. With range tuning
  *       on (below) this trims the distance table instead, by the same 50.
  *   <li><b>D-pad right / left</b>: nectar launcher target up / down 50 RPM.
+ *   <li><b>Cross / A</b>: steady range on / off (docs/decisions/0048). One rumble on, two off.
  * </ul>
+ *
+ * <p><b>Steady range</b> ({@code steadyRange}, off unless switched on): the distance is the
+ * average of our hive's tags in view, not just the biggest one ({@code steadyRangeAverage}),
+ * and the speed only moves to the next 2-inch step once the distance is
+ * {@code launchBandHoldIn} past that step's edge, so a reading that wobbles on an edge does
+ * not flip the speed every loop.
  *
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
  * (right bumper) or launch (right trigger) and the camera sees our hive, the
@@ -51,6 +58,7 @@ public class Launcher implements Subsystem {
     private final Debouncer mPollenSlowerButton;
     private final Debouncer mNectarFasterButton;
     private final Debouncer mNectarSlowerButton;
+    private final Debouncer mSteadyRangeButton;
     private final ElapsedTime mTimeSinceUpdate;
 
     private boolean mSpinning = false;
@@ -60,6 +68,8 @@ public class Launcher implements Subsystem {
     private boolean mDriverAiming = false;
     /** What the distance table last said, for the Driver Station. */
     private String mRangeStatus = "no tag seen yet";
+    /** Steady range: the step start, in inches, the speed is held on. NaN = none yet. */
+    private double mHeldStepIn = Double.NaN;
 
     /**
      * @param vision the camera, so the pollen launcher's speed can follow the distance to the
@@ -81,6 +91,7 @@ public class Launcher implements Subsystem {
         mPollenSlowerButton = new Debouncer(properties.debounce);
         mNectarFasterButton = new Debouncer(properties.debounce);
         mNectarSlowerButton = new Debouncer(properties.debounce);
+        mSteadyRangeButton = new Debouncer(properties.debounce);
         mTimeSinceUpdate = new ElapsedTime();
     }
 
@@ -117,6 +128,15 @@ public class Launcher implements Subsystem {
         }
         if (Pressed(mNectarSlowerButton, mGamepad.dpad_left)) {
             ChangeNectarRpm(-mProperties.launcherRpmStep);
+        }
+        // Cross: steady range on / off, to compare the two on the field. Rumble 1 on, 2 off.
+        if (Pressed(mSteadyRangeButton, mGamepad.cross)) {
+            mProperties.steadyRange = !mProperties.steadyRange;
+            if (mProperties.steadyRange) {
+                mGamepad.rumbleBlips(1);
+            } else {
+                mGamepad.rumbleBlips(2);
+            }
         }
     }
 
@@ -163,19 +183,82 @@ public class Launcher implements Subsystem {
             return;
         }
         if (mVision == null || !mVision.SeesTag()) {
+            // The held step is forgotten: the next tag starts on its own step.
+            mHeldStepIn = Double.NaN;
             mRangeStatus = String.format(Locale.US, "no tag in view, holding %.0f", mProperties.pollenLauncherRpm);
             return;
         }
+        boolean steady = mProperties.steadyRange;
         double rangeIn = mVision.GetRange();
+        if (steady && mProperties.steadyRangeAverage) {
+            rangeIn = mVision.GetGroupRange();
+        }
         if (rangeIn <= 0) {
             // The camera sees the tag but could not work out how far it is.
             mRangeStatus = String.format(Locale.US, "tag seen, no distance, holding %.0f", mProperties.pollenLauncherRpm);
             return;
         }
-        double tableRpm = RpmForRange(rangeIn, mProperties);
+        double tableRpm;
+        String mode;
+        if (steady && mProperties.launchBandHoldIn > 0) {
+            mHeldStepIn = StepFor(rangeIn, mHeldStepIn, mProperties);
+            tableRpm = RpmForStep(mHeldStepIn, mProperties);
+            mode = String.format(Locale.US, "STEADY (%d tags, step %.0f in) ", mVision.CountTags(), mHeldStepIn);
+        } else {
+            mHeldStepIn = Double.NaN;
+            tableRpm = RpmForRange(rangeIn, mProperties);
+            if (steady) {
+                mode = String.format(Locale.US, "STEADY (%d tags) ", mVision.CountTags());
+            } else {
+                mode = "raw ";
+            }
+        }
         mProperties.pollenLauncherRpm = KeepInRange(tableRpm + mProperties.launcherRangeTrimRpm);
-        mRangeStatus = String.format(Locale.US, "%.0f in -> %.0f RPM, trim %+.0f = %.0f",
-                rangeIn, tableRpm, mProperties.launcherRangeTrimRpm, mProperties.pollenLauncherRpm);
+        mRangeStatus = String.format(Locale.US, "%s%.0f in -> %.0f RPM, trim %+.0f = %.0f",
+                mode, rangeIn, tableRpm, mProperties.launcherRangeTrimRpm, mProperties.pollenLauncherRpm);
+    }
+
+    /**
+     * Steady range: the step the speed sits on, in inches, with some give at the edges. The
+     * step only changes once the distance is {@code launchBandHoldIn} past its edge.
+     *
+     * <pre>
+     *     steps of 2 in, hold 1 in, held on the 120 step (120 to 122):
+     *     119.2 -> stays 120    122.8 -> stays 120    118.9 -> 118    123.1 -> 122
+     * </pre>
+     *
+     * @param heldStepIn the step held last loop, or NaN for none yet
+     * @return the start of the step to use, in inches
+     */
+    static double StepFor(double rangeIn, double heldStepIn, BotProperties p) {
+        double plainStep = StepStart(rangeIn, p);
+        if (Double.isNaN(heldStepIn)) {
+            return plainStep;
+        }
+        double lowEdge = heldStepIn - p.launchBandHoldIn;
+        double highEdge = heldStepIn + p.launchBandIn + p.launchBandHoldIn;
+        if (rangeIn >= lowEdge && rangeIn <= highEdge) {
+            return heldStepIn;
+        }
+        return plainStep;
+    }
+
+    /**
+     * Where the step a distance falls in starts, in inches. Nearer than nearIn is nearIn,
+     * farther than farIn is farIn, so the ends never change step.
+     */
+    static double StepStart(double rangeIn, BotProperties p) {
+        if (rangeIn <= p.launchNearIn) {
+            return p.launchNearIn;
+        }
+        if (rangeIn >= p.launchFarIn) {
+            return p.launchFarIn;
+        }
+        if (p.launchBandIn <= 0) {
+            return rangeIn;
+        }
+        double steps = Math.floor((rangeIn - p.launchNearIn) / p.launchBandIn);
+        return p.launchNearIn + steps * p.launchBandIn;
     }
 
     /**
@@ -195,18 +278,18 @@ public class Launcher implements Subsystem {
      * @return whole RPM
      */
     public static double RpmForRange(double rangeIn, BotProperties p) {
-        if (rangeIn <= p.launchNearIn) {
+        return RpmForStep(StepStart(rangeIn, p), p);
+    }
+
+    /** The RPM on the curve for a step that starts at stepStartIn inches. @return whole RPM */
+    static double RpmForStep(double stepStartIn, BotProperties p) {
+        if (stepStartIn <= p.launchNearIn) {
             return p.launchNearRpm;
         }
-        if (rangeIn >= p.launchFarIn) {
+        if (stepStartIn >= p.launchFarIn) {
             return p.launchFarRpm;
         }
-        double stepStart = rangeIn;
-        if (p.launchBandIn > 0) {
-            double steps = Math.floor((rangeIn - p.launchNearIn) / p.launchBandIn);
-            stepStart = p.launchNearIn + steps * p.launchBandIn;
-        }
-        double fraction = (stepStart - p.launchNearIn) / (p.launchFarIn - p.launchNearIn);
+        double fraction = (stepStartIn - p.launchNearIn) / (p.launchFarIn - p.launchNearIn);
         double rpm = p.launchNearRpm + (p.launchFarRpm - p.launchNearRpm) * Math.pow(fraction, p.launchCurve);
         return Math.round(rpm);
     }

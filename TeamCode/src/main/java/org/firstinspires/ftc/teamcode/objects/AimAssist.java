@@ -137,6 +137,23 @@ public final class AimAssist {
      */
     public static double GroupCenterBearing(List<Integer> ids, List<Double> bearings,
                                             int nearestId, int[][] groups) {
+        return GroupAverage(ids, bearings, nearestId, groups, false);
+    }
+
+    /**
+     * The average of one number per tag (a bearing, or a distance) over every tag in view
+     * from the nearest tag's group, the same tags {@link #GroupCenterBearing} uses.
+     *
+     * <pre>
+     *     tags 30, 31, 33 (one group) at 100, 104 and 0 in (0 = no distance), skipZeros:
+     *     (100 + 104) / 2 = 102
+     * </pre>
+     *
+     * @param skipZeros true: a value of 0 means "not known" and is left out (distances).
+     * @return the average, or 0 when no tag counts
+     */
+    public static double GroupAverage(List<Integer> ids, List<Double> values, int nearestId,
+                                      int[][] groups, boolean skipZeros) {
         // Start with the group that is just the nearest tag, in case it is in no group.
         int lowest = nearestId;
         int highest = nearestId;
@@ -150,8 +167,10 @@ public final class AimAssist {
         int count = 0;
         for (int i = 0; i < ids.size(); i++) {
             int id = ids.get(i);
-            if (id >= lowest && id <= highest) {
-                total = total + bearings.get(i);
+            double value = values.get(i);
+            boolean unknown = skipZeros && value == 0;
+            if (id >= lowest && id <= highest && !unknown) {
+                total = total + value;
                 count = count + 1;
             }
         }

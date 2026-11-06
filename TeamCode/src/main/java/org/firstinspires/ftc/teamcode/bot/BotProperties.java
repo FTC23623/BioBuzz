@@ -266,6 +266,22 @@ public class BotProperties {
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
     public double launchBandIn = 2;
     /**
+     * Steady range (docs/decisions/0048), an experiment: false (today) uses the biggest tag's
+     * distance and plain steps. true uses the two settings below. Gamepad 2 cross flips it
+     * during a run, to compare; so does the dashboard.
+     */
+    public boolean steadyRange = false;
+    /**
+     * With steadyRange: the distance is the average of our hive's tags in view, not the
+     * biggest tag's alone, so it doesn't jump when a different tag looks biggest.
+     */
+    public boolean steadyRangeAverage = true;
+    /**
+     * With steadyRange: inches past a step's edge before the speed moves to the next step, so
+     * a distance wobbling on an edge doesn't flip the speed every loop. 0 = no hold.
+     */
+    public double launchBandHoldIn = 1;
+    /**
      * Added to every step of the curve. D-pad up / down on gamepad 2 moves it by
      * launcherRpmStep while range tuning is on, so the operator can nudge every shot faster
      * or slower on the day. On the dashboard's Launcher group.

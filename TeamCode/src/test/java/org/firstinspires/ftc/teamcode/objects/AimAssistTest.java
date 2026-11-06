@@ -109,6 +109,17 @@ class AimAssistTest {
     }
 
     @Test
+    @DisplayName("group average of distances: zeros (no distance) are left out")
+    void groupAverageSkipsZeros() {
+        List<Integer> ids = Arrays.asList(30, 31, 33, 42);
+        List<Double> ranges = Arrays.asList(100.0, 104.0, 0.0, 300.0);
+        assertEquals(102, AimAssist.GroupAverage(ids, ranges, 30, HIVES, true), EPS);
+        // Kept in, the zero pulls the average down: that is why distances skip them.
+        assertEquals(68, AimAssist.GroupAverage(ids, ranges, 30, HIVES, false), EPS);
+        assertEquals(0, AimAssist.GroupAverage(Arrays.asList(30), Arrays.asList(0.0), 30, HIVES, true), EPS);
+    }
+
+    @Test
     @DisplayName("group middle: nothing in view, 0")
     void emptyIsZero() {
         assertEquals(0, AimAssist.GroupCenterBearing(Arrays.<Integer>asList(), Arrays.<Double>asList(), 31, HIVES), EPS);

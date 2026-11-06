@@ -133,7 +133,8 @@ public class Bot {
             "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
-            "launchNearRpm", "launchFarRpm", "launchCurve", "launchBandIn", "launcherKF", "launcherKP", "launcherKI",
+            "launchNearRpm", "launchFarRpm", "launchCurve", "launchBandIn",
+            "steadyRange", "steadyRangeAverage", "launchBandHoldIn", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
             "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock"};
     static final String[] LiveTuningIntake = {

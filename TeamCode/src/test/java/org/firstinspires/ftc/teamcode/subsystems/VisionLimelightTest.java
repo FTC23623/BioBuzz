@@ -197,6 +197,27 @@ class VisionLimelightTest {
         assertEquals(2, vision.CountIgnoredTags());
     }
 
+    /** A tag, like tag(), that also knows how far away it is, straight ahead. */
+    private LLResultTypes.FiducialResult tagAtInches(int id, double areaPercent, double inches) {
+        LLResultTypes.FiducialResult tag = tag(id, 0, areaPercent);
+        when(tag.getTargetPoseCameraSpace())
+                .thenReturn(new Pose3D(new Position(DistanceUnit.INCH, 0, 0, inches, 0), null));
+        return tag;
+    }
+
+    @Test
+    @DisplayName("group range: the average of the nearest tag's group; tags with no distance and other groups left out")
+    void groupRangeAverages() {
+        op.mAlliance = Alliance.RED;
+        // 30 and 31 share a group (30-33); 32 has no distance; 34 is the next group.
+        LLResultTypes.FiducialResult noDistance = tag(32, 0, 1.0);
+        limelightSees(tagAtInches(30, 3.0, 100), tagAtInches(31, 2.0, 110), noDistance,
+                tagAtInches(34, 1.0, 200));
+        vision.Process();
+        assertEquals(100, vision.GetRange(), 1e-6);   // the biggest tag, as before
+        assertEquals(105, vision.GetGroupRange(), 1e-6);
+    }
+
     @Test
     @DisplayName("quiet telemetry: still sees the tag, but never asks the Limelight for its status")
     void quietSkipsTheStatusRead() {
