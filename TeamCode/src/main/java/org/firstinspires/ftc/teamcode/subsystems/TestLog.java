@@ -23,7 +23,8 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *       {@code /sdcard/FIRST/logs/}. Open it in a spreadsheet to see, say, the distance and
  *       the transfer's speed in the moment the launch trigger was pulled.
  *   <li><b>testTelemetry</b>: the same numbers on the Driver Station, even with quiet or
- *       launcher-only telemetry on.
+ *       launcher-only telemetry on, one line each, named like the file's columns. Each is a
+ *       plain number (buttons 0 or 1), so FTC Dashboard can graph it over time.
  * </ul>
  *
  * <p>The columns: time and loop time; each button that does something (1 held, 0 not), by
@@ -54,10 +55,8 @@ public class TestLog implements Subsystem {
     // This loop's columns, names and values in the same order. Filled by Collect().
     private final List<String> mNames = new ArrayList<>();
     private final List<String> mValues = new ArrayList<>();
-    // Where each gamepad's buttons are in those lists, for the Driver Station.
-    private int mDriverFirst = 0;
-    private int mOperatorFirst = 0;
-    private int mButtonsEnd = 0;
+    /** The same values as numbers, for the telemetry graphs. Buttons are 0 or 1. */
+    private final List<Double> mNumbers = new ArrayList<>();
 
     /**
      * @param folder where the log files go. null (what the Bot passes) means
@@ -111,6 +110,7 @@ public class TestLog implements Subsystem {
     private void Collect() {
         mNames.clear();
         mValues.clear();
+        mNumbers.clear();
         if (mStartNanos == 0) {
             mStartNanos = System.nanoTime();
         }
@@ -118,7 +118,6 @@ public class TestLog implements Subsystem {
         Add("loop_ms", mOp.mLoopTime);
 
         // Gamepad 1, the driver.
-        mDriverFirst = mNames.size();
         Gamepad driver = mOp.mDriverGamepad;
         Add("aim", driver.right_bumper);
         Add("launch", driver.right_trigger > mProperties.trgBtnThresh);
@@ -129,7 +128,6 @@ public class TestLog implements Subsystem {
         Add("wiggle_button", driver.square);
         Add("reset_forward", driver.circle);
         // Gamepad 2, the operator.
-        mOperatorFirst = mNames.size();
         Gamepad operator = mOp.mOperatorGamepad;
         Add("intake_toggle", operator.left_bumper);
         Add("intake_hold", operator.left_trigger > mProperties.trgBtnThresh);
@@ -140,7 +138,6 @@ public class TestLog implements Subsystem {
         Add("steady_button", operator.cross);
         Add("always_track_button", operator.circle);
         Add("lock_override", operator.right_trigger > mProperties.trgBtnThresh);
-        mButtonsEnd = mNames.size();
         // What those buttons switch.
         Add("wiggle_on", mProperties.launchWiggle);
         Add("steady_on", mProperties.steadyRange);
@@ -176,13 +173,17 @@ public class TestLog implements Subsystem {
     }
 
     private void Add(String name, boolean value) {
-        mNames.add(name);
-        mValues.add(value ? "1" : "0");
+        if (value) {
+            Add(name, 1);
+        } else {
+            Add(name, 0);
+        }
     }
 
     private void Add(String name, double value) {
         mNames.add(name);
         mValues.add(Number(value));
+        mNumbers.add(value);
     }
 
     /** A number for the file: whole numbers without ".0", others to three places, NaN empty. */
@@ -258,38 +259,21 @@ public class TestLog implements Subsystem {
         mWriter = null;
     }
 
-    /** The same numbers on the Driver Station, a few to a line. */
+    /**
+     * The same numbers on the Driver Station, one line each: "T aim: 1". Each value is a
+     * plain number, so FTC Dashboard graphs it. The time column is left out (the graph has
+     * its own clock), and so is an unknown value (NaN), which the dashboard can't draw.
+     */
     private void Show() {
-        mOp.mTelemetry.addData("Test: driver held", Held(mDriverFirst, mOperatorFirst));
-        mOp.mTelemetry.addData("Test: operator held", Held(mOperatorFirst, mButtonsEnd));
-        mOp.mTelemetry.addData("Test: switches", "wiggle %s, steady %s, always-track %s, gates %s",
-                Value("wiggle_on"), Value("steady_on"), Value("always_track_on"), Value("gates_open"));
-        mOp.mTelemetry.addData("Test: distance", "tag %s, %s in (group %s), tilt %s",
-                Value("tag_id"), Value("range_in"), Value("group_range_in"), Value("tag_tilt_deg"));
-        mOp.mTelemetry.addData("Test: pollen", "target %s, actual %s RPM",
-                Value("pollen_target_rpm"), Value("pollen_rpm"));
-        mOp.mTelemetry.addData("Test: transfer", "target %s, actual %s RPM, power %s",
-                Value("transfer_target_rpm"), Value("transfer_rpm"), Value("transfer_power"));
-        mOp.mTelemetry.addData("Test: intake", "target %s, actual %s RPM, power %s",
-                Value("intake_target_rpm"), Value("intake_rpm"), Value("intake_power"));
-        mOp.mTelemetry.addData("Test log file", mFileStatus);
-    }
-
-    /** The names of the buttons held, from column "from" up to (not including) "to". */
-    String Held(int from, int to) {
-        StringBuilder held = new StringBuilder();
-        for (int i = from; i < to && i < mNames.size(); i++) {
-            if (mValues.get(i).equals("1")) {
-                if (held.length() > 0) {
-                    held.append(", ");
-                }
-                held.append(mNames.get(i));
+        for (int i = 0; i < mNames.size(); i++) {
+            String name = mNames.get(i);
+            double value = mNumbers.get(i);
+            if (name.equals("time_s") || Double.isNaN(value)) {
+                continue;
             }
+            mOp.mTelemetry.addData("T " + name, value);
         }
-        if (held.length() == 0) {
-            return "none";
-        }
-        return held.toString();
+        mOp.mTelemetry.addData("Test log file", mFileStatus);
     }
 
     /** This loop's value for a column, as written in the file. */

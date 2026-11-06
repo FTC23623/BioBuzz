@@ -134,9 +134,10 @@ public class BotProperties {
      */
     public boolean testLog = false;
     /**
-     * true: the Driver Station shows the same numbers as the test log, even with quiet or
-     * launcher-only telemetry on: buttons held, distances, the transfer's RPM and power.
-     * For testing; costs loop time. Off for matches.
+     * true: the Driver Station shows the same numbers as the test log, one line each ("T
+     * launch: 1"), even with quiet or launcher-only telemetry on: buttons as 0 or 1,
+     * distances, the transfer's RPM and power. Plain numbers, so FTC Dashboard graphs each
+     * one. For testing; about 40 lines, so it costs loop time. Off for matches.
      */
     public boolean testTelemetry = false;
     /**

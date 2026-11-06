@@ -15,7 +15,7 @@ Each of these adds work to every loop. Set them as shown, top to bottom.
 | # | Setting | Set to | What it costs when on |
 |---|---|---|---|
 | 1 | `testLog` | `false` | Writes a CSV line to the hub's storage every loop (0050). |
-| 2 | `testTelemetry` | `false` | About 8 extra Driver Station lines every loop (0050). |
+| 2 | `testTelemetry` | `false` | About 40 extra Driver Station lines every loop (0050). |
 | 3 | `launcherOnlyTelemetry` | `false` | Launcher numbers every loop. Only for tuning the launchers (0041). |
 | 4 | `quietTelemetry` | your choice | `true` is the fastest loop: after START the screen shows only loop time and battery, and the parts skip the hardware reads they make just for the screen. `false` shows the full screen. INIT shows everything either way (0041). |
 | 5 | `competitionMode` | `true` | With it `false`, every telemetry line is also sent to FTC Dashboard over Wi-Fi, and the Limelight web-page relay runs (0022). |

@@ -65,7 +65,7 @@ class TestLogTest {
     void offDoesNothing() {
         log.Process();
         assertNull(log.GetFile());
-        verify(telemetry, never()).addData(eq("Test: driver held"), any(Object.class));
+        verify(telemetry, never()).addData(eq("T launch"), any(Object.class));
     }
 
     @Test
@@ -95,15 +95,19 @@ class TestLogTest {
     }
 
     @Test
-    @DisplayName("testTelemetry on: the buttons held, by what they do, and the transfer on the screen")
+    @DisplayName("testTelemetry on: one number per line, buttons 0 or 1, so the dashboard can graph them")
     void showsOnScreen() {
         properties.testTelemetry = true;
         driver.right_trigger = 1;
         operator.left_bumper = true;
+        when(transfer.GetPower()).thenReturn(0.6);
         log.Process();
-        assertEquals("launch", log.Held(0, 100).split(", ")[0]);
-        verify(telemetry).addData("Test: driver held", "launch");
-        verify(telemetry).addData("Test: operator held", "intake_toggle");
+        verify(telemetry).addData("T launch", 1.0);
+        verify(telemetry).addData("T aim", 0.0);
+        verify(telemetry).addData("T intake_toggle", 1.0);
+        verify(telemetry).addData("T transfer_power", 0.6);
+        // No tag: the tilt is unknown (NaN), which a graph can't draw, so it is left out.
+        verify(telemetry, never()).addData(eq("T tag_tilt_deg"), any(Object.class));
         assertNull(log.GetFile(), "the screen alone writes no file");
     }
 

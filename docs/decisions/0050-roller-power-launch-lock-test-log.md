@@ -33,8 +33,12 @@ Four asks from the coach before Hartland:
   target and actual RPM and power; power mode. It flushes every 10 lines, so STOP loses
   at most a few loops. Copy the file off the hub (Android file transfer, or `adb pull`)
   and open it in a spreadsheet.
-- **`testTelemetry`** (false): the same numbers on the Driver Station, as "Test: ..." lines,
-  even with quiet or launcher-only telemetry on.
+- **`testTelemetry`** (false): the same numbers on the Driver Station, one line each, named
+  like the file's columns with a "T " in front (`T launch: 1`), even with quiet or
+  launcher-only telemetry on. Every value is a plain number, buttons 0 or 1, so FTC
+  Dashboard's graph view can plot each one over time. An unknown value (no tilt) is left
+  out, since the dashboard can't draw it. (Changed the same day from a few combined lines
+  that listed the buttons by name, coach.)
 - **`docs/match-day-settings.md`**: A, loop-time settings in order; B, the match-rule
   settings; linked from the top of `event-checklist.md`.
 
