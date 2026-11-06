@@ -31,9 +31,11 @@ point it straight. The coach asked for three things:
 
   | Auto | Start facing |
   |---|---|
-  | Garden Side Auto A | -90, the driver's right |
-  | Flower Side Auto B | 90, the driver's left |
-  | Flower Side Auto C | 90, the driver's left |
+  | Garden Side Auto A | 90, the driver's left |
+  | Flower Side Auto B | -90, the driver's right |
+  | Flower Side Auto C | -90, the driver's right |
+
+  (Flipped on 2026-11-05: the first numbers had A right and B, C left, backwards.)
 
   Every loop, the auto saves start facing + Pedro's heading in `objects/HeadingHandoff`.
   It is a static field, so it lives from one OpMode to the next in the same Robot

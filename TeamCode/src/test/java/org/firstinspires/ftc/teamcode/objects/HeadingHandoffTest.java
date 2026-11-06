@@ -20,7 +20,7 @@ class HeadingHandoffTest {
     @Test
     @DisplayName("TeleOp heading: the start facing plus Pedro's turn")
     void teleOpYaw() {
-        // Garden Side A starts facing the driver's right; turning 90 left faces away.
+        // Starting at the driver's right (-90), a 90 left turn faces away from the driver.
         assertEquals(0, HeadingHandoff.TeleOpYaw(-90, 90), EPS);
         assertEquals(-150, HeadingHandoff.TeleOpYaw(90, 120), EPS);
         assertEquals(90, HeadingHandoff.TeleOpYaw(90, 0), EPS);

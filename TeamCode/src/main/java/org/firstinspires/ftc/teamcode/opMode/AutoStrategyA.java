@@ -28,10 +28,10 @@ public class AutoStrategyA extends PedroAuto {
     /** The name on the Driver Station. The backups add their color to it. */
     public static final String NAME = "Garden Side Auto A";
 
-    /** The robot starts facing the driver's right. */
+    /** The robot starts facing the driver's left (was -90 until 2026-11-05: backwards). */
     @Override
     protected double StartFacingDeg() {
-        return -90;
+        return 90;
     }
 
     /** How far right the robot slides while it turns, in inches. */

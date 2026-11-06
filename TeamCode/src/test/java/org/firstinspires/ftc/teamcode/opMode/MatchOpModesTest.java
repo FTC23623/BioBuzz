@@ -70,14 +70,14 @@ class MatchOpModesTest {
     }
 
     @Test
-    @DisplayName("start facing, seen from the driver: A to the right, B and C to the left")
+    @DisplayName("start facing, seen from the driver: A to the left, B and C to the right")
     void startFacing() {
-        assertEquals(-90, new AutoStrategyA().StartFacingDeg(), 1e-9);
-        assertEquals(90, new AutoStrategyB().StartFacingDeg(), 1e-9);
-        assertEquals(90, new AutoStrategyC().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyA().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyB().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyC().StartFacingDeg(), 1e-9);
         // The backups start the same way as the auto they copy.
-        assertEquals(-90, new AutoStrategyARed().StartFacingDeg(), 1e-9);
-        assertEquals(90, new AutoStrategyCBlue().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyARed().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyCBlue().StartFacingDeg(), 1e-9);
     }
 
     @Test

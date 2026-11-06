@@ -32,10 +32,10 @@ public class AutoStrategyC extends PedroAuto {
     /** The name on the Driver Station. The backups add their color to it. */
     public static final String NAME = "Flower Side Auto C";
 
-    /** The robot starts facing the driver's left. */
+    /** The robot starts facing the driver's right (was 90 until 2026-11-05: backwards). */
     @Override
     protected double StartFacingDeg() {
-        return 90;
+        return -90;
     }
 
 
