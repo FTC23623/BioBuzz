@@ -33,6 +33,16 @@ public class AutoStrategyC extends PedroAuto {
     public static final String NAME = "Flower Side Auto C";
 
     /** The robot starts facing the driver's right (was 90 until 2026-11-05: backwards). */
+    /**
+     * Flower side: front against the top wall, in front of the cell there, on the tile
+     * east of the seam (x 46.75), toward the blue alliance wall. The robot is 18 x 18, so its center is
+     * 9 in off the wall and 9 in from the seam. Blue; red is turned half a turn (0051).
+     */
+    @Override
+    protected Pose FieldStartBlue() {
+        return new Pose(55.75, 132.5, Math.toRadians(90));
+    }
+
     @Override
     protected double StartFacingDeg() {
         return -90;

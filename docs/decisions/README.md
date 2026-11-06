@@ -57,6 +57,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0048](0048-steady-range.md) | Steady range: average our tags and hold each speed step; on by default, gamepad 2 cross toggles | On by default, not driven yet |
 | [0049](0049-always-track-range.md) | Always-track range: follow the distance whenever a tipped-up tag of ours is seen, gamepad 2 circle | Experiment, off by default |
 | [0050](0050-roller-power-launch-lock-test-log.md) | Roller power mode, launch RPM lock, test log and test telemetry, match-day settings | Accepted, all off by default |
+| [0051](0051-pedro-visualizer-tools.md) | Autos on the field: start spots, export to and import from the Pedro Pathing Visualizer | Accepted, laptop tools only |
 
 ## TODO: confirm on the robot after this week's tuning
 
