@@ -267,6 +267,12 @@ class LauncherTest {
     }
 
     @Test
+    @DisplayName("steady range is on at START (coach, 2026-11-05)")
+    void steadyOnByDefault() {
+        assertTrue(new BotProperties().steadyRange);
+    }
+
+    @Test
     @DisplayName("gamepad 2 cross: steady range on (one rumble), again off (two)")
     void crossTogglesSteady() {
         tap(down -> gamepad.cross = down);

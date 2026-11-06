@@ -266,11 +266,11 @@ public class BotProperties {
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
     public double launchBandIn = 2;
     /**
-     * Steady range (docs/decisions/0048), an experiment: false (today) uses the biggest tag's
-     * distance and plain steps. true uses the two settings below. Gamepad 2 cross flips it
-     * during a run, to compare; so does the dashboard.
+     * Steady range (docs/decisions/0048): true (since 2026-11-05) uses the two settings below.
+     * false uses the biggest tag's distance and plain steps, as before. Gamepad 2 cross flips
+     * it during a run, to compare; so does the dashboard.
      */
-    public boolean steadyRange = false;
+    public boolean steadyRange = true;
     /**
      * With steadyRange: the distance is the average of our hive's tags in view, not the
      * biggest tag's alone, so it doesn't jump when a different tag looks biggest.
@@ -650,10 +650,16 @@ public class BotProperties {
     /** The distance correction never drives harder than this, either way. */
     public double arcMaxDrive = 0.4;
 
-    // Launch wiggle (docs/decisions/0045): while the driver holds SQUARE and the launch
-    // trigger, the robot swings wiggleDeg left, then right, a side per ball, so balls that
-    // leave one after another don't run into each other. The heading comes from the IMU
-    // (Pinpoint), not the camera. An experiment (coach, 2026-11-04): CHECK every number.
+    // Launch wiggle (docs/decisions/0045): while launchWiggle is on and the driver holds the
+    // launch trigger, the robot swings wiggleDeg left, then right, a side per ball, so balls
+    // that leave one after another don't run into each other. It starts once aim has settled
+    // (or no tag is in view). The heading comes from the IMU (Pinpoint), not the camera. An
+    // experiment (coach, 2026-11-04): CHECK every number.
+    /**
+     * true (since 2026-11-05): every launch wiggles. Square on gamepad 1 turns it off and on
+     * again during a match (one rumble on, two off). Was: hold square with the trigger.
+     */
+    public boolean launchWiggle = true;
     /** How far either side of where the wiggle started, in degrees. */
     public double wiggleDeg = 1;
     /**

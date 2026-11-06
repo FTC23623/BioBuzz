@@ -33,9 +33,10 @@ import org.firstinspires.ftc.teamcode.objects.Wiggle;
  *       strafes that way at {@code arcStrafePower}, aim keeps the nose on the hive, and a
  *       little drive holds the distance the arc started at ({@code arcRangeKP}). With the
  *       aim button up, or no tag in view, the D-pad does nothing (docs/decisions/0039).
- *   <li><b>Square / X (hold, with the launch trigger)</b>: wiggle. The robot swings
- *       {@code wiggleDeg} left, then right, a side per ball, so balls don't run into each
- *       other. Takes over the turn from aim while held (docs/decisions/0045).
+ *   <li><b>Square / X (press)</b>: launch wiggle on / off ({@code launchWiggle}, on at
+ *       START). On, every launch wiggles: once aim has settled (or with no tag in view) the
+ *       robot swings {@code wiggleDeg} left, then right, a side per ball, so balls don't run
+ *       into each other, until the trigger is let go (docs/decisions/0045).
  * </ul>
  *
  * <p>Practice options, off unless an OpMode turns them on in BotProperties (from Decode's
@@ -73,8 +74,10 @@ public class Drive_Manual extends Drive {
      * with no fresh reading never aims, so a button seen once can't keep aiming (0040).
      */
     private boolean mInputFresh = false;
-    /** true while the driver holds square AND the launch trigger. */
+    /** true while the launch trigger is held with launchWiggle on. */
     private boolean mWiggleHeld = false;
+    /** Square: launch wiggle on / off. */
+    private final Debouncer mWiggleButton;
     /** true once a wiggle has started: its center heading and its timer are set. */
     private boolean mWiggling = false;
     /** Which way the robot faced when the wiggle started, degrees. */
@@ -88,6 +91,7 @@ public class Drive_Manual extends Drive {
         SetAllMotorPower(0.0);
         SetAllMotorMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         mResetHeadingButton = new Debouncer(mProperties.debounce);
+        mWiggleButton = new Debouncer(mProperties.debounce);
         mSpeedLimit = mProperties.driveNormal;
     }
 
@@ -107,7 +111,18 @@ public class Drive_Manual extends Drive {
         mRotate = -turnStick;
         // Aim on the right bumper, and on the launch trigger too, so a launch snaps to the hive.
         mAimHeld = AimButtonDown();
-        mWiggleHeld = mGamepad.square && mGamepad.right_trigger > mProperties.trgBtnThresh;
+        // Square: launch wiggle on / off. One rumble on, two off.
+        mWiggleButton.In(mGamepad.square);
+        if (mWiggleButton.Out()) {
+            mWiggleButton.Used();
+            mProperties.launchWiggle = !mProperties.launchWiggle;
+            if (mProperties.launchWiggle) {
+                mGamepad.rumbleBlips(1);
+            } else {
+                mGamepad.rumbleBlips(2);
+            }
+        }
+        mWiggleHeld = mProperties.launchWiggle && mGamepad.right_trigger > mProperties.trgBtnThresh;
         mInputFresh = true;
         // Drift only while the trigger is held, and only in an OpMode that has it on.
         mDriftHeld = mProperties.driveDriftAssist && mGamepad.left_trigger > mProperties.trgBtnThresh;
@@ -172,6 +187,8 @@ public class Drive_Manual extends Drive {
         // Aim assist: the middle of the hive's tag group decides the turn, not one tag, so the
         // robot faces the hive itself. The sticks still drive and strafe.
         boolean aimingAtHive = mAimHeld && mVision.SeesTag();
+        // true once aim is done turning, or has nothing to aim at: the wiggle may start.
+        boolean aimSettled = true;
         if (aimingAtHive) {
             double hiveBearing = mVision.GetGroupBearing();
             // Aim a little off the hive's middle, toward the side the robot stands on
@@ -179,6 +196,7 @@ public class Drive_Manual extends Drive {
             double aimAt = AimAssist.SideOffset(mVision.GetSideDegrees(),
                     mProperties.aimHiveBearingDeg, mProperties.aimSideCenterDeg);
             double aimError = AimAssist.AimError(hiveBearing, aimAt);
+            aimSettled = Math.abs(aimError) <= mProperties.aimDoneDegrees;
             mRotate = AimAssist.RotateToward(aimError, mProperties.aimKP,
                     mProperties.aimMaxRotate, mProperties.aimDoneDegrees);
             if (!mOp.mQuiet) {
@@ -190,9 +208,9 @@ public class Drive_Manual extends Drive {
         } else if (!mOp.mQuiet) {
             mOp.mTelemetry.addLine("Aim assist: off");
         }
-        // Square with the launch trigger: wiggle. It takes over the turn from aim (aim first,
-        // then hold square), swinging around the heading it started at, by the IMU.
-        if (mWiggleHeld && mImu.Ready()) {
+        // Launch trigger with launchWiggle on: wiggle. It waits for aim to settle, then takes
+        // over the turn, swinging around that heading, by the IMU, until the trigger is let go.
+        if (mWiggleHeld && mImu.Ready() && (mWiggling || aimSettled)) {
             if (!mWiggling) {
                 mWiggling = true;
                 mWiggleCenterYaw = yaw;

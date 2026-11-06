@@ -51,10 +51,10 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0042](0042-flower-step-and-recorder-circle.md) | A FLOWER step for the autos (back 6, arm out, 7-inch strokes twice, arm in), recorded with circle | Accepted, not driven yet |
 | [0043](0043-auto-intake-roller-only-for-flower.md) | In autos the intake roller runs only during FLOWER; the transfer feeds launches at 30% | Accepted, not driven yet |
 | [0044](0044-aim-offset-by-side-of-hive.md) | The aim offset flips with the side of the hive the robot stands on | Accepted, not driven yet |
-| [0045](0045-launch-wiggle.md) | Launch wiggle: square with the launch trigger swings 1 deg left and right, a side per ball | Experiment, not driven yet |
+| [0045](0045-launch-wiggle.md) | Launch wiggle: every launch swings 1 deg left and right, a side per ball; on by default, square toggles | Experiment, not driven yet |
 | [0046](0046-auto-to-teleop-handoff.md) | The autos go straight on to TeleOp and keep the heading; renamed by field side, color-sensing first | Accepted, not run on the field yet |
 | [0047](0047-auto-intake-on-off-steps.md) | INTAKE_ON and INTAKE_OFF auto steps, recorded with D-pad up / down | Accepted, not driven yet |
-| [0048](0048-steady-range.md) | Steady range: average our tags and hold each speed step, opt-in on gamepad 2 cross | Experiment, off by default |
+| [0048](0048-steady-range.md) | Steady range: average our tags and hold each speed step; on by default, gamepad 2 cross toggles | On by default, not driven yet |
 
 ## TODO: confirm on the robot after this week's tuning
 

@@ -1,6 +1,6 @@
-# 0048: Steady range, an opt-in for a steadier launcher speed
+# 0048: Steady range, for a steadier launcher speed
 
-Status: Experiment, 2026-11-05. Off by default. Not yet driven.
+Status: Accepted, 2026-11-05, on by default since the same day. Not yet driven.
 
 ## Context
 
@@ -47,3 +47,8 @@ The coach wanted both fixed, as something they can switch on and off to compare.
 - Autos follow the same switch: steady is off in the autos unless it is set in BotProperties.
 - Tests: `AimAssistTest` (the average skips zeros), `VisionLimelightTest` (group range),
   `LauncherTest` (the hold, off is unchanged, the group range, cross toggles).
+
+## Update, 2026-11-05: on by default
+
+Coach: `steadyRange` is **true** from now on, so TeleOp and the autos both use it. Gamepad
+2 cross still turns it off (two rumbles) for a comparison.

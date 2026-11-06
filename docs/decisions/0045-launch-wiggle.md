@@ -39,3 +39,15 @@ All four numbers are on the dashboard's Drive group.
 - TeleOp only. The autos don't wiggle.
 - Tests: `WiggleTest` (sides, the turn, across 180 / -180), `DriveAimTest` (square with
   the trigger, square alone, no IMU).
+
+## Update, 2026-11-05: a toggle, on by default
+
+Coach: the wiggle is now a setting, `launchWiggle`, **on at START**. Square on gamepad 1
+turns it off and on again (one rumble on, two off); the dashboard's Drive group has it
+too. With it on, every launch wiggles: hold the launch trigger and nothing else.
+
+Because the trigger also aims (`launchTriggerAims`), the wiggle waits until aim has
+settled: the hive within `aimDoneDegrees` (1) of where it should sit, or no tag in view.
+Then it swings around that heading until the trigger is let go; a new camera reading does
+not take the turn back. So a launch still snaps to the hive first, then wiggles.
+Tests: `DriveAimTest` (the trigger alone wiggles, aim first, square toggles, on by default).

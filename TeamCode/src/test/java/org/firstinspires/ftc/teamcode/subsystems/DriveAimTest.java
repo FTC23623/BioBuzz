@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -65,6 +67,8 @@ class DriveAimTest {
         op.mSafeMode = false;
         // These tests check the aim itself, dead center. The pollen offset has its own test.
         properties.aimHiveBearingDeg = 0;
+        // The aim tests check aim alone; the wiggle tests turn it back on.
+        properties.launchWiggle = false;
         drive = new Drive_Manual(op, properties, imu, vision);
     }
 
@@ -398,15 +402,27 @@ class DriveAimTest {
         assertEquals(0, frontLeft(), EPS);
     }
 
+    /** Press a button long enough for the debouncer, then let go. */
+    private void tap(java.util.function.Consumer<Boolean> button) {
+        for (int loop = 0; loop < properties.debounce + 2; loop++) {
+            button.accept(true);
+            drive.HandleUserInput();
+            drive.Process();
+        }
+        button.accept(false);
+        drive.HandleUserInput();
+        drive.Process();
+    }
+
     @Test
-    @DisplayName("wiggle: square with the launch trigger turns left first, toward 1 deg left of the start")
+    @DisplayName("wiggle on: the launch trigger alone turns left first, toward 1 deg left of the start")
     void wiggleStartsLeft() {
+        properties.launchWiggle = true;
         properties.wiggleDeg = 1;
         properties.wiggleKP = 0.1;
         properties.wiggleMaxRotate = 0.3;
         properties.wiggleSwitchSeconds = 60;   // long, so the test stays on the left side
         properties.driveNormal = 1;
-        gamepad.square = true;
         gamepad.right_trigger = 1;
         runLoops();
         // 1 degree to go, left: 0.1 x 1 = 0.1, a left turn (positive rotate).
@@ -415,25 +431,61 @@ class DriveAimTest {
     }
 
     @Test
-    @DisplayName("wiggle: overrides aim while held; square alone (no trigger) does nothing")
-    void wiggleNeedsTheTrigger() {
+    @DisplayName("wiggle on: aim turns first; once aimed the wiggle takes over and keeps going")
+    void wiggleWaitsForAim() {
+        properties.launchWiggle = true;
         properties.wiggleSwitchSeconds = 60;
         properties.driveNormal = 1;
-        gamepad.square = true;
-        runLoops();
-        assertEquals(0, frontLeft(), EPS);
-        tagAt(-20);   // aim alone would turn right hard
+        tagAt(-20);   // the hive well to the right
         gamepad.right_trigger = 1;
         runLoops();
-        assertEquals(0.1, frontLeft(), EPS);   // the wiggle's gentle left wins
+        assertTrue(frontLeft() < -0.1, "aim turns right hard first");
+        tagAt(-0.5);  // aimed
+        runLoops();
+        assertEquals(0.1, frontLeft(), EPS);   // the wiggle's gentle left
+        tagAt(-20);   // the camera's next look: the wiggle carries on, it does not hand back
+        runLoops();
+        assertEquals(0.1, frontLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("wiggle is on at START")
+    void wiggleOnByDefault() {
+        assertTrue(new BotProperties().launchWiggle);
+    }
+
+    @Test
+    @DisplayName("wiggle: no trigger, no wiggle")
+    void wiggleNeedsTheTrigger() {
+        properties.launchWiggle = true;
+        properties.wiggleSwitchSeconds = 60;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("square: wiggle off (two rumbles), then on again (one)")
+    void squareToggles() {
+        properties.launchWiggle = true;
+        properties.wiggleSwitchSeconds = 60;
+        tap(down -> gamepad.square = down);
+        assertFalse(properties.launchWiggle);
+        verify(gamepad).rumbleBlips(2);
+        gamepad.right_trigger = 1;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);   // off: the trigger launches without a wiggle
+        gamepad.right_trigger = 0;
+        tap(down -> gamepad.square = down);
+        assertTrue(properties.launchWiggle);
+        verify(gamepad).rumbleBlips(1);
     }
 
     @Test
     @DisplayName("wiggle: no heading from the IMU, no wiggle")
     void wiggleNeedsTheImu() {
         when(imu.Ready()).thenReturn(false);
+        properties.launchWiggle = true;
         properties.wiggleSwitchSeconds = 60;
-        gamepad.square = true;
         gamepad.right_trigger = 1;
         runLoops();
         assertEquals(0, frontLeft(), EPS);
