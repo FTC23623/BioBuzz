@@ -35,6 +35,13 @@ public interface Vision extends Subsystem {
     double GetGroupRange();
 
     /**
+     * @return the nearest tag's tilt in the camera, degrees: its pitch, or its roll with
+     *     {@code tagTiltFromRoll}. NaN when no tag is seen or the camera can't tell. Used to
+     *     tell whether the hive has tipped up (docs/decisions/0049).
+     */
+    double GetTagTiltDegrees();
+
+    /**
      * @return degrees to the middle of the tag group the nearest tag is in (see
      *     {@code tagGroups} in BotProperties). Left is positive. 0 when no tag is seen.
      */

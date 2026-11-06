@@ -20,9 +20,11 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.Arrays;
 import java.util.Collections;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.types.Alliance;
@@ -216,6 +218,25 @@ class VisionLimelightTest {
         vision.Process();
         assertEquals(100, vision.GetRange(), 1e-6);   // the biggest tag, as before
         assertEquals(105, vision.GetGroupRange(), 1e-6);
+    }
+
+    @Test
+    @DisplayName("tag tilt: the nearest tag's pitch, or its roll with tagTiltFromRoll; NaN with no pose")
+    void tagTilt() {
+        op.mAlliance = Alliance.RED;
+        LLResultTypes.FiducialResult tag = tag(30, 0, 3.0);
+        when(tag.getTargetPoseCameraSpace()).thenReturn(new Pose3D(
+                new Position(DistanceUnit.INCH, 0, 0, 100, 0),
+                new YawPitchRollAngles(AngleUnit.DEGREES, 5, -12, 30, 0)));
+        limelightSees(tag);
+        vision.Process();
+        assertEquals(-12, vision.GetTagTiltDegrees(), 1e-6);
+        properties.tagTiltFromRoll = true;
+        assertEquals(30, vision.GetTagTiltDegrees(), 1e-6);
+
+        limelightSees(tag(31, 0, 3.0));   // no pose at all
+        vision.Process();
+        assertTrue(Double.isNaN(vision.GetTagTiltDegrees()));
     }
 
     @Test

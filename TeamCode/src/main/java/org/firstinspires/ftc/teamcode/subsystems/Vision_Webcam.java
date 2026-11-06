@@ -207,6 +207,12 @@ public class Vision_Webcam implements Vision {
         return GetRange();
     }
 
+    /** The webcam doesn't work out the tag's tilt: never known, so never "tipped". */
+    @Override
+    public double GetTagTiltDegrees() {
+        return Double.NaN;
+    }
+
     /** This camera does not work out which side of the hive it is on: always 0, no offset. */
     @Override
     public double GetSideDegrees() {

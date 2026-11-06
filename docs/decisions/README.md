@@ -55,6 +55,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0046](0046-auto-to-teleop-handoff.md) | The autos go straight on to TeleOp and keep the heading; renamed by field side, color-sensing first | Accepted, not run on the field yet |
 | [0047](0047-auto-intake-on-off-steps.md) | INTAKE_ON and INTAKE_OFF auto steps, recorded with D-pad up / down | Accepted, not driven yet |
 | [0048](0048-steady-range.md) | Steady range: average our tags and hold each speed step; on by default, gamepad 2 cross toggles | On by default, not driven yet |
+| [0049](0049-always-track-range.md) | Always-track range: follow the distance whenever a tipped-up tag of ours is seen, gamepad 2 circle | Experiment, off by default |
 
 ## TODO: confirm on the robot after this week's tuning
 

@@ -7,9 +7,11 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
@@ -50,6 +52,10 @@ public class Vision_Limelight implements Vision {
     private double mRange = 0;
     /** Inches, averaged over the nearest tag's group (docs/decisions/0048). */
     private double mGroupRange = 0;
+    /** The nearest tag's angles in the camera, degrees, for its tilt (0049). NaN = not known. */
+    private double mTagPitch = Double.NaN;
+    private double mTagRoll = Double.NaN;
+    private double mTagYaw = Double.NaN;
     /** Which side of the hive the robot stands, degrees, left positive. 0 = not known. */
     private double mSide = 0;
     private double mArea = 0;
@@ -116,6 +122,15 @@ public class Vision_Limelight implements Vision {
                 mTagId = nearest.getFiducialId();
                 mBearing = -nearest.getTargetXDegrees();
                 mRange = RangeInches(nearest.getTargetPoseCameraSpace());
+                YawPitchRollAngles angles = Angles(nearest.getTargetPoseCameraSpace());
+                mTagPitch = Double.NaN;
+                mTagRoll = Double.NaN;
+                mTagYaw = Double.NaN;
+                if (angles != null) {
+                    mTagPitch = angles.getPitch(AngleUnit.DEGREES);
+                    mTagRoll = angles.getRoll(AngleUnit.DEGREES);
+                    mTagYaw = angles.getYaw(AngleUnit.DEGREES);
+                }
                 mSide = SideDegrees(nearest.getCameraPoseTargetSpace(), mProperties.aimSideReversed);
                 mArea = nearest.getTargetArea();
                 List<Integer> ids = new ArrayList<>();
@@ -248,6 +263,25 @@ public class Vision_Limelight implements Vision {
     }
 
     @Override
+    public double GetTagTiltDegrees() {
+        if (!SeesTag()) {
+            return Double.NaN;
+        }
+        if (mProperties.tagTiltFromRoll) {
+            return mTagRoll;
+        }
+        return mTagPitch;
+    }
+
+    /** The tag's angles from its pose, or null when the Limelight did not work them out. */
+    static YawPitchRollAngles Angles(Pose3D tagPose) {
+        if (tagPose == null) {
+            return null;
+        }
+        return tagPose.getOrientation();
+    }
+
+    @Override
     public double GetSideDegrees() {
         if (!SeesTag()) {
             return 0;
@@ -294,6 +328,9 @@ public class Vision_Limelight implements Vision {
                     mTagId, Math.abs(mBearing), Side(mBearing), mRange);
             mOp.mTelemetry.addData("Group middle", "%.1f deg to the %s, %.0f in away (average)",
                     Math.abs(mGroupBearing), Side(mGroupBearing), mGroupRange);
+            mOp.mTelemetry.addData("Tag tilt", "pitch %.0f, roll %.0f, yaw %.0f deg (tipped: %.0f to %.0f on %s)",
+                    mTagPitch, mTagRoll, mTagYaw, mProperties.tagTippedMinDeg, mProperties.tagTippedMaxDeg,
+                    mProperties.tagTiltFromRoll ? "roll" : "pitch");
             mOp.mTelemetry.addData("Robot stands", "%.0f deg to the %s of the hive", Math.abs(mSide), Side(mSide));
             mOp.mTelemetry.addData("Tag fills", "%.1f%% of the picture", mArea);
             mOp.mTelemetry.addData("Tag last seen", "%.0f ms ago", mSinceSeen.milliseconds());

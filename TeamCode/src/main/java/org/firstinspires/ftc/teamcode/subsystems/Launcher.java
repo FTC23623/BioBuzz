@@ -23,6 +23,8 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *       on (below) this trims the distance table instead, by the same 50.
  *   <li><b>D-pad right / left</b>: nectar launcher target up / down 50 RPM.
  *   <li><b>Cross / A</b>: steady range on / off (docs/decisions/0048). One rumble on, two off.
+ *   <li><b>Circle / B</b>: always-track range on / off (docs/decisions/0049): the speed
+ *       follows the distance whenever a tipped-up tag of ours is seen, not only while aiming.
  * </ul>
  *
  * <p><b>Steady range</b> ({@code steadyRange}, off unless switched on): the distance is the
@@ -59,6 +61,7 @@ public class Launcher implements Subsystem {
     private final Debouncer mNectarFasterButton;
     private final Debouncer mNectarSlowerButton;
     private final Debouncer mSteadyRangeButton;
+    private final Debouncer mAlwaysTrackButton;
     private final ElapsedTime mTimeSinceUpdate;
 
     private boolean mSpinning = false;
@@ -92,6 +95,7 @@ public class Launcher implements Subsystem {
         mNectarFasterButton = new Debouncer(properties.debounce);
         mNectarSlowerButton = new Debouncer(properties.debounce);
         mSteadyRangeButton = new Debouncer(properties.debounce);
+        mAlwaysTrackButton = new Debouncer(properties.debounce);
         mTimeSinceUpdate = new ElapsedTime();
     }
 
@@ -138,6 +142,15 @@ public class Launcher implements Subsystem {
                 mGamepad.rumbleBlips(2);
             }
         }
+        // Circle: always-track range on / off. Rumble 1 on, 2 off.
+        if (Pressed(mAlwaysTrackButton, mGamepad.circle)) {
+            mProperties.rangeAlwaysTracks = !mProperties.rangeAlwaysTracks;
+            if (mProperties.rangeAlwaysTracks) {
+                mGamepad.rumbleBlips(1);
+            } else {
+                mGamepad.rumbleBlips(2);
+            }
+        }
     }
 
     /** true once per press: the button was held long enough, and this press is now used up. */
@@ -177,10 +190,14 @@ public class Launcher implements Subsystem {
             return;
         }
         if (mFromGamepad && !mDriverAiming) {
-            // TeleOp, no aim button down: the camera is not tracking, so the speed holds.
-            mRangeStatus = String.format(Locale.US, "not tracking (hold aim or launch), holding %.0f",
-                    mProperties.pollenLauncherRpm);
-            return;
+            // TeleOp, no aim button down: the speed holds, unless always-track is on and a
+            // tag of ours is seen, tipped up (docs/decisions/0049).
+            String why = AlwaysTrackBlocked();
+            if (why != null) {
+                mRangeStatus = String.format(Locale.US, "not tracking (%s), holding %.0f",
+                        why, mProperties.pollenLauncherRpm);
+                return;
+            }
         }
         if (mVision == null || !mVision.SeesTag()) {
             // The held step is forgotten: the next tag starts on its own step.
@@ -213,9 +230,41 @@ public class Launcher implements Subsystem {
                 mode = "raw ";
             }
         }
+        if (mFromGamepad && !mDriverAiming) {
+            // Following with no aim button down: always-track did it.
+            mode = "ALWAYS " + mode;
+        }
         mProperties.pollenLauncherRpm = KeepInRange(tableRpm + mProperties.launcherRangeTrimRpm);
         mRangeStatus = String.format(Locale.US, "%s%.0f in -> %.0f RPM, trim %+.0f = %.0f",
                 mode, rangeIn, tableRpm, mProperties.launcherRangeTrimRpm, mProperties.pollenLauncherRpm);
+    }
+
+    /**
+     * Why always-track may not follow the distance right now, or null when it may.
+     * Only asked in TeleOp with no aim button down.
+     */
+    private String AlwaysTrackBlocked() {
+        if (!mProperties.rangeAlwaysTracks) {
+            return "hold aim or launch";
+        }
+        if (mVision == null || !mVision.SeesTag()) {
+            return "always-track: no tag";
+        }
+        if (mProperties.rangeNeedsTipped && !Tipped(mVision.GetTagTiltDegrees(), mProperties)) {
+            return String.format(Locale.US, "always-track: tag not tipped, tilt %.0f", mVision.GetTagTiltDegrees());
+        }
+        return null;
+    }
+
+    /**
+     * true when a tag's tilt says the hive has tipped up: from tagTippedMinDeg to
+     * tagTippedMaxDeg. An unknown tilt (NaN) is never tipped.
+     */
+    static boolean Tipped(double tiltDeg, BotProperties p) {
+        if (Double.isNaN(tiltDeg)) {
+            return false;
+        }
+        return tiltDeg >= p.tagTippedMinDeg && tiltDeg <= p.tagTippedMaxDeg;
     }
 
     /**

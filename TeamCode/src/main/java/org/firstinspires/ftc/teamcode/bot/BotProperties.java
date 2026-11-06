@@ -282,6 +282,29 @@ public class BotProperties {
      */
     public double launchBandHoldIn = 1;
     /**
+     * Always-track range (docs/decisions/0049): true follows the distance curve in TeleOp
+     * whenever a tag of ours is seen, not only while the driver holds aim or launch, so the
+     * wheel is already at speed when aiming starts. Gamepad 2 circle flips it. false (today):
+     * only while aiming, as before.
+     */
+    public boolean rangeAlwaysTracks = false;
+    /**
+     * With rangeAlwaysTracks: only follow while the tag reads as tipped up, by its tilt
+     * below. The hive's tags can be seen before the basket tips (coach, 2026-11-05). While
+     * aiming, the distance is followed either way.
+     */
+    public boolean rangeNeedsTipped = true;
+    /**
+     * Which of the tag's angles in the Limelight (camera space) is its tilt: false = pitch,
+     * true = roll. CHECK: watch the "Tag tilt" line while the basket tips, and pick the one
+     * that changes.
+     */
+    public boolean tagTiltFromRoll = false;
+    /** The tag counts as tipped while its tilt is from this... CHECK, in degrees. */
+    public double tagTippedMinDeg = -20;
+    /** ...to this. CHECK, in degrees. */
+    public double tagTippedMaxDeg = 20;
+    /**
      * Added to every step of the curve. D-pad up / down on gamepad 2 moves it by
      * launcherRpmStep while range tuning is on, so the operator can nudge every shot faster
      * or slower on the day. On the dashboard's Launcher group.

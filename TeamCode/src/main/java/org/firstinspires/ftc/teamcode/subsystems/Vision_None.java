@@ -66,6 +66,11 @@ public class Vision_None implements Vision {
     }
 
     @Override
+    public double GetTagTiltDegrees() {
+        return Double.NaN;
+    }
+
+    @Override
     public double GetGroupBearing() {
         return 0;
     }

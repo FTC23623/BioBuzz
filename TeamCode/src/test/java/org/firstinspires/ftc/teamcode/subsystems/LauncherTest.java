@@ -71,6 +71,11 @@ class LauncherTest {
         properties.steadyRange = false;
         properties.steadyRangeAverage = true;
         properties.launchBandHoldIn = 1;
+        // Always-track (0049) is off unless a test turns it on.
+        properties.rangeAlwaysTracks = false;
+        properties.rangeNeedsTipped = true;
+        properties.tagTippedMinDeg = -20;
+        properties.tagTippedMaxDeg = 20;
         HardwareMap hardwareMap = mock(HardwareMap.class);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgLaunchPollen)).thenReturn(pollen.motor);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgLaunchNectar)).thenReturn(nectar.motor);
@@ -264,6 +269,73 @@ class LauncherTest {
         tagAt(123.2);
         launcher.Process();
         assertEquals(Launcher.RpmForRange(122, properties), launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    /** A TeleOp loop with no aim button down: the gamepad is read, then the launcher runs. */
+    private void teleOpLoopNotAiming() {
+        launcher.HandleUserInput();
+        launcher.Process();
+    }
+
+    @Test
+    @DisplayName("tipped: the tilt within -20 to 20 degrees; an unknown tilt never is")
+    void tippedWindow() {
+        assertTrue(Launcher.Tipped(0, properties));
+        assertTrue(Launcher.Tipped(-20, properties));
+        assertTrue(Launcher.Tipped(20, properties));
+        assertFalse(Launcher.Tipped(25, properties));
+        assertFalse(Launcher.Tipped(-60, properties));
+        assertFalse(Launcher.Tipped(Double.NaN, properties));
+    }
+
+    @Test
+    @DisplayName("always-track off (today): not aiming, the speed holds even with a tag in view")
+    void alwaysTrackOffHolds() {
+        properties.launcherRangeTuning = true;
+        tagAt(135);
+        when(vision.GetTagTiltDegrees()).thenReturn(0.0);
+        teleOpLoopNotAiming();
+        assertEquals(1000, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("always-track on: not aiming, a tipped tag sets the speed; an untipped one holds it")
+    void alwaysTrackFollowsTippedTags() {
+        properties.launcherRangeTuning = true;
+        properties.rangeAlwaysTracks = true;
+        tagAt(135);
+        when(vision.GetTagTiltDegrees()).thenReturn(60.0);   // basket not tipped
+        teleOpLoopNotAiming();
+        assertEquals(1000, launcher.GetPollenTargetRpm(), EPS);
+        when(vision.GetTagTiltDegrees()).thenReturn(Double.NaN);   // tilt not known
+        teleOpLoopNotAiming();
+        assertEquals(1000, launcher.GetPollenTargetRpm(), EPS);
+        when(vision.GetTagTiltDegrees()).thenReturn(5.0);    // tipped up
+        teleOpLoopNotAiming();
+        assertEquals(3172, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("always-track on, no tilt check: any tag of ours sets the speed")
+    void alwaysTrackWithoutTiltCheck() {
+        properties.launcherRangeTuning = true;
+        properties.rangeAlwaysTracks = true;
+        properties.rangeNeedsTipped = false;
+        tagAt(135);
+        when(vision.GetTagTiltDegrees()).thenReturn(60.0);
+        teleOpLoopNotAiming();
+        assertEquals(3172, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("gamepad 2 circle: always-track on (one rumble), again off (two)")
+    void circleTogglesAlwaysTrack() {
+        tap(down -> gamepad.circle = down);
+        assertTrue(properties.rangeAlwaysTracks);
+        verify(gamepad).rumbleBlips(1);
+        tap(down -> gamepad.circle = down);
+        assertFalse(properties.rangeAlwaysTracks);
+        verify(gamepad).rumbleBlips(2);
     }
 
     @Test
