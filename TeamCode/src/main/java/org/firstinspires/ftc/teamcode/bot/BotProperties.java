@@ -141,6 +141,17 @@ public class BotProperties {
      */
     public boolean testTelemetry = false;
     /**
+     * true (only Tool: Launch Tuning turns it on): the driver's cross marks the last shot
+     * made and triangle missed, in the test log (docs/decisions/0052).
+     */
+    public boolean tuningMarks = false;
+    /** A shot starts when the pollen speed falls this far under the target with the gates open, RPM. */
+    public double shotDipRpm = 100;
+    /** A shot is over once the speed is back within this of the target, RPM. */
+    public double shotRecoveredRpm = 30;
+    /** A shot that hasn't recovered after this long is over anyway, seconds. */
+    public double shotTimeoutSeconds = 1.5;
+    /**
      * How often the battery voltage is read, in milliseconds. Each read is an extra trip to
      * the hub, so not every loop. 250 = four times a second, more than enough for a graph.
      */

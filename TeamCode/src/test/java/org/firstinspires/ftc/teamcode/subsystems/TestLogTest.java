@@ -35,6 +35,7 @@ class TestLogTest {
     private Launcher launcher;
     private Intake intake;
     private Roller transfer;
+    private LaunchGates gates;
     private TestLog log;
 
     @TempDir
@@ -53,7 +54,12 @@ class TestLogTest {
         intake = mock(Intake.class);
         transfer = mock(Roller.class);
         when(intake.GetTransferRoller()).thenReturn(transfer);
-        log = new TestLog(op, properties, vision, launcher, null, intake, new File(folder, "logs"));
+        gates = mock(LaunchGates.class);
+        properties.tuningMarks = false;
+        properties.shotDipRpm = 100;
+        properties.shotRecoveredRpm = 30;
+        properties.shotTimeoutSeconds = 1.5;
+        log = new TestLog(op, properties, vision, launcher, gates, intake, null, new File(folder, "logs"));
     }
 
     private List<String> fileLines() throws Exception {
@@ -109,6 +115,54 @@ class TestLogTest {
         // No tag: the tilt is unknown (NaN), which a graph can't draw, so it is left out.
         verify(telemetry, never()).addData(eq("T tag_tilt_deg"), any(Object.class));
         assertNull(log.GetFile(), "the screen alone writes no file");
+    }
+
+    /** A TeleOp loop for the log: the gamepads read, then the log's Process. */
+    private void loop() {
+        log.HandleUserInput();
+        log.Process();
+    }
+
+    @Test
+    @DisplayName("a shot: the speed dips with the gates open, comes back; the driver marks it made")
+    void shotAndMark() {
+        properties.testTelemetry = true;
+        properties.tuningMarks = true;
+        when(launcher.GetPollenTargetRpm()).thenReturn(3000.0);
+        when(gates.IsOpen()).thenReturn(true);
+        when(vision.SeesTag()).thenReturn(true);
+        when(vision.GetGroupRange()).thenReturn(126.0);
+        when(launcher.GetPollenMeasuredRpm()).thenReturn(2990.0);
+        loop();
+        when(launcher.GetPollenMeasuredRpm()).thenReturn(2750.0);   // a ball going through
+        loop();
+        when(launcher.GetPollenMeasuredRpm()).thenReturn(2620.0);
+        loop();
+        when(launcher.GetPollenMeasuredRpm()).thenReturn(2985.0);   // back
+        loop();
+        assertEquals("1", log.Value("shots"));
+        assertEquals("380", log.Value("shot_dip_rpm"));
+        assertEquals("126", log.Value("shot_range_in"));
+        assertEquals("0", log.Value("shot_mark"));
+        for (int i = 0; i < properties.debounce + 2; i++) {
+            driver.cross = true;
+            loop();
+        }
+        driver.cross = false;
+        loop();
+        assertEquals("1", log.Value("shot_mark"));
+        verify(driver).rumbleBlips(1);
+    }
+
+    @Test
+    @DisplayName("marks off (every OpMode but Tool: Launch Tuning): cross does nothing here")
+    void marksOff() {
+        properties.testTelemetry = true;
+        for (int i = 0; i < properties.debounce + 2; i++) {
+            driver.cross = true;
+            loop();
+        }
+        verify(driver, never()).rumbleBlips(1);
     }
 
     @Test

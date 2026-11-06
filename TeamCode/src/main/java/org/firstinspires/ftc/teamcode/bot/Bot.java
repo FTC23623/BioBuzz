@@ -130,7 +130,7 @@ public class Bot {
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
             "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "aimSideCenterDeg", "aimSideReversed",
             "arcStrafePower", "arcRangeKP", "arcMaxDrive",
-            "testLog", "testTelemetry", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
+            "testLog", "testTelemetry", "tuningMarks", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
             "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
@@ -277,7 +277,7 @@ public class Bot {
         }
         // Last, so it sees what every other part did this loop. It does nothing unless
         // testLog or testTelemetry is on (docs/decisions/0050).
-        mSystems.add(new TestLog(mOp, mProperties, mVision, mLauncher, mLaunchGates, mIntake, null));
+        mSystems.add(new TestLog(mOp, mProperties, mVision, mLauncher, mLaunchGates, mIntake, mImu, null));
 
         // Read every hub's sensors in one trip per loop instead of one trip per sensor.
         // StartLoop() throws the old readings away, so each loop reads fresh ones.

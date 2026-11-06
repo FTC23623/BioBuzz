@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.Locale;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.ShotTracker;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
 /**
@@ -31,6 +33,12 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * what it does; the switches the buttons flip; the camera's distances and tilt; the
  * launchers' and rollers' target and measured RPM, and the rollers' power.
  *
+ * <p><b>Shots</b> (docs/decisions/0052): a {@link ShotTracker} finds each ball by the dip it
+ * makes in the pollen speed, and the last shot's numbers stay on their lines until the
+ * next one: {@code shots}, {@code shot_dip_rpm}, {@code shot_recovery_s}, ... With
+ * {@code tuningMarks} on, the driver's <b>cross</b> marks the last shot made and
+ * <b>triangle</b> missed ({@code shot_mark} 1 or -1), for Tool: Launch Tuning.
+ *
  * <p>The Bot runs this last each loop, so it sees what every other part did this loop.
  * A part that is switched off writes 0.
  */
@@ -44,7 +52,17 @@ public class TestLog implements Subsystem {
     private final Launcher mLauncher;
     private final LaunchGates mLaunchGates;
     private final Intake mIntake;
+    private final Imu mImu;
     private final File mFolder;
+    private final ShotTracker mShots;
+    private ShotTracker.Shot mLastShot = null;
+    /** The camera's distance when the last shot started, inches. */
+    private double mLastShotRangeIn = 0;
+    private double mShotStartRangeIn = 0;
+    /** 1 the last shot was marked made, -1 missed, 0 not marked. */
+    private int mLastShotMark = 0;
+    private final Debouncer mMadeButton;
+    private final Debouncer mMissedButton;
 
     private BufferedWriter mWriter = null;
     private File mFile = null;
@@ -64,14 +82,19 @@ public class TestLog implements Subsystem {
      *               Any part may be null: it is switched off, and its columns read 0.
      */
     public TestLog(HydraOpMode op, BotProperties properties, Vision vision, Launcher launcher,
-                   LaunchGates launchGates, Intake intake, File folder) {
+                   LaunchGates launchGates, Intake intake, Imu imu, File folder) {
         mOp = op;
         mProperties = properties;
         mVision = vision;
         mLauncher = launcher;
         mLaunchGates = launchGates;
         mIntake = intake;
+        mImu = imu;
         mFolder = folder;
+        mShots = new ShotTracker(properties.shotDipRpm, properties.shotRecoveredRpm,
+                properties.shotTimeoutSeconds);
+        mMadeButton = new Debouncer(properties.debounce);
+        mMissedButton = new Debouncer(properties.debounce);
     }
 
     @Override
@@ -85,8 +108,50 @@ public class TestLog implements Subsystem {
         return true;
     }
 
+    /** Tool: Launch Tuning: the driver marks the last shot made (cross) or missed (triangle). */
     @Override
     public void HandleUserInput() {
+        if (!mProperties.tuningMarks) {
+            return;
+        }
+        if (Pressed(mMadeButton, mOp.mDriverGamepad.cross) && mLastShot != null) {
+            mLastShotMark = 1;
+            mOp.mDriverGamepad.rumbleBlips(1);
+        }
+        if (Pressed(mMissedButton, mOp.mDriverGamepad.triangle) && mLastShot != null) {
+            mLastShotMark = -1;
+            mOp.mDriverGamepad.rumbleBlips(2);
+        }
+    }
+
+    /** true once per press: the button was held long enough, and this press is now used up. */
+    private static boolean Pressed(Debouncer button, boolean down) {
+        button.In(down);
+        if (button.Out()) {
+            button.Used();
+            return true;
+        }
+        return false;
+    }
+
+    /** Watch the pollen speed for the next ball. */
+    private void TrackShots() {
+        if (mLauncher == null) {
+            return;
+        }
+        boolean wasInShot = mShots.InShot();
+        boolean open = mLaunchGates != null && mLaunchGates.IsOpen();
+        ShotTracker.Shot shot = mShots.Update(System.nanoTime() / 1e9, open,
+                mLauncher.GetPollenTargetRpm(), mLauncher.GetPollenMeasuredRpm());
+        if (!wasInShot && mShots.InShot()) {
+            // Where the robot was when the ball went, not after.
+            mShotStartRangeIn = mVision != null && mVision.SeesTag() ? mVision.GetGroupRange() : 0;
+        }
+        if (shot != null) {
+            mLastShot = shot;
+            mLastShotRangeIn = mShotStartRangeIn;
+            mLastShotMark = 0;
+        }
     }
 
     @Override
@@ -95,6 +160,7 @@ public class TestLog implements Subsystem {
             Close();
             return;
         }
+        TrackShots();
         Collect();
         if (mProperties.testLog) {
             WriteLine();
@@ -170,6 +236,21 @@ public class TestLog implements Subsystem {
         Add("transfer_rpm", transfer == null ? 0 : transfer.GetMeasuredRpm());
         Add("transfer_power", transfer == null ? 0 : transfer.GetPower());
         Add("roller_power_mode", mProperties.rollerUsePower);
+
+        // Which way the robot faces, from the heading sensor, degrees, left positive.
+        Add("heading_deg", mImu != null && mImu.Ready() ? mImu.GetYaw() : Double.NaN);
+        Add("side_deg", sees ? mVision.GetSideDegrees() : Double.NaN);
+
+        // The last shot (0052). Its numbers stay until the next one.
+        boolean shot = mLastShot != null;
+        Add("shots", mShots.Count());
+        Add("in_shot", mShots.InShot());
+        Add("shot_target_rpm", shot ? mLastShot.targetRpm : 0);
+        Add("shot_dip_rpm", shot ? mLastShot.dipRpm : 0);
+        Add("shot_recovery_s", shot ? mLastShot.recoverySeconds : 0);
+        Add("shot_recovered", shot && mLastShot.recovered);
+        Add("shot_range_in", shot ? mLastShotRangeIn : 0);
+        Add("shot_mark", mLastShotMark);
     }
 
     private void Add(String name, boolean value) {
