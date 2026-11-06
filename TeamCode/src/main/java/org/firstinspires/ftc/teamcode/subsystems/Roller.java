@@ -15,6 +15,11 @@ import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
  * <p>A plus speed pulls balls in or up. A minus speed runs the roller backward, to spit
  * balls out.
  *
+ * <p><b>Power mode</b> ({@code rollerUsePower}, off by default, docs/decisions/0050): the hub's
+ * speed control is skipped and the motor gets a plain power instead, the speed as a share of
+ * the motor's top ({@code intakeMaxRpm}): 1150 RPM is full power, 575 is half. The same RPM
+ * settings work in both modes. It can be switched on the dashboard while the robot runs.
+ *
  * <p>A robot with no motor by this name still runs: the roller does nothing, and the Driver
  * Station says it is missing.
  */
@@ -32,6 +37,8 @@ public class Roller {
 
     private double mTargetRpm = 0;
     private boolean mEverSet = false;
+    /** true while the motor is run by power (rollerUsePower), false by the hub's speed control. */
+    private boolean mPowerMode = false;
 
     public Roller(String name, HydraOpMode op, BotProperties properties, String configName,
                   boolean reversed) {
@@ -78,7 +85,20 @@ public class Roller {
 
     /** Spin at this speed. Minus is backward. 0 is off (coast). */
     public void SetRpm(double rpm) {
-        SendGains();
+        boolean usePower = mProperties.rollerUsePower;
+        if (mMotor != null && usePower != mPowerMode) {
+            // Switched on the dashboard: change how the hub runs the motor, and send again.
+            if (usePower) {
+                mMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            } else {
+                mMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            }
+            mEverSet = false;
+        }
+        mPowerMode = usePower;
+        if (!usePower) {
+            SendGains();
+        }
         // Each message to the hub takes time out of the loop, so only send a change.
         if (mEverSet && rpm == mTargetRpm) {
             return;
@@ -90,9 +110,31 @@ public class Roller {
         }
         if (rpm == 0) {
             mMotor.setPower(0);
+        } else if (usePower) {
+            mMotor.setPower(PowerForRpm(rpm, mProperties));
         } else {
             mMotor.setVelocity(RpmToTicksPerSecond(rpm));
         }
+    }
+
+    /**
+     * Power mode: the power for a speed, as a share of the motor's top speed, never past
+     * full either way. 1150 of 1150 is 1.0, 575 is 0.5, -400 is -0.35.
+     */
+    static double PowerForRpm(double rpm, BotProperties p) {
+        if (p.intakeMaxRpm <= 0) {
+            return 0;
+        }
+        double power = rpm / p.intakeMaxRpm;
+        return Math.max(-1, Math.min(power, 1));
+    }
+
+    /** The power the motor was last given, read back from the hub. 0 with no motor. */
+    public double GetPower() {
+        if (mMotor == null) {
+            return 0;
+        }
+        return mMotor.getPower();
     }
 
     public double GetTargetRpm() {
@@ -120,7 +162,8 @@ public class Roller {
         }
         mOp.mTelemetry.addData(mName + " target RPM", "%.0f", mTargetRpm);
         mOp.mTelemetry.addData(mName + " actual RPM", "%.0f", GetMeasuredRpm());
-        mOp.mTelemetry.addData(mName + " power", "%.3f", mMotor.getPower());
+        mOp.mTelemetry.addData(mName + " power", "%.3f%s", mMotor.getPower(),
+                mPowerMode ? " (POWER MODE: no speed control)" : "");
         if (mSentGains != null) {
             mOp.mTelemetry.addData(mName + " gains P / I / D / F", "%.2f / %.2f / %.2f / %.2f",
                     mSentGains.p, mSentGains.i, mSentGains.d, mSentGains.f);

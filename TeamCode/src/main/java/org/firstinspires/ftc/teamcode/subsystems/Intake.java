@@ -244,6 +244,16 @@ public class Intake implements Subsystem {
     }
 
     /** true while square is held: both rollers run backward. */
+    /** The intake roller, for the test log and test telemetry (0050). */
+    public Roller GetIntakeRoller() {
+        return mIntake;
+    }
+
+    /** The transfer, for the test log and test telemetry (0050). */
+    public Roller GetTransferRoller() {
+        return mTransfer;
+    }
+
     public boolean IsReversing() {
         return mReverseHeld;
     }

@@ -33,6 +33,7 @@ import org.firstinspires.ftc.teamcode.subsystems.MotorTuner;
 import org.firstinspires.ftc.teamcode.subsystems.PollenSensor;
 import org.firstinspires.ftc.teamcode.subsystems.PoseRecorder;
 import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
+import org.firstinspires.ftc.teamcode.subsystems.TestLog;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSelector;
 import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
@@ -129,18 +130,18 @@ public class Bot {
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
             "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "aimSideCenterDeg", "aimSideReversed",
             "arcStrafePower", "arcRangeKP", "arcMaxDrive",
-            "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
+            "testLog", "testTelemetry", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
             "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
             "launchNearRpm", "launchFarRpm", "launchCurve", "launchBandIn",
             "steadyRange", "steadyRangeAverage", "launchBandHoldIn",
-            "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
+            "launchLocksRpm", "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
             "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock"};
     static final String[] LiveTuningIntake = {
             "intakeRpm", "transferRpm", "launchFeedIntakeScale", "launchFeedTransferScale",
-            "intakeReverseRpm", "transferReverseRpm",
+            "intakeReverseRpm", "transferReverseRpm", "rollerUsePower",
             "rollerKP", "rollerKI", "rollerKD", "rollerKF"};
 
     /**
@@ -205,6 +206,10 @@ public class Bot {
             // The gates get the camera, so each launch notes how far the tag was.
             mLaunchGates = new LaunchGates(mOp, mProperties, mOp.mDriverGamepad, mVision);
             mSystems.add(mLaunchGates);
+            // The launcher holds its speed while the gates are open (launchLocksRpm, 0050).
+            if (mLauncher != null) {
+                mLauncher.SetLaunchGates(mLaunchGates);
+            }
         }
         // The flower extractor is the operator's too: hold triangle and it swings out.
         if (mProperties.flowerExtractorDisabled) {
@@ -270,6 +275,9 @@ public class Bot {
             mSystems.add(new PoseRecorder(mOp, mProperties, mOp.mDriverGamepad,
                     PedroConstants.CreateLocalizer(mOp.mHardwareMap, mProperties), folder));
         }
+        // Last, so it sees what every other part did this loop. It does nothing unless
+        // testLog or testTelemetry is on (docs/decisions/0050).
+        mSystems.add(new TestLog(mOp, mProperties, mVision, mLauncher, mLaunchGates, mIntake, null));
 
         // Read every hub's sensors in one trip per loop instead of one trip per sensor.
         // StartLoop() throws the old readings away, so each loop reads fresh ones.

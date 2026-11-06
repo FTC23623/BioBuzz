@@ -2,7 +2,8 @@
 
 Three lists: what to change in the code before an event, what to read on the Driver
 Station at INIT before every match, and the names the code expects in the robot
-configuration. Laptop setup is in `laptop-setup.md`.
+configuration. Laptop setup is in `laptop-setup.md`. **First do `match-day-settings.md`**:
+the loop-time and competition-rule settings, step by step.
 
 ## 1. Before the event
 
@@ -11,7 +12,8 @@ Change these, build green, deploy, then INIT HyDrive once and read section 2 top
 | Setting | Where | For an event | Why |
 |---|---|---|---|
 | `competitionMode` | `BotProperties.java`, last line | `true` | Rule R704.D: nothing may stream to FTC Dashboard in a match. The code stops sending; the dashboard itself is switched off in the Robot Controller app (menu, Disable Dashboard). INIT must then say `Competition mode: dashboard off.` (0022) |
-| `botProperties.autoSpeedScale = 0.5` | `AutoStrategyA.BuildPaths()`, `AutoStrategyB.BuildPaths()` | delete the line | Half speed is for checking a path on the field. Take the line out only after that path has run clean three times at full speed. INIT says `SLOW AUTO` while it is still there. |
+| `botProperties.autoSpeedScale = 0.5` | any auto's `BuildPaths()` | none left (2026-11-06) | Half speed is for checking a path on the field. If one comes back, take it out once that path has run clean three times at full speed. INIT says `SLOW AUTO` while one is there. |
+| `testLog`, `testTelemetry`, `launcherOnlyTelemetry` | `BotProperties.java` | `false` | Testing only, they cost loop time. See `match-day-settings.md`. |
 | `frameLengthIn`, `frameWidthIn` | `BotProperties.java` | the competition frame, bumpers on | StrategyA backs up by half the frame's diagonal before its first turn. Measure, write the numbers in, then watch that turn clear the wall. |
 | `launchNearRpm`, `launchFarRpm`, `launchCurve` | `BotProperties.java` | the numbers that scored | The pollen launcher's speed curve over camera range, 110 to 140 in, in 2-inch steps (0038). A trim that held all day (`launcherRangeTrimRpm`, D-pad up / down) belongs in the two RPMs; the trim goes back to 0. `pollenLauncherRpm` is the speed used with no tag in view. |
 | `visionAnyTag` | `BotProperties.java` | `false` | Practice only. True at an event aims at the other alliance's hive. INIT shouts `EVERY TAG COUNTS` while it is on. |

@@ -127,6 +127,19 @@ public class BotProperties {
      */
     public boolean launcherOnlyTelemetry = true;
     /**
+     * true: every loop, one line goes to a CSV file on the hub, in /sdcard/FIRST/logs/: the
+     * buttons held (aim, launch, ...), the Limelight's distances, the launcher and roller
+     * speeds and powers. For testing; costs a little loop time. Off for matches
+     * (docs/decisions/0050, docs/match-day-settings.md).
+     */
+    public boolean testLog = false;
+    /**
+     * true: the Driver Station shows the same numbers as the test log, even with quiet or
+     * launcher-only telemetry on: buttons held, distances, the transfer's RPM and power.
+     * For testing; costs loop time. Off for matches.
+     */
+    public boolean testTelemetry = false;
+    /**
      * How often the battery voltage is read, in milliseconds. Each read is an extra trip to
      * the hub, so not every loop. 250 = four times a second, more than enough for a graph.
      */
@@ -305,6 +318,12 @@ public class BotProperties {
     /** ...to this. CHECK, in degrees. */
     public double tagTippedMaxDeg = 20;
     /**
+     * true: while the launch gates are open, the pollen speed stops following the distance
+     * and holds the target it had when they opened, so it doesn't jump mid-launch. false
+     * (today): it keeps following. TeleOp and the autos (docs/decisions/0050).
+     */
+    public boolean launchLocksRpm = false;
+    /**
      * Added to every step of the curve. D-pad up / down on gamepad 2 moves it by
      * launcherRpmStep while range tuning is on, so the operator can nudge every shot faster
      * or slower on the day. On the dashboard's Launcher group.
@@ -399,6 +418,13 @@ public class BotProperties {
     public double intakeRpmStep = 50;
     /** The intake and transfer target speed never goes above this: the motors' top speed. */
     public double intakeMaxRpm = 1150;
+    /**
+     * false (today): the intake and transfer hold a SPEED, by the hub's speed control and
+     * the gains below. true: they get a plain POWER instead, the speed setting as a share of
+     * intakeMaxRpm (1150 = full power, 575 = half). The RPM settings above work either way.
+     * On the dashboard's Intake group (docs/decisions/0050).
+     */
+    public boolean rollerUsePower = false;
     // Hub speed-control gains for the intake and transfer (docs/decisions/0025). The hub
     // runs this loop itself; we only hand it the numbers. Starting values are the REV hub's
     // usual defaults, so nothing changes until someone tunes them. CHECK on the robot: the
