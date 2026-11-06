@@ -236,7 +236,7 @@ public class BotProperties {
     // past 140 in; the far row raised 25 to 3325 on 2026-11-03. The rows between are a
     // straight line from 2900 to 3325, rounded; tune each on the robot. 2026-11-04: an inertia
     // wheel went on, so the near shot came down 150 to 2750; the far shot stayed 3325, then
-    // came down 100 to 3225 the same day.
+    // came down 100 to 3225 the same day. 2026-11-05: the whole curve up 50, 2800 to 3275.
 
     /**
      * true: the pollen launcher's target follows the distance curve below whenever a tag of
@@ -250,17 +250,17 @@ public class BotProperties {
     //     rpm = near + (far - near) x ((band start - nearIn) / (farIn - nearIn)) ^ launchCurve
     //
     // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.1, a gentle
-    // bend: 2750 at 110, 2892 at 120, 3054 at 130, 3225 at 140 (coach, 2026-11-04; it was
-    // 1.25 for a few hours while the far shot was still 3325).
+    // bend: 2800 at 110, 2942 at 120, 3104 at 130, 3275 at 140 (coach, 2026-11-04, and up 50
+    // on 2026-11-05; it was 1.25 for a few hours while the far shot was still 3325).
     // Nearer than nearIn uses the near speed; farther than farIn uses the far speed.
     /** The near measured shot: distance, in inches. */
     public double launchNearIn = 110;
-    /** The near measured shot: RPM that scored from there (2900, less 150 for the inertia wheel). */
-    public double launchNearRpm = 2750;
+    /** The near measured shot: RPM that scored from there (2900, less 150 for the inertia wheel, +50 on 2026-11-05). */
+    public double launchNearRpm = 2800;
     /** The far measured shot: distance, in inches. */
     public double launchFarIn = 140;
-    /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03, -100 on 2026-11-04). */
-    public double launchFarRpm = 3225;
+    /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03, -100 on 2026-11-04, +50 on 2026-11-05). */
+    public double launchFarRpm = 3275;
     /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.1 since 2026-11-04. */
     public double launchCurve = 1.1;
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
@@ -490,7 +490,8 @@ public class BotProperties {
      * fast, in RPM. The wheels did not hold within 50 RPM of the target long enough on the
      * robot, so the auto no longer waits for "at speed" (coach, 2026-11-03: 2800, then 2950).
      * 2800 since 2026-11-04: the near shot came down 150 with the inertia wheel, and a
-     * near target of 2750 would never reach 2950.
+     * near target of 2750 would never reach 2950. The near shot is 2800 since 2026-11-05, the
+     * same as this.
      */
     public double autoLaunchMinRpm = 2800;
     /**

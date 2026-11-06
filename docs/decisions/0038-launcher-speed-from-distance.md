@@ -1,6 +1,6 @@
 # 0038: The pollen launcher's speed follows the distance to the tag
 
-Status: Accepted. Since 2026-11-04 a curve in 2-inch steps, 2750 at 110 in to 3225 at 140 in, curve 1.1 (see the updates at the end). Two rows measured; the two between are guesses. Not yet shot.
+Status: Accepted. Since 2026-11-05 a curve in 2-inch steps, 2800 at 110 in to 3275 at 140 in, curve 1.1 (see the updates at the end). Two rows measured; the two between are guesses. Not yet shot.
 Date: 2026-11-02
 Adds to 0009 (speed control) and 0023 (the D-pad sets the speed).
 
@@ -90,3 +90,11 @@ does not sit out its spin-up wait (docs/decisions/0030).
 | in | 110 | 112 | 116 | 120 | 124 | 130 | 134 | 138 | 140+ |
 |---|---|---|---|---|---|---|---|---|---|
 | RPM | 2750 | 2774 | 2831 | 2892 | 2955 | 3054 | 3122 | 3190 | 3225 |
+
+**2026-11-05:** the whole curve up 50 (coach): `launchNearRpm` 2800, `launchFarRpm` 3275,
+same bend, so every step is exactly 50 more. `autoLaunchMinRpm` stays 2800, now the same
+as the near shot.
+
+| in | 110 | 112 | 116 | 120 | 124 | 130 | 134 | 138 | 140+ |
+|---|---|---|---|---|---|---|---|---|---|
+| RPM | 2800 | 2824 | 2881 | 2942 | 3005 | 3104 | 3172 | 3240 | 3275 |
