@@ -98,3 +98,8 @@ as the near shot.
 | in | 110 | 112 | 116 | 120 | 124 | 130 | 134 | 138 | 140+ |
 |---|---|---|---|---|---|---|---|---|---|
 | RPM | 2800 | 2824 | 2881 | 2942 | 3005 | 3104 | 3172 | 3240 | 3275 |
+
+**2026-11-05, a lookup table:** the launcher no longer works the curve out every loop.
+`objects/RpmTable` works out one RPM per step once and looks it up after that. It builds
+itself again whenever one of the six curve settings changes, so dashboard tuning still
+works. Same numbers as before (`RpmTableTest` checks every step against the formula).

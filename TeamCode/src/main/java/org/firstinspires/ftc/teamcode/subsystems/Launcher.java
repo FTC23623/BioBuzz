@@ -6,6 +6,7 @@ import java.util.Locale;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.RpmTable;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
 /**
@@ -73,6 +74,8 @@ public class Launcher implements Subsystem {
     private String mRangeStatus = "no tag seen yet";
     /** Steady range: the step start, in inches, the speed is held on. NaN = none yet. */
     private double mHeldStepIn = Double.NaN;
+    /** The curve, one RPM per step, looked up each loop instead of worked out. */
+    private final RpmTable mRpmTable = new RpmTable();
 
     /**
      * @param vision the camera, so the pollen launcher's speed can follow the distance to the
@@ -219,11 +222,13 @@ public class Launcher implements Subsystem {
         String mode;
         if (steady && mProperties.launchBandHoldIn > 0) {
             mHeldStepIn = StepFor(rangeIn, mHeldStepIn, mProperties);
-            tableRpm = RpmForStep(mHeldStepIn, mProperties);
+            mRpmTable.UpdateFrom(mProperties);
+            tableRpm = mRpmTable.Rpm(mHeldStepIn);
             mode = String.format(Locale.US, "STEADY (%d tags, step %.0f in) ", mVision.CountTags(), mHeldStepIn);
         } else {
             mHeldStepIn = Double.NaN;
-            tableRpm = RpmForRange(rangeIn, mProperties);
+            mRpmTable.UpdateFrom(mProperties);
+            tableRpm = mRpmTable.Rpm(StepStart(rangeIn, mProperties));
             if (steady) {
                 mode = String.format(Locale.US, "STEADY (%d tags) ", mVision.CountTags());
             } else {
@@ -330,17 +335,15 @@ public class Launcher implements Subsystem {
         return RpmForStep(StepStart(rangeIn, p), p);
     }
 
-    /** The RPM on the curve for a step that starts at stepStartIn inches. @return whole RPM */
+    /**
+     * The RPM on the curve for a step that starts at stepStartIn inches, worked out. The
+     * launcher itself looks it up in an {@link RpmTable}; this is for tests and tools.
+     *
+     * @return whole RPM
+     */
     static double RpmForStep(double stepStartIn, BotProperties p) {
-        if (stepStartIn <= p.launchNearIn) {
-            return p.launchNearRpm;
-        }
-        if (stepStartIn >= p.launchFarIn) {
-            return p.launchFarRpm;
-        }
-        double fraction = (stepStartIn - p.launchNearIn) / (p.launchFarIn - p.launchNearIn);
-        double rpm = p.launchNearRpm + (p.launchFarRpm - p.launchNearRpm) * Math.pow(fraction, p.launchCurve);
-        return Math.round(rpm);
+        return RpmTable.CurveRpm(stepStartIn, p.launchNearIn, p.launchNearRpm,
+                p.launchFarIn, p.launchFarRpm, p.launchCurve);
     }
 
     /** Measure both speeds and set both powers. Process() calls this every 50 ms. */
