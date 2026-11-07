@@ -25,12 +25,23 @@ import java.util.List;
  * <p>Pedro measures in inches: x grows as the robot drives forward, y grows as it drives left.
  * See {@link PedroAuto} for more.
  */
-// No group: the Driver Station lists these first, before the "Backup" ones. At the end it
-// picks HyDrive, so the drivers only press INIT and START (docs/decisions/0046).
-@Autonomous(name = AutoStrategyC.NAME, preselectTeleOp = HyDrive.NAME)
+// Group "Auto" (it reads the alliance magnet): the Driver Station lists it before the
+// "Blue" and "Red" backups. At the end it picks HyDrive, so the drivers only press INIT and
+// START (docs/decisions/0046, 0053).
+@Autonomous(name = "Auto: " + AutoStrategyC.NAME, group = "Auto", preselectTeleOp = HyDrive.NAME)
 public class AutoStrategyC extends PedroAuto {
-    /** The name on the Driver Station. The backups add their color to it. */
-    public static final String NAME = "Flower Side Auto C";
+    /** The auto's name. On the Driver Station: "Auto: ", "Blue: " or "Red: " in front. */
+    public static final String NAME = "Flower Side C";
+
+    /**
+     * Flower side: front against the top wall, in front of the cell there, on the tile
+     * east of the seam (x 46.75), toward the blue alliance wall. The robot is 18 x 18, so its center is
+     * 9 in off the wall and 9 in from the seam. Blue; red is turned half a turn (0051).
+     */
+    @Override
+    protected Pose FieldStartBlue() {
+        return new Pose(55.75, 132.5, Math.toRadians(90));
+    }
 
     /** The robot starts facing the driver's right (was 90 until 2026-11-05: backwards). */
     @Override

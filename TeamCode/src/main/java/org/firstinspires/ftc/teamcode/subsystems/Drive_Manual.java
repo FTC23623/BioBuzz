@@ -137,7 +137,7 @@ public class Drive_Manual extends Drive {
 
         // Circle resets which way is forward. Rumble so the driver feels it happen.
         mResetHeadingButton.In(mGamepad.circle);
-        if (mResetHeadingButton.Out() && mProperties.fieldCentricDrive) {
+        if (mResetHeadingButton.Out() && mProperties.fieldCentricDrive && mProperties.circleResetsForward) {
             mResetHeadingButton.Used();
             mGamepad.rumbleBlips(1);
             mImu.ResetYaw();

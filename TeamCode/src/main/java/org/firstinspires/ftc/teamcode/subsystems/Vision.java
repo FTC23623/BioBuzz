@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
+import org.firstinspires.ftc.teamcode.objects.TagPosition;
 
 /**
  * Something that sees AprilTags.
@@ -40,6 +41,13 @@ public interface Vision extends Subsystem {
      *     tell whether the hive has tipped up (docs/decisions/0049).
      */
     double GetTagTiltDegrees();
+
+    /**
+     * @return where the robot is from the tags alone: from the hive's nearest tag, and the
+     *     Limelight's field position when it has the field map (docs/decisions/0054).
+     *     {@link TagPosition#UNKNOWN} when no tag is seen or the camera can't tell.
+     */
+    TagPosition GetPosition();
 
     /**
      * @return degrees to the middle of the tag group the nearest tag is in (see

@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
+import org.firstinspires.ftc.teamcode.BuildConfig;
 import org.firstinspires.ftc.teamcode.objects.DashboardTuning;
 import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
@@ -33,6 +34,7 @@ import org.firstinspires.ftc.teamcode.subsystems.MotorTuner;
 import org.firstinspires.ftc.teamcode.subsystems.PollenSensor;
 import org.firstinspires.ftc.teamcode.subsystems.PoseRecorder;
 import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
+import org.firstinspires.ftc.teamcode.subsystems.TestLog;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSelector;
 import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
@@ -129,18 +131,18 @@ public class Bot {
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
             "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "aimSideCenterDeg", "aimSideReversed",
             "arcStrafePower", "arcRangeKP", "arcMaxDrive",
-            "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
+            "testLog", "testTelemetry", "tuningMarks", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
             "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
             "launchNearRpm", "launchFarRpm", "launchCurve", "launchBandIn",
             "steadyRange", "steadyRangeAverage", "launchBandHoldIn",
-            "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
+            "launchLocksRpm", "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
             "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock"};
     static final String[] LiveTuningIntake = {
             "intakeRpm", "transferRpm", "launchFeedIntakeScale", "launchFeedTransferScale",
-            "intakeReverseRpm", "transferReverseRpm",
+            "intakeReverseRpm", "transferReverseRpm", "rollerUsePower",
             "rollerKP", "rollerKI", "rollerKD", "rollerKF"};
 
     /**
@@ -152,6 +154,8 @@ public class Bot {
     public Bot(LinearOpMode opMode, BotProperties properties) {
         mLinearOpMode = opMode;
         mProperties = properties;
+        // A match build turns the test and tuning settings off, whatever was set (0053).
+        mProperties.ApplyMatchBuild(BuildConfig.MATCH_BUILD);
         Telemetry telemetry = opMode.telemetry;
         // At an event, nothing goes to the dashboard (rule R704.D, docs/decisions/0022).
         if (!BotProperties.competitionMode) {
@@ -205,6 +209,10 @@ public class Bot {
             // The gates get the camera, so each launch notes how far the tag was.
             mLaunchGates = new LaunchGates(mOp, mProperties, mOp.mDriverGamepad, mVision);
             mSystems.add(mLaunchGates);
+            // The launcher holds its speed while the gates are open (launchLocksRpm, 0050).
+            if (mLauncher != null) {
+                mLauncher.SetLaunchGates(mLaunchGates);
+            }
         }
         // The flower extractor is the operator's too: hold triangle and it swings out.
         if (mProperties.flowerExtractorDisabled) {
@@ -267,9 +275,14 @@ public class Bot {
         // robot is the same way Pedro does, so the spots it saves match the autos' (0024).
         if (!mProperties.poseRecorderDisabled) {
             File folder = new File(AppUtil.FIRST_FOLDER, "recordings");
+            // It also gets the parts it blips to show a recorded step (0055).
             mSystems.add(new PoseRecorder(mOp, mProperties, mOp.mDriverGamepad,
-                    PedroConstants.CreateLocalizer(mOp.mHardwareMap, mProperties), folder));
+                    PedroConstants.CreateLocalizer(mOp.mHardwareMap, mProperties), folder,
+                    mIntake, mFlowerExtractor, mIndicator));
         }
+        // Last, so it sees what every other part did this loop. It does nothing unless
+        // testLog or testTelemetry is on (docs/decisions/0050).
+        mSystems.add(new TestLog(mOp, mProperties, mVision, mLauncher, mLaunchGates, mIntake, mImu, null));
 
         // Read every hub's sensors in one trip per loop instead of one trip per sensor.
         // StartLoop() throws the old readings away, so each loop reads fresh ones.
@@ -427,6 +440,15 @@ public class Bot {
         FtcDashboard dashboard = FtcDashboard.getInstance();
         boolean dashboardOn = dashboard != null && dashboard.isEnabled();
         mOp.mTelemetry.addLine(CompetitionStatus(BotProperties.competitionMode, dashboardOn));
+        mOp.mTelemetry.addLine(BuildStatus(BuildConfig.MATCH_BUILD));
+    }
+
+    /** Which build is on the robot (docs/decisions/0053). No hardware, so a test can check it. */
+    static String BuildStatus(boolean matchBuild) {
+        if (matchBuild) {
+            return "Match build: only the match OpModes are installed.";
+        }
+        return "Full build: test and tool OpModes installed. For events, install the match build (matchBuild=true).";
     }
 
     /** The competition line for the Driver Station. No hardware, so a test can check it. */

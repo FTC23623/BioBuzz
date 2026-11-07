@@ -56,6 +56,12 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0047](0047-auto-intake-on-off-steps.md) | INTAKE_ON and INTAKE_OFF auto steps, recorded with D-pad up / down | Accepted, not driven yet |
 | [0048](0048-steady-range.md) | Steady range: average our tags and hold each speed step; on by default, gamepad 2 cross toggles | On by default, not driven yet |
 | [0049](0049-always-track-range.md) | Always-track range: follow the distance whenever a tipped-up tag of ours is seen, gamepad 2 circle | Experiment, off by default |
+| [0050](0050-roller-power-launch-lock-test-log.md) | Roller power mode, launch RPM lock, test log and test telemetry, match-day settings | Accepted, all off by default |
+| [0051](0051-pedro-visualizer-tools.md) | Autos on the field: start spots, export to and import from the Pedro Pathing Visualizer | Accepted, laptop tools only |
+| [0052](0052-launch-tuning-sessions.md) | Launch tuning sessions: Claude changes settings and reads shots over FTC Dashboard; Tool: Launch Tuning | Accepted, practice only, not yet run |
+| [0053](0053-match-build-and-auto-names.md) | Match build (`matchBuild=true`, Android Studio or `-PmatchBuild`) leaves test and tool OpModes out, turns competition mode and the match settings on; autos named Auto / Blue / Red | Accepted |
+| [0054](0054-position-from-tags.md) | Position from the AprilTags (left of / out from the hive, the Limelight's field pose) for tuning; wheels coast in Tool: Launch Tuning | Accepted, signs CHECK |
+| [0055](0055-pose-recorder-blips-and-centric.md) | Pose Recorder: a saved step blips its mechanism; back / share switches robot- and field-centric | Accepted |
 
 ## TODO: confirm on the robot after this week's tuning
 

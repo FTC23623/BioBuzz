@@ -1,0 +1,38 @@
+# OpModes left out of a match build (docs/decisions/0053):
+#
+#     ./gradlew :TeamCode:installDebug -PmatchBuild
+#
+# One class name per line, from TeamCode/.../opMode/. A match build keeps only the match
+# autos (Auto / Blue / Red: Garden Side A, Flower Side B and C) and HyDrive with its two
+# backups. MatchBuildTest checks this list against the OpModes, so a new test or tool
+# OpMode that isn't listed here fails the tests.
+
+# Test: (group "Test")
+DriveMotorTest
+LauncherMotorTest
+LaunchServoTuningTest
+MotorTuningTest
+OdometryPodTest
+PinpointTest
+StripTest
+VisionTest
+
+# Tool: (group "Tool")
+LaunchTuningTool
+PoseRecorderTool
+
+# Practice: (group "Practice")
+PracticeFieldCentric
+PracticeRobotCentric
+PracticeRobotCentricSwapped
+
+# Shapes and the one-tile check (groups "Shapes" and "Basic")
+AutoShapeCNoTurning
+AutoShapeCTurning
+AutoShapeZ
+AutoForwardOneTile
+
+# StrategyD: the team isn't running it (coach, 2026-11-05)
+AutoStrategyD
+AutoStrategyDBlue
+AutoStrategyDRed

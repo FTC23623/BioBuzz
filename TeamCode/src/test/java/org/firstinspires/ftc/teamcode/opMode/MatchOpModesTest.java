@@ -26,24 +26,30 @@ class MatchOpModesTest {
     @Test
     @DisplayName("the autos are named by field side")
     void names() {
-        assertEquals("Garden Side Auto A", auto(AutoStrategyA.class).name());
-        assertEquals("Flower Side Auto B", auto(AutoStrategyB.class).name());
-        assertEquals("Flower Side Auto C", auto(AutoStrategyC.class).name());
-        assertEquals("Garden Side Auto A Red (backup)", auto(AutoStrategyARed.class).name());
-        assertEquals("Flower Side Auto C Blue (backup)", auto(AutoStrategyCBlue.class).name());
+        assertEquals("Auto: Garden Side A", auto(AutoStrategyA.class).name());
+        assertEquals("Auto: Flower Side B", auto(AutoStrategyB.class).name());
+        assertEquals("Auto: Flower Side C", auto(AutoStrategyC.class).name());
+        assertEquals("Red: Garden Side A", auto(AutoStrategyARed.class).name());
+        assertEquals("Blue: Flower Side C", auto(AutoStrategyCBlue.class).name());
     }
 
     @Test
-    @DisplayName("the color-sensing autos have no group, so they list first; the color ones are in Backup")
+    @DisplayName("groups Auto (reads the magnet), Blue and Red, in that order on the Driver Station")
     void order() {
+        // The Driver Station sorts by group: Auto, then Blue, then Red.
         Class<?>[] sensing = {AutoStrategyA.class, AutoStrategyB.class, AutoStrategyC.class};
         for (Class<?> opMode : sensing) {
-            assertEquals("", auto(opMode).group(), opMode.getSimpleName());
+            assertEquals("Auto", auto(opMode).group(), opMode.getSimpleName());
         }
-        Class<?>[] backups = {AutoStrategyARed.class, AutoStrategyABlue.class, AutoStrategyBRed.class,
-                AutoStrategyBBlue.class, AutoStrategyCRed.class, AutoStrategyCBlue.class};
-        for (Class<?> opMode : backups) {
-            assertEquals("Backup", auto(opMode).group(), opMode.getSimpleName());
+        Class<?>[] blue = {AutoStrategyABlue.class, AutoStrategyBBlue.class, AutoStrategyCBlue.class};
+        for (Class<?> opMode : blue) {
+            assertEquals("Blue", auto(opMode).group(), opMode.getSimpleName());
+            assertTrue(auto(opMode).name().startsWith("Blue: "), opMode.getSimpleName());
+        }
+        Class<?>[] red = {AutoStrategyARed.class, AutoStrategyBRed.class, AutoStrategyCRed.class};
+        for (Class<?> opMode : red) {
+            assertEquals("Red", auto(opMode).group(), opMode.getSimpleName());
+            assertTrue(auto(opMode).name().startsWith("Red: "), opMode.getSimpleName());
         }
     }
 

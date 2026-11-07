@@ -191,6 +191,38 @@ class BotTest {
         }
     }
 
+    @Test
+    @DisplayName("a match build turns the test, tuning and launcher-only settings off (0053)")
+    void matchBuildSettings() {
+        BotProperties p = new BotProperties();
+        p.testLog = true;
+        p.testTelemetry = true;
+        p.tuningMarks = true;
+        p.launcherOnlyTelemetry = true;
+        p.driveCoastWhenIdle = true;
+        p.visionAnyTag = true;
+        p.quietTelemetry = true;
+        p.ApplyMatchBuild(false);
+        assertTrue(p.testLog, "the normal build leaves them as set");
+        p.ApplyMatchBuild(true);
+        assertFalse(p.testLog || p.testTelemetry || p.tuningMarks || p.launcherOnlyTelemetry
+                || p.driveCoastWhenIdle || p.visionAnyTag);
+        assertTrue(p.quietTelemetry, "quiet is the coach's choice either way");
+    }
+
+    @Test
+    @DisplayName("the normal build is never competition mode; that comes from the match build")
+    void competitionFromBuild() {
+        assertEquals(org.firstinspires.ftc.teamcode.BuildConfig.MATCH_BUILD, BotProperties.competitionMode);
+    }
+
+    @Test
+    @DisplayName("INIT says which build is on the robot: match or full (0053)")
+    void buildStatus() {
+        assertTrue(Bot.BuildStatus(true).startsWith("Match build"));
+        assertTrue(Bot.BuildStatus(false).contains("install the match build"));
+    }
+
     @Nested
     @DisplayName("heading from the auto (0046)")
     class HeadingFromAuto {

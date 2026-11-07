@@ -434,6 +434,8 @@ class DriveAimTest {
     @DisplayName("wiggle on: aim turns first; once aimed the wiggle takes over and keeps going")
     void wiggleWaitsForAim() {
         properties.launchWiggle = true;
+        properties.wiggleDeg = 1;   // 1 deg to go x kP 0.1 = 0.1; BotProperties may say more
+        properties.wiggleKP = 0.1;
         properties.wiggleSwitchSeconds = 60;
         properties.driveNormal = 1;
         tagAt(-20);   // the hive well to the right
@@ -446,6 +448,18 @@ class DriveAimTest {
         tagAt(-20);   // the camera's next look: the wiggle carries on, it does not hand back
         runLoops();
         assertEquals(0.1, frontLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("circle re-sets forward in HyDrive, but not with circleResetsForward off (Pose Recorder: FLOWER)")
+    void circleResetsForward() {
+        properties.fieldCentricDrive = true;
+        properties.circleResetsForward = false;
+        tap(down -> gamepad.circle = down);
+        org.mockito.Mockito.verify(imu, org.mockito.Mockito.never()).ResetYaw();
+        properties.circleResetsForward = true;
+        tap(down -> gamepad.circle = down);
+        org.mockito.Mockito.verify(imu).ResetYaw();
     }
 
     @Test

@@ -186,6 +186,19 @@ public abstract class PedroAuto extends LinearOpMode {
         return Double.NaN;
     }
 
+    /**
+     * Where the robot starts on the field, on the BLUE alliance, for the Pedro Pathing
+     * Visualizer: inches from the bottom-left corner of its BIOBUZZ field (x right, y up),
+     * heading in radians, 0 pointing right (docs/decisions/0051). The walls cover the outer
+     * 1.25 in of the edge tiles, so the tile seams are at 22.75, 46.75, 70.75, 94.75 and
+     * 118.75 in, and a robot's center against a wall is half its length off it. Red is the same spot with
+     * the field turned half a turn. The robot never uses it: only the laptop tool that draws
+     * the autos on the field. null (the default) = not placed, not drawn.
+     */
+    protected Pose FieldStartBlue() {
+        return null;
+    }
+
     @Override
     public void runOpMode() {
         // In an auto, Pedro Pathing drives the wheels, so driver control is switched off.

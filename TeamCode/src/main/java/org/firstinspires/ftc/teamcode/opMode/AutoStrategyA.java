@@ -21,12 +21,24 @@ import java.util.List;
  * The robot starts facing the wall, so backing up is minus x and the garden (to its right) is
  * minus y. See {@link PedroAuto} for more.
  */
-// No group: the Driver Station lists these first, before the "Backup" ones. At the end it
-// picks HyDrive, so the drivers only press INIT and START (docs/decisions/0046).
-@Autonomous(name = AutoStrategyA.NAME, preselectTeleOp = HyDrive.NAME)
+// Group "Auto" (it reads the alliance magnet): the Driver Station lists it before the
+// "Blue" and "Red" backups. At the end it picks HyDrive, so the drivers only press INIT and
+// START (docs/decisions/0046, 0053).
+@Autonomous(name = "Auto: " + AutoStrategyA.NAME, group = "Auto", preselectTeleOp = HyDrive.NAME)
 public class AutoStrategyA extends PedroAuto {
-    /** The name on the Driver Station. The backups add their color to it. */
-    public static final String NAME = "Garden Side Auto A";
+    /** The auto's name. On the Driver Station: "Auto: ", "Blue: " or "Red: " in front. */
+    public static final String NAME = "Garden Side A";
+
+    /**
+     * Garden side: front against the bottom wall, on the tile east of the seam at x 46.75
+     * (coach, 2026-11-06: two tiles left of the first guess at 94.75). The robot is 18 x 18,
+     * so its center is 9 in off the wall and 9 in from the seam. Blue; red is turned half a
+     * turn (0051).
+     */
+    @Override
+    protected Pose FieldStartBlue() {
+        return new Pose(55.75, 9, Math.toRadians(-90));
+    }
 
     /** The robot starts facing the driver's left (was -90 until 2026-11-05: backwards). */
     @Override
@@ -53,25 +65,31 @@ public class AutoStrategyA extends PedroAuto {
 
     @Override
     protected List<Path> BuildPaths() {
-        Pose spot1 = new Pose(-11.0, -0.1);   // heading -1 deg
-        Pose spot2 = new Pose(-38.5, -27.6);   // heading -89 deg
-        Pose spot3 = new Pose(-38.7, -41.8);   // heading -91 deg
-        Pose spot4 = new Pose(-35.9, -28.1);   // heading -88 deg
-        Pose spot5 = new Pose(-111.1, -20.6);   // heading -185 deg
-        Pose spot6 = new Pose(-111.1, 5.1);   // heading -184 deg
-        Pose spot7 = new Pose(-119.6, -6.2);   // heading -177 deg
-        Pose spot8 = new Pose(-116.3, 3.8);   // heading -180 deg
-        Pose spot9 = new Pose(-106.3, -31.2);   // heading -159 deg
+        // Recorded with Tool: Pose Recorder. 9 spots.
+// Paste into BuildPaths() of a copy of AutoShapeZ. It also needs:
+//     import static com.pedropathing.api.Paths.line;
+//     import com.pedropathing.paths.interpolator.Interpolator;
+// Start the auto from the spot the recording started from, facing the same way.
 
-        Path toSpot1 = line(StartPose(), spot1).constant(Math.toRadians(-1));
-        Path toSpot2 = line(spot1, spot2).heading(Interpolator.linear(Math.toRadians(-1), Math.toRadians(-89)));
-        Path toSpot3 = line(spot2, spot3).heading(Interpolator.linear(Math.toRadians(-89), Math.toRadians(-91)));
-        Path toSpot4 = line(spot3, spot4).heading(Interpolator.linear(Math.toRadians(-91), Math.toRadians(-88)));
-        Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-88), Math.toRadians(-185)));
-        Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-185), Math.toRadians(-184)));
-        Path toSpot7 = line(spot6, spot7).heading(Interpolator.linear(Math.toRadians(-184), Math.toRadians(-177)));
-        Path toSpot8 = line(spot7, spot8).heading(Interpolator.linear(Math.toRadians(-177), Math.toRadians(-180)));
-        Path toSpot9 = line(spot8, spot9).heading(Interpolator.linear(Math.toRadians(-180), Math.toRadians(-159)));
+        Pose spot1 = new Pose(-13.1, 4.3);   // heading -0 deg
+        Pose spot2 = new Pose(-25.4, -18.1);   // heading 32 deg
+        Pose spot3 = new Pose(-39.5, -42.2);   // heading -93 deg
+        Pose spot4 = new Pose(-31.7, -22.7);   // heading -181 deg
+        Pose spot5 = new Pose(-100.0, -22.7);   // heading -177 deg
+        Pose spot6 = new Pose(-110.9, -5.9);   // heading -175 deg
+        Pose spot7 = new Pose(-119.7, -6.5);   // heading -174 deg
+        Pose spot8 = new Pose(-111.0, -5.7);   // heading -173 deg
+        Pose spot9 = new Pose(-84.6, -38.1);   // heading -162 deg
+
+        Path toSpot1 = line(StartPose(), spot1).constant(Math.toRadians(-0));
+        Path toSpot2 = line(spot1, spot2).heading(Interpolator.linear(Math.toRadians(-0), Math.toRadians(32)));
+        Path toSpot3 = line(spot2, spot3).heading(Interpolator.linear(Math.toRadians(32), Math.toRadians(-93)));
+        Path toSpot4 = line(spot3, spot4).heading(Interpolator.linear(Math.toRadians(-93), Math.toRadians(-181)));
+        Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-181), Math.toRadians(-177)));
+        Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-177), Math.toRadians(-175)));
+        Path toSpot7 = line(spot6, spot7).constant(Math.toRadians(-174));
+        Path toSpot8 = line(spot7, spot8).heading(Interpolator.linear(Math.toRadians(-174), Math.toRadians(-173)));
+        Path toSpot9 = line(spot8, spot9).heading(Interpolator.linear(Math.toRadians(-173), Math.toRadians(-162)));
 
         List<Path> paths = new ArrayList<>();
         paths.add(toSpot1);

@@ -73,6 +73,7 @@ class LauncherTest {
         properties.launchBandHoldIn = 1;
         // Always-track (0049) is off unless a test turns it on.
         properties.rangeAlwaysTracks = false;
+        properties.launchLocksRpm = false;
         properties.rangeNeedsTipped = true;
         properties.tagTippedMinDeg = -20;
         properties.tagTippedMaxDeg = 20;
@@ -275,6 +276,37 @@ class LauncherTest {
     private void teleOpLoopNotAiming() {
         launcher.HandleUserInput();
         launcher.Process();
+    }
+
+    @Test
+    @DisplayName("launch lock on: while the gates are open the speed holds; closed, it follows again")
+    void launchLockHolds() {
+        properties.launcherRangeTuning = true;
+        properties.launchLocksRpm = true;
+        LaunchGates gates = mock(LaunchGates.class);
+        launcher.SetLaunchGates(gates);
+        tagAt(135);
+        launcher.Process();
+        assertEquals(3172, launcher.GetPollenTargetRpm(), EPS);
+        when(gates.IsOpen()).thenReturn(true);
+        tagAt(150);   // the distance jumps mid-launch
+        launcher.Process();
+        assertEquals(3172, launcher.GetPollenTargetRpm(), EPS);
+        when(gates.IsOpen()).thenReturn(false);
+        launcher.Process();
+        assertEquals(3275, launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch lock off (today): the speed keeps following during a launch")
+    void launchLockOff() {
+        properties.launcherRangeTuning = true;
+        LaunchGates gates = mock(LaunchGates.class);
+        when(gates.IsOpen()).thenReturn(true);
+        launcher.SetLaunchGates(gates);
+        tagAt(150);
+        launcher.Process();
+        assertEquals(3275, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test

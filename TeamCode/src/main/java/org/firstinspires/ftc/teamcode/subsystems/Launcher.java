@@ -55,6 +55,8 @@ public class Launcher implements Subsystem {
     private final Gamepad mGamepad;
     /** The camera, for the speed-from-distance table. null when there is none. */
     private final Vision mVision;
+    /** The launch gates, for launchLocksRpm. null until the Bot hands them over, or none. */
+    private LaunchGates mLaunchGates = null;
     private final LauncherWheel mPollen;
     private final LauncherWheel mNectar;
     private final Debouncer mPollenFasterButton;
@@ -100,6 +102,14 @@ public class Launcher implements Subsystem {
         mSteadyRangeButton = new Debouncer(properties.debounce);
         mAlwaysTrackButton = new Debouncer(properties.debounce);
         mTimeSinceUpdate = new ElapsedTime();
+    }
+
+    /**
+     * The launch gates, so the speed can hold still while they are open (launchLocksRpm,
+     * docs/decisions/0050). The Bot calls this once, after building them.
+     */
+    public void SetLaunchGates(LaunchGates gates) {
+        mLaunchGates = gates;
     }
 
     @Override
@@ -190,6 +200,12 @@ public class Launcher implements Subsystem {
     private void FollowDistance() {
         if (!mProperties.launcherRangeTuning) {
             mRangeStatus = "OFF (launcherRangeTuning): D-pad sets the speed";
+            return;
+        }
+        if (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsOpen()) {
+            // Launching: hold the speed the gates opened at, so it doesn't jump mid-launch.
+            mRangeStatus = String.format(Locale.US, "LOCKED for the launch, holding %.0f",
+                    mProperties.pollenLauncherRpm);
             return;
         }
         if (mFromGamepad && !mDriverAiming) {

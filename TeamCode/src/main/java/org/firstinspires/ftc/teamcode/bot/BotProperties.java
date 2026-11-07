@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.bot;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import org.firstinspires.ftc.teamcode.BuildConfig;
 import org.firstinspires.ftc.teamcode.types.Alliance;
 
 /**
@@ -84,6 +85,19 @@ public class BotProperties {
      */
     public boolean fieldCentricDrive = true;
     /**
+     * false (every match OpMode): the wheels brake when the sticks are let go. true (only
+     * Tool: Launch Tuning): they coast, so the robot can be slid around by hand while
+     * tuning; the camera works out where it is from the tags (docs/decisions/0054).
+     */
+    public boolean driveCoastWhenIdle = false;
+    /**
+     * true (HyDrive): circle re-sets "forward" for field-centric driving. false: circle does
+     * nothing in the drive. Tool: Pose Recorder uses circle for FLOWER (0055).
+     */
+    public boolean circleResetsForward = true;
+    /** Tool: Pose Recorder: how long a recorded step's mechanism blips, seconds (0055). */
+    public double recorderBlipSeconds = 0.6;
+    /**
      * true: TeleOp keeps the heading the auto left, so forward stays away from the driver
      * even though the auto turned the robot (docs/decisions/0046). Each auto says which way
      * it starts facing. Circle still re-sets forward. false: forward is the way the robot
@@ -126,6 +140,31 @@ public class BotProperties {
      * group, next to quietTelemetry (docs/decisions/0041).
      */
     public boolean launcherOnlyTelemetry = true;
+    /**
+     * true: every loop, one line goes to a CSV file on the hub, in /sdcard/FIRST/logs/: the
+     * buttons held (aim, launch, ...), the Limelight's distances, the launcher and roller
+     * speeds and powers. For testing; costs a little loop time. Off for matches
+     * (docs/decisions/0050, docs/match-day-settings.md).
+     */
+    public boolean testLog = false;
+    /**
+     * true: the Driver Station shows the same numbers as the test log, one line each ("T
+     * launch: 1"), even with quiet or launcher-only telemetry on: buttons as 0 or 1,
+     * distances, the transfer's RPM and power. Plain numbers, so FTC Dashboard graphs each
+     * one. For testing; about 40 lines, so it costs loop time. Off for matches.
+     */
+    public boolean testTelemetry = false;
+    /**
+     * true (only Tool: Launch Tuning turns it on): the driver's cross marks the last shot
+     * made and triangle missed, in the test log (docs/decisions/0052).
+     */
+    public boolean tuningMarks = false;
+    /** A shot starts when the pollen speed falls this far under the target with the gates open, RPM. */
+    public double shotDipRpm = 100;
+    /** A shot is over once the speed is back within this of the target, RPM. */
+    public double shotRecoveredRpm = 30;
+    /** A shot that hasn't recovered after this long is over anyway, seconds. */
+    public double shotTimeoutSeconds = 1.5;
     /**
      * How often the battery voltage is read, in milliseconds. Each read is an extra trip to
      * the hub, so not every loop. 250 = four times a second, more than enough for a graph.
@@ -305,6 +344,12 @@ public class BotProperties {
     /** ...to this. CHECK, in degrees. */
     public double tagTippedMaxDeg = 20;
     /**
+     * true: while the launch gates are open, the pollen speed stops following the distance
+     * and holds the target it had when they opened, so it doesn't jump mid-launch. false
+     * (today): it keeps following. TeleOp and the autos (docs/decisions/0050).
+     */
+    public boolean launchLocksRpm = true;
+    /**
      * Added to every step of the curve. D-pad up / down on gamepad 2 moves it by
      * launcherRpmStep while range tuning is on, so the operator can nudge every shot faster
      * or slower on the day. On the dashboard's Launcher group.
@@ -368,12 +413,12 @@ public class BotProperties {
     // its speed above, so balls go into the launcher one at a time at a steady rate.
     // Intaking on purpose is always 100%.
     /** The intake's share while feeding a launch: 0.5 = half (coach, 2026-11-02). */
-    public double launchFeedIntakeScale = 0.5;
+    public double launchFeedIntakeScale = 0.7;
     /**
      * The transfer's share while feeding a launch: 0.3. At half the balls ran into each
      * other at the launcher (coach, 2026-11-03).
      */
-    public double launchFeedTransferScale = 0.6;
+    public double launchFeedTransferScale = 0.5;
     // Reverse is SLOWER than forward on purpose: at full speed one tap of square emptied the
     // robot. About a third of forward lets the operator let out one ball at a time (coach,
     // 2026-11-02). Both are on the dashboard's Intake group: tune them there, then write the
@@ -399,6 +444,13 @@ public class BotProperties {
     public double intakeRpmStep = 50;
     /** The intake and transfer target speed never goes above this: the motors' top speed. */
     public double intakeMaxRpm = 1150;
+    /**
+     * false (today): the intake and transfer hold a SPEED, by the hub's speed control and
+     * the gains below. true: they get a plain POWER instead, the speed setting as a share of
+     * intakeMaxRpm (1150 = full power, 575 = half). The RPM settings above work either way.
+     * On the dashboard's Intake group (docs/decisions/0050).
+     */
+    public boolean rollerUsePower = true;
     // Hub speed-control gains for the intake and transfer (docs/decisions/0025). The hub
     // runs this loop itself; we only hand it the numbers. Starting values are the REV hub's
     // usual defaults, so nothing changes until someone tunes them. CHECK on the robot: the
@@ -627,7 +679,7 @@ public class BotProperties {
      * right, for the pollen launcher sitting left of the camera (2026-11-03), until shots from
      * the right side missed. Used by aim assist, the launch lock and the autos' aim.
      */
-    public double aimHiveBearingDeg = 3.0;
+    public double aimHiveBearingDeg = 2.0;
     /**
      * true: the driver's launch trigger also turns the robot to face the middle of our hive's
      * tags while it is held, the way an auto aims before LAUNCH_WHEN_TAG_SEEN (coach,
@@ -684,7 +736,7 @@ public class BotProperties {
      */
     public boolean launchWiggle = true;
     /** How far either side of where the wiggle started, in degrees. */
-    public double wiggleDeg = 1;
+    public double wiggleDeg = 1.5;
     /**
      * How long each side lasts, in seconds. The coach measured a ball every 10 frames of a
      * 60 fps video: 10 / 60 = 0.167 s, so each ball leaves on the other side from the last.
@@ -856,6 +908,30 @@ public class BotProperties {
      * the webcam does not stream to it, and the Limelight web page relay does not start.
      * The Driver Station warns until the dashboard is also switched off in the Robot
      * Controller app's menu (Disable Dashboard). false at practice.
+     *
+     * <p>Set by the build (docs/decisions/0053): a match build (matchBuild=true) is always
+     * competition mode, the normal build never is. Nothing to edit here.
      */
-    public static final boolean competitionMode = false;
+    public static final boolean competitionMode = BuildConfig.MATCH_BUILD;
+
+    /**
+     * A match build (docs/decisions/0053) turns off everything for testing that costs loop
+     * time or isn't for matches, whatever an OpMode or this file says: the test log and
+     * test telemetry, shot marks, launcher-only telemetry, coasting wheels and "every tag
+     * counts". The Bot calls this once, before building anything. quietTelemetry is left as
+     * set: a full screen or the fastest loop is the coach's choice.
+     *
+     * @param matchBuild {@code BuildConfig.MATCH_BUILD}; false does nothing
+     */
+    public void ApplyMatchBuild(boolean matchBuild) {
+        if (!matchBuild) {
+            return;
+        }
+        testLog = false;
+        testTelemetry = false;
+        tuningMarks = false;
+        launcherOnlyTelemetry = false;
+        driveCoastWhenIdle = false;
+        visionAnyTag = false;
+    }
 }

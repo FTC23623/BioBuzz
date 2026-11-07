@@ -8,7 +8,7 @@ import org.firstinspires.ftc.teamcode.types.Alliance;
  * read. Pick this only if the magnet sensor is not working (docs/decisions/0021). At the
  * end it picks HyDrive Red (backup), the TeleOp that is also always red.
  */
-@Autonomous(name = AutoStrategyA.NAME + " Red (backup)", group = "Backup",
+@Autonomous(name = "Red: " + AutoStrategyA.NAME, group = "Red",
         preselectTeleOp = HyDrive.RED_NAME)
 public class AutoStrategyARed extends AutoStrategyA {
     public AutoStrategyARed() {
