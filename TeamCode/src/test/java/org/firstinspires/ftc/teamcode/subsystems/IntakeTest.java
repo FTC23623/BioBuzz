@@ -88,6 +88,18 @@ class IntakeTest {
     }
 
     @Test
+    @DisplayName("Pose Recorder blip: the intake runs at the blip speed for one loop, the transfer not; then back")
+    void blipOneLoop() {
+        rollers.HandleUserInput();
+        rollers.BlipIntakeRpm(-400);
+        rollers.Process();
+        assertEquals(-TicksPerSecond(400), intake.velocity, EPS);
+        assertEquals(0, transfer.velocity, EPS);
+        loop();   // nobody asked again: off, as the buttons say
+        assertEquals(0, intake.velocity, EPS);
+    }
+
+    @Test
     @DisplayName("starts off")
     void startsOff() {
         loop();

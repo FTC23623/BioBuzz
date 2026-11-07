@@ -55,6 +55,8 @@ public class Intake implements Subsystem {
     private final LaunchGates mLaunchGates;
 
     private boolean mOn = false;
+    /** Tool: Pose Recorder's blip, this loop only. 0 = none. */
+    private double mBlipRpm = 0;
     private boolean mTriggerHeld = false;
     private boolean mReverseHeld = false;
     private boolean mBumperHeld = false;
@@ -120,10 +122,21 @@ public class Intake implements Subsystem {
         mReverseHeld = mGamepad.square;
     }
 
+    /**
+     * Tool: Pose Recorder: run the intake roller at this speed for this one loop, whatever
+     * the buttons say, and the transfer not at all. Shows a recorded INTAKE step (0055).
+     */
+    public void BlipIntakeRpm(double rpm) {
+        mBlipRpm = rpm;
+    }
+
     @Override
     public void Process() {
         WatchForAnExtraBall();
-        if (mReverseHeld) {
+        if (mBlipRpm != 0) {
+            mIntake.SetRpm(mBlipRpm);
+            mTransfer.SetRpm(0);
+        } else if (mReverseHeld) {
             mIntake.SetRpm(-mProperties.intakeReverseRpm);
 //            mTransfer.SetRpm(-mProperties.transferReverseRpm);
         } else if (IsGateOpening()) {
@@ -155,6 +168,8 @@ public class Intake implements Subsystem {
             mIntake.SetRpm(0);
             mTransfer.SetRpm(0);
         }
+        // A blip lasts one loop: the recorder asks again while it wants more.
+        mBlipRpm = 0;
         if (!mOp.mQuiet) {
             ShowStatus();
         }

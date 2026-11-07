@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.pedropathing.localization.Localizer;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -35,7 +36,13 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *       run from here on (docs/decisions/0047).
  *   <li><b>D-pad down</b>: save this spot, and turn the INTAKE_OFF here.
  *   <li><b>Square / X</b>: forget the last spot.
+ *   <li><b>Back / Share</b>: switch the sticks between robot-centric and field-centric
+ *       (docs/decisions/0055). One rumble field-centric, two robot-centric.
  * </ul>
+ *
+ * <p>A spot saved with a step <b>blips</b> that step for {@code recorderBlipSeconds}, so you
+ * can see it counted: FLOWER swings the extractor out, INTAKE_ON runs the intake forward,
+ * INTAKE_OFF runs it backward, LAUNCH blinks the light yellow. The launch gates never open.
  *
  * <p>Every change is written straight away to a file on the hub, in
  * {@code /sdcard/FIRST/recordings/}, so STOP or a dead battery loses nothing. Copy the
@@ -94,6 +101,15 @@ public class PoseRecorder implements Subsystem {
     private final Debouncer mIntakeOnButton;
     private final Debouncer mIntakeOffButton;
     private final Debouncer mUndoButton;
+    private final Debouncer mCentricButton;
+    private final BotProperties mProperties;
+    // The parts a step blips. Any may be null: that step just doesn't blip.
+    private final Intake mIntake;
+    private final FlowerExtractor mExtractor;
+    private final Indicator mIndicator;
+    /** The step blipping now: "LAUNCH", "FLOWER", "INTAKE_ON", "INTAKE_OFF", or null. */
+    private String mBlip = null;
+    private final ElapsedTime mBlipTimer = new ElapsedTime();
 
     private boolean mStarted = false;
     private String mFileStatus = "nothing saved yet";
@@ -103,6 +119,22 @@ public class PoseRecorder implements Subsystem {
      */
     public PoseRecorder(HydraOpMode op, BotProperties properties, Gamepad gamepad,
                         Localizer localizer, File folder) {
+        this(op, properties, gamepad, localizer, folder, null, null, null);
+    }
+
+    /**
+     * @param intake    blipped for INTAKE_ON / INTAKE_OFF; null for none
+     * @param extractor blipped for FLOWER; null for none
+     * @param indicator blinked for LAUNCH; null for none
+     */
+    public PoseRecorder(HydraOpMode op, BotProperties properties, Gamepad gamepad,
+                        Localizer localizer, File folder, Intake intake,
+                        FlowerExtractor extractor, Indicator indicator) {
+        mProperties = properties;
+        mIntake = intake;
+        mExtractor = extractor;
+        mIndicator = indicator;
+        mCentricButton = new Debouncer(properties.debounce);
         mOp = op;
         mGamepad = gamepad;
         mLocalizer = localizer;
@@ -126,6 +158,7 @@ public class PoseRecorder implements Subsystem {
         mOp.mTelemetry.addLine("POSE RECORDER: the robot's spot right now is the start (0, 0).");
         mOp.mTelemetry.addLine("Cross: save spot. Triangle: save + LAUNCH. Circle: save + FLOWER. Square: undo.");
         mOp.mTelemetry.addLine("D-pad up: save + INTAKE_ON. D-pad down: save + INTAKE_OFF.");
+        mOp.mTelemetry.addLine("Back / share: robot-centric or field-centric sticks.");
         return true;
     }
 
@@ -136,21 +169,79 @@ public class PoseRecorder implements Subsystem {
         }
         if (Pressed(mLaunchButton, mGamepad.triangle)) {
             SaveSpot(true);
+            StartBlip("LAUNCH");
         }
         if (Pressed(mFlowerButton, mGamepad.circle)) {
             SaveSpot(false, true);
+            StartBlip("FLOWER");
         }
         if (Pressed(mIntakeOnButton, mGamepad.dpad_up)) {
             SaveSpot(false, false, true, false);
+            StartBlip("INTAKE_ON");
         }
         if (Pressed(mIntakeOffButton, mGamepad.dpad_down)) {
             SaveSpot(false, false, false, true);
+            StartBlip("INTAKE_OFF");
         }
+        // Back / share: robot-centric or field-centric sticks. One rumble field, two robot.
+        if (Pressed(mCentricButton, mGamepad.back || mGamepad.share)) {
+            mProperties.fieldCentricDrive = !mProperties.fieldCentricDrive;
+            if (mProperties.fieldCentricDrive) {
+                mGamepad.rumbleBlips(1);
+            } else {
+                mGamepad.rumbleBlips(2);
+            }
+        }
+        // After the parts read their own buttons, so the blip wins for its length.
+        ApplyBlip();
         if (Pressed(mUndoButton, mGamepad.square) && !mSpots.isEmpty()) {
             mSpots.remove(mSpots.size() - 1);
             mGamepad.rumbleBlips(2);
             WriteFile();
         }
+    }
+
+    /** Show a step that was just saved: blip its mechanism for recorderBlipSeconds. */
+    private void StartBlip(String step) {
+        EndBlip();
+        mBlip = step;
+        mBlipTimer.reset();
+    }
+
+    /**
+     * Every loop while a blip runs: hold its mechanism on. Runs after the parts read their
+     * buttons this loop and before they act, so it wins; when it ends, they go back to
+     * their buttons by themselves.
+     */
+    private void ApplyBlip() {
+        if (mBlip == null) {
+            return;
+        }
+        if (mBlipTimer.seconds() >= mProperties.recorderBlipSeconds) {
+            EndBlip();
+            return;
+        }
+        if (mBlip.equals("FLOWER") && mExtractor != null) {
+            mExtractor.SetDeployed(true);
+        } else if (mBlip.equals("INTAKE_ON") && mIntake != null) {
+            mIntake.BlipIntakeRpm(mProperties.intakeRpm);
+        } else if (mBlip.equals("INTAKE_OFF") && mIntake != null) {
+            mIntake.BlipIntakeRpm(-mProperties.intakeReverseRpm);
+        } else if (mBlip.equals("LAUNCH") && mIndicator != null) {
+            mIndicator.SetLaunching(true);
+        }
+    }
+
+    private void EndBlip() {
+        if ("LAUNCH".equals(mBlip) && mIndicator != null) {
+            mIndicator.SetLaunching(false);
+        }
+        mBlip = null;
+    }
+
+    /** The step blipping now, or null. For tests. */
+    String Blipping() {
+        return mBlip;
     }
 
     /** true once per press: the button was held long enough, and this press is now used up. */
@@ -170,6 +261,9 @@ public class PoseRecorder implements Subsystem {
         mOp.mTelemetry.addData("Robot is at", "x %.1f, y %.1f in, heading %.0f deg",
                 here.x(), here.y(), Math.toDegrees(here.heading()));
         mOp.mTelemetry.addData("Spots saved", mSpots.size());
+        mOp.mTelemetry.addData("Sticks", mProperties.fieldCentricDrive
+                ? "FIELD-centric (forward = the way it faced at INIT). Back / share switches."
+                : "ROBOT-centric. Back / share switches.");
         // The last three, so the driver can see the press counted.
         int first = Math.max(0, mSpots.size() - 3);
         for (int i = first; i < mSpots.size(); i++) {

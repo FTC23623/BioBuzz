@@ -449,6 +449,18 @@ class DriveAimTest {
     }
 
     @Test
+    @DisplayName("circle re-sets forward in HyDrive, but not with circleResetsForward off (Pose Recorder: FLOWER)")
+    void circleResetsForward() {
+        properties.fieldCentricDrive = true;
+        properties.circleResetsForward = false;
+        tap(down -> gamepad.circle = down);
+        org.mockito.Mockito.verify(imu, org.mockito.Mockito.never()).ResetYaw();
+        properties.circleResetsForward = true;
+        tap(down -> gamepad.circle = down);
+        org.mockito.Mockito.verify(imu).ResetYaw();
+    }
+
+    @Test
     @DisplayName("wiggle is on at START")
     void wiggleOnByDefault() {
         assertTrue(new BotProperties().launchWiggle);

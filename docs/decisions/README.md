@@ -61,6 +61,7 @@ that replaces the old one and mark the old one **Replaced by NNNN**. Do not rewr
 | [0052](0052-launch-tuning-sessions.md) | Launch tuning sessions: Claude changes settings and reads shots over FTC Dashboard; Tool: Launch Tuning | Accepted, practice only, not yet run |
 | [0053](0053-match-build-and-auto-names.md) | Match build (`matchBuild=true`, Android Studio or `-PmatchBuild`) leaves test and tool OpModes out, turns competition mode and the match settings on; autos named Auto / Blue / Red | Accepted |
 | [0054](0054-position-from-tags.md) | Position from the AprilTags (left of / out from the hive, the Limelight's field pose) for tuning; wheels coast in Tool: Launch Tuning | Accepted, signs CHECK |
+| [0055](0055-pose-recorder-blips-and-centric.md) | Pose Recorder: a saved step blips its mechanism; back / share switches robot- and field-centric | Accepted |
 
 ## TODO: confirm on the robot after this week's tuning
 

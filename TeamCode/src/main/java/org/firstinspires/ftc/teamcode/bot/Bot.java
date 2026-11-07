@@ -275,8 +275,10 @@ public class Bot {
         // robot is the same way Pedro does, so the spots it saves match the autos' (0024).
         if (!mProperties.poseRecorderDisabled) {
             File folder = new File(AppUtil.FIRST_FOLDER, "recordings");
+            // It also gets the parts it blips to show a recorded step (0055).
             mSystems.add(new PoseRecorder(mOp, mProperties, mOp.mDriverGamepad,
-                    PedroConstants.CreateLocalizer(mOp.mHardwareMap, mProperties), folder));
+                    PedroConstants.CreateLocalizer(mOp.mHardwareMap, mProperties), folder,
+                    mIntake, mFlowerExtractor, mIndicator));
         }
         // Last, so it sees what every other part did this loop. It does nothing unless
         // testLog or testTelemetry is on (docs/decisions/0050).

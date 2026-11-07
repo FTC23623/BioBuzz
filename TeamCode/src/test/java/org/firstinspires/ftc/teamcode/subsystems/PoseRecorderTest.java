@@ -1,8 +1,11 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +35,9 @@ class PoseRecorderTest {
     private Localizer localizer;
     private Gamepad gamepad;
     private PoseRecorder recorder;
+    private Intake intake;
+    private FlowerExtractor extractor;
+    private Indicator indicator;
 
     @TempDir
     File folder;
@@ -42,7 +48,12 @@ class PoseRecorderTest {
         when(localizer.pose()).thenReturn(new Pose(0, 0, 0));
         gamepad = mock(Gamepad.class);
         HydraOpMode op = new HydraOpMode(mock(Telemetry.class), mock(HardwareMap.class), gamepad, gamepad);
-        recorder = new PoseRecorder(op, properties, gamepad, localizer, folder);
+        intake = mock(Intake.class);
+        extractor = mock(FlowerExtractor.class);
+        indicator = mock(Indicator.class);
+        properties.recorderBlipSeconds = 60;   // long: the tests check it while it runs
+        properties.fieldCentricDrive = false;
+        recorder = new PoseRecorder(op, properties, gamepad, localizer, folder, intake, extractor, indicator);
     }
 
     private void robotIsAt(double x, double y, double headingDeg) {
@@ -139,6 +150,44 @@ class PoseRecorderTest {
                 .endsWith(", INTAKE_ON"));
         assertTrue(PoseRecorder.SpotLine(2, new PoseRecorder.Spot(1, 2, 3, false, false, false, true))
                 .endsWith(", INTAKE_OFF"));
+    }
+
+    @Test
+    @DisplayName("a saved step blips its part: FLOWER the extractor, INTAKE_ON / OFF the intake, LAUNCH the light")
+    void stepsBlip() {
+        tap(down -> gamepad.circle = down);
+        assertEquals("FLOWER", recorder.Blipping());
+        verify(extractor, atLeastOnce()).SetDeployed(true);
+        tap(down -> gamepad.dpad_up = down);
+        verify(intake, atLeastOnce()).BlipIntakeRpm(properties.intakeRpm);
+        tap(down -> gamepad.dpad_down = down);
+        verify(intake, atLeastOnce()).BlipIntakeRpm(-properties.intakeReverseRpm);
+        tap(down -> gamepad.triangle = down);
+        verify(indicator, atLeastOnce()).SetLaunching(true);
+        // The next step's blip ends this one: the light stops blinking.
+        tap(down -> gamepad.circle = down);
+        verify(indicator).SetLaunching(false);
+        assertEquals("FLOWER", recorder.Blipping());
+    }
+
+    @Test
+    @DisplayName("a blip ends by itself after recorderBlipSeconds")
+    void blipEnds() {
+        properties.recorderBlipSeconds = 0;
+        tap(down -> gamepad.circle = down);
+        recorder.HandleUserInput();
+        assertNull(recorder.Blipping());
+    }
+
+    @Test
+    @DisplayName("back / share switches robot-centric and field-centric: one rumble field, two robot")
+    void centricToggle() {
+        tap(down -> gamepad.back = down);
+        assertTrue(properties.fieldCentricDrive);
+        verify(gamepad).rumbleBlips(1);
+        tap(down -> gamepad.share = down);
+        assertFalse(properties.fieldCentricDrive);
+        verify(gamepad).rumbleBlips(2);
     }
 
     @Test

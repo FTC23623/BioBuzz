@@ -91,6 +91,13 @@ public class BotProperties {
      */
     public boolean driveCoastWhenIdle = false;
     /**
+     * true (HyDrive): circle re-sets "forward" for field-centric driving. false: circle does
+     * nothing in the drive. Tool: Pose Recorder uses circle for FLOWER (0055).
+     */
+    public boolean circleResetsForward = true;
+    /** Tool: Pose Recorder: how long a recorded step's mechanism blips, seconds (0055). */
+    public double recorderBlipSeconds = 0.6;
+    /**
      * true: TeleOp keeps the heading the auto left, so forward stays away from the driver
      * even though the auto turned the robot (docs/decisions/0046). Each auto says which way
      * it starts facing. Circle still re-sets forward. false: forward is the way the robot

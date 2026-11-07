@@ -12,7 +12,13 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  *   <li><b>D-pad up</b>: save this spot and turn the INTAKE_ON here (docs/decisions/0047).
  *   <li><b>D-pad down</b>: save this spot and turn the INTAKE_OFF here.
  *   <li><b>Square / X</b>: forget the last spot.
+ *   <li><b>Back / Share</b>: switch the sticks between robot-centric (at START) and
+ *       field-centric, where forward is the way the robot faced at INIT (0055).
  * </ul>
+ *
+ * <p>Saving a spot with a step blips that step's mechanism, so you can see the press
+ * counted: FLOWER swings the extractor out and back, INTAKE_ON runs the intake forward,
+ * INTAKE_OFF runs it backward, LAUNCH blinks the light yellow (the gates stay shut).
  *
  * <p>Steps:
  * <ol>
@@ -23,13 +29,16 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  *       copy of AutoShapeZ, run it at half speed first.
  * </ol>
  *
- * <p>Robot-centric, so circle is free for the FLOWER step. See docs/decisions/0024.
+ * <p>Circle is the FLOWER step here, never "reset forward". See docs/decisions/0024.
  */
 @TeleOp(name = "Tool: Pose Recorder", group = "Tool")
 public class PoseRecorderTool extends HyDrive {
     @Override
     protected void ChooseDriveOptions(BotProperties properties) {
         properties.poseRecorderDisabled = false;
+        // Starts robot-centric; back / share switches (0055). Circle is FLOWER here, never
+        // "reset forward".
         properties.fieldCentricDrive = false;
+        properties.circleResetsForward = false;
     }
 }
