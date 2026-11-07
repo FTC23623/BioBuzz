@@ -434,6 +434,8 @@ class DriveAimTest {
     @DisplayName("wiggle on: aim turns first; once aimed the wiggle takes over and keeps going")
     void wiggleWaitsForAim() {
         properties.launchWiggle = true;
+        properties.wiggleDeg = 1;   // 1 deg to go x kP 0.1 = 0.1; BotProperties may say more
+        properties.wiggleKP = 0.1;
         properties.wiggleSwitchSeconds = 60;
         properties.driveNormal = 1;
         tagAt(-20);   // the hive well to the right

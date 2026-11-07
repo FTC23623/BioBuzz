@@ -61,6 +61,8 @@ class MotorTunerTest {
     void setUp() {
         // Set here, so tuning BotProperties on the robot can't break the tests.
         properties.pollenLauncherReversed = false;
+        // The tuner's roller checks are in speeds (the hub's speed control), not power mode.
+        properties.rollerUsePower = false;
         properties.nectarLauncherReversed = true;
         HardwareMap hardwareMap = mock(HardwareMap.class);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgLaunchPollen)).thenReturn(pollen.motor);

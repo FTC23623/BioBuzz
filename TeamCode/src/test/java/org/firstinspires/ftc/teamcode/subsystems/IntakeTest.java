@@ -58,6 +58,10 @@ class IntakeTest {
 
     @BeforeEach
     void setUp() {
+        // These tests check what speed each roller is asked for, so they run the hub's speed
+        // control. The robot runs power mode (rollerUsePower); its own test is below and in
+        // RollerTest.
+        properties.rollerUsePower = false;
         HardwareMap hardwareMap = mock(HardwareMap.class);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgIntake)).thenReturn(intake.motor);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgTransfer)).thenReturn(transfer.motor);
@@ -223,7 +227,7 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("launching with the rollers off: intake and transfer both run forward, at their feed shares (intake half, transfer 60%)")
+    @DisplayName("launching with the rollers off: intake and transfer both run forward, at their feed shares")
     void launchFeedsBoth() {
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
@@ -251,15 +255,28 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top; the launch feed is half of it for the intake and 60% for the transfer")
+    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top; the launch feed is 70% for the intake and 50% for the transfer")
     void speedsFitTheMotor() {
         assertEquals(1150, properties.intakeMaxRpm, EPS);
         assertTrue(properties.intakeRpm <= properties.intakeMaxRpm);
         assertTrue(properties.transferRpm <= properties.intakeMaxRpm);
         assertTrue(properties.intakeReverseRpm <= properties.intakeMaxRpm);
         assertTrue(properties.transferReverseRpm <= properties.intakeMaxRpm);
-        assertEquals(0.5, properties.launchFeedIntakeScale, EPS);
-        assertEquals(0.6, properties.launchFeedTransferScale, EPS);
+        assertEquals(0.7, new BotProperties().launchFeedIntakeScale, EPS);
+        assertEquals(0.5, new BotProperties().launchFeedTransferScale, EPS);
+    }
+
+    @Test
+    @DisplayName("power mode is on in BotProperties: the rollers get a share of full power, not a speed")
+    void powerModeByDefault() {
+        assertTrue(new BotProperties().rollerUsePower);
+        properties.rollerUsePower = true;
+        properties.intakeRpm = 1150;
+        properties.transferRpm = 575;
+        tap(down -> gamepad.left_bumper = down);
+        assertEquals(1.0, intake.power, EPS);
+        assertEquals(0.5, transfer.power, EPS);
+        assertEquals(0, transfer.velocity, EPS);
     }
 
     @Test
@@ -441,14 +458,14 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("auto launch: the transfer feeds at 60%, the intake roller stays off")
-    void autoLaunchFeedsAtSixtyPercent() {
+    @DisplayName("auto launch: the transfer feeds at 50%, the intake roller stays off")
+    void autoLaunchFeedsAtHalf() {
         rollers.SetOn(true);
         rollers.SetIntakeRollerOn(false);
         when(gates.IsFullyOpen()).thenReturn(true);
         rollers.Process();
-        assertEquals(0.6, properties.launchFeedTransferScale, EPS);
-        assertEquals(TicksPerSecond(properties.transferRpm * 0.6), transfer.velocity, EPS);
+        assertEquals(0.5, properties.launchFeedTransferScale, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm * 0.5), transfer.velocity, EPS);
         assertEquals(0, intake.power, EPS);
     }
 

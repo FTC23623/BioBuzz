@@ -348,7 +348,7 @@ public class BotProperties {
      * and holds the target it had when they opened, so it doesn't jump mid-launch. false
      * (today): it keeps following. TeleOp and the autos (docs/decisions/0050).
      */
-    public boolean launchLocksRpm = false;
+    public boolean launchLocksRpm = true;
     /**
      * Added to every step of the curve. D-pad up / down on gamepad 2 moves it by
      * launcherRpmStep while range tuning is on, so the operator can nudge every shot faster
@@ -413,12 +413,12 @@ public class BotProperties {
     // its speed above, so balls go into the launcher one at a time at a steady rate.
     // Intaking on purpose is always 100%.
     /** The intake's share while feeding a launch: 0.5 = half (coach, 2026-11-02). */
-    public double launchFeedIntakeScale = 0.5;
+    public double launchFeedIntakeScale = 0.7;
     /**
      * The transfer's share while feeding a launch: 0.3. At half the balls ran into each
      * other at the launcher (coach, 2026-11-03).
      */
-    public double launchFeedTransferScale = 0.6;
+    public double launchFeedTransferScale = 0.5;
     // Reverse is SLOWER than forward on purpose: at full speed one tap of square emptied the
     // robot. About a third of forward lets the operator let out one ball at a time (coach,
     // 2026-11-02). Both are on the dashboard's Intake group: tune them there, then write the
@@ -450,7 +450,7 @@ public class BotProperties {
      * intakeMaxRpm (1150 = full power, 575 = half). The RPM settings above work either way.
      * On the dashboard's Intake group (docs/decisions/0050).
      */
-    public boolean rollerUsePower = false;
+    public boolean rollerUsePower = true;
     // Hub speed-control gains for the intake and transfer (docs/decisions/0025). The hub
     // runs this loop itself; we only hand it the numbers. Starting values are the REV hub's
     // usual defaults, so nothing changes until someone tunes them. CHECK on the robot: the
@@ -679,7 +679,7 @@ public class BotProperties {
      * right, for the pollen launcher sitting left of the camera (2026-11-03), until shots from
      * the right side missed. Used by aim assist, the launch lock and the autos' aim.
      */
-    public double aimHiveBearingDeg = 3.0;
+    public double aimHiveBearingDeg = 2.0;
     /**
      * true: the driver's launch trigger also turns the robot to face the middle of our hive's
      * tags while it is held, the way an auto aims before LAUNCH_WHEN_TAG_SEEN (coach,
@@ -736,7 +736,7 @@ public class BotProperties {
      */
     public boolean launchWiggle = true;
     /** How far either side of where the wiggle started, in degrees. */
-    public double wiggleDeg = 1;
+    public double wiggleDeg = 1.5;
     /**
      * How long each side lasts, in seconds. The coach measured a ball every 10 frames of a
      * 60 fps video: 10 / 60 = 0.167 s, so each ball leaves on the other side from the last.
