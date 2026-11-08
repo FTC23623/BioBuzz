@@ -31,6 +31,13 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * right trigger and the gates open anyway. {@code launchNeedsLock = false} turns the lock
  * off. An auto's LAUNCH ({@link #SetOpen}) is not checked here; the auto decides.
  *
+ * <p><b>Settle first</b> (docs/decisions/0056, {@code teleopLaunchSettles}, on today). Once
+ * the trigger passes the camera lock above, the pollen speed is LOCKED and the gates wait
+ * for the wheel to settle on it ({@link Launcher#BeginSettle}), at most
+ * {@code launchSettleTimeoutSeconds}. Settled once per pull: the gates then stay open while
+ * the trigger is held, as before. Letting go, or losing the lock while still settling,
+ * unlocks the speed so the distance moves it again.
+ *
  * <p><b>Out of the way first.</b> A servo can't say when it got there, so the time it needs
  * is worked out from its speed and how far it turns ({@link #OpenSeconds}). Until then
  * {@link #IsFullyOpen()} is false, and the transfer waits before pushing balls in
@@ -50,6 +57,8 @@ public class LaunchGates implements Subsystem {
     private final Gamepad mGamepad;
     /** The camera, asked once per launch how far the tag is, and for the lock. null when there is none. */
     private final Vision mVision;
+    /** The launcher, to settle on the speed before opening. null until the Bot hands it over, or none. */
+    private Launcher mLauncher = null;
     /** null when the servo is not in the robot configuration. */
     private final Servo mPollenServo;
     private final Servo mNectarServo;
@@ -72,6 +81,8 @@ public class LaunchGates implements Subsystem {
     private boolean mOverrideHeld = false;
     /** true once this pull has buzzed the driver, so one pull is one buzz. */
     private boolean mBuzzedThisPull = false;
+    /** true once this pull has settled (or timed out), so a pull settles only once. */
+    private boolean mSettledThisPull = false;
     /** Why the gates are shut while the trigger is held, for the Driver Station. */
     private String mLockStatus = "";
 
@@ -108,8 +119,9 @@ public class LaunchGates implements Subsystem {
         mTriggerHeld = mGamepad.right_trigger > mProperties.trgBtnThresh;
         mOverrideHeld = mOp.mOperatorGamepad.right_trigger > mProperties.trgBtnThresh;
         if (!mTriggerHeld) {
-            // Let go: the next pull may buzz again.
+            // Let go: the next pull may buzz again, and settles again.
             mBuzzedThisPull = false;
+            mSettledThisPull = false;
         }
     }
 
@@ -149,10 +161,55 @@ public class LaunchGates implements Subsystem {
     }
 
     /**
-     * TeleOp: should the gates be open this loop? The trigger must be held, and the camera
-     * locked on our hive, unless the operator overrides or the lock is switched off.
+     * The launcher, so a pull can settle on the speed before the gates open (0056). The Bot
+     * calls this once, after building both.
+     */
+    public void SetLauncher(Launcher launcher) {
+        mLauncher = launcher;
+    }
+
+    /**
+     * TeleOp: should the gates be open this loop? The trigger and the camera lock must allow
+     * it, and then the speed must have settled (or timed out) once this pull.
      */
     private boolean DecideFromTrigger() {
+        if (!TriggerAllows()) {
+            if (!mSettledThisPull && mLauncher != null) {
+                // Let go, or lost the lock before the launch: unlock the speed again.
+                mLauncher.CancelSettle();
+            }
+            return false;
+        }
+        return SettledThisPull();
+    }
+
+    /**
+     * Settle once per pull: lock the speed, wait for it, then let the gates open. With
+     * teleopLaunchSettles off, or no launcher, there is nothing to wait for.
+     */
+    private boolean SettledThisPull() {
+        if (mSettledThisPull || mLauncher == null || !mProperties.teleopLaunchSettles) {
+            mSettledThisPull = true;
+            return true;
+        }
+        if (!mLauncher.IsSettling()) {
+            mLauncher.BeginSettle();
+        }
+        if (mLauncher.SettleDone()) {
+            mSettledThisPull = true;
+            // Unlock the settle. With launchLocksRpm on, the open gates keep it locked.
+            mLauncher.CancelSettle();
+            return true;
+        }
+        mLockStatus = "LOCKED, " + mLauncher.SettleStatus();
+        return false;
+    }
+
+    /**
+     * The trigger must be held, and the camera locked on our hive, unless the operator
+     * overrides or the lock is switched off.
+     */
+    private boolean TriggerAllows() {
         if (!mTriggerHeld) {
             return false;
         }

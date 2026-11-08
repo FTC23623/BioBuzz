@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -35,17 +36,35 @@ class LaunchSpinUpTest {
     }
 
     @Test
-    @DisplayName("the launch speed is 2800 RPM")
+    @DisplayName("the launch speed is 2735 RPM, never above the near shot")
     void minRpm() {
-        org.junit.jupiter.api.Assertions.assertEquals(2800, properties.autoLaunchMinRpm, 1e-9);
+        Assertions.assertEquals(2735, properties.autoLaunchMinRpm, 1e-9);
+        assertTrue(properties.autoLaunchMinRpm <= properties.launchNearRpm);
+    }
+
+    @Test
+    @DisplayName("settle (today): LAUNCH_WHEN_TAG_SEEN settles, a plain LAUNCH does not")
+    void tagLaunchSettles() {
+        assertTrue(PedroAuto.SettlesBeforeLaunch(PedroAuto.LAUNCH_WHEN_TAG_SEEN, properties));
+        assertFalse(PedroAuto.SettlesBeforeLaunch(PedroAuto.LAUNCH, properties));
+    }
+
+    @Test
+    @DisplayName("settle: autoLaunchSettles covers every launch; autoTagLaunchSettles off skips the tag launch")
+    void settleSwitches() {
+        properties.autoLaunchSettles = true;
+        assertTrue(PedroAuto.SettlesBeforeLaunch(PedroAuto.LAUNCH, properties));
+        properties.autoLaunchSettles = false;
+        properties.autoTagLaunchSettles = false;
+        assertFalse(PedroAuto.SettlesBeforeLaunch(PedroAuto.LAUNCH_WHEN_TAG_SEEN, properties));
     }
 
     @Test
     @DisplayName("auto aim, hive dead ahead: left of it turns 1 deg right, right of it 1 deg left, in front none")
     void autoAimHeading() {
         properties.aimHiveBearingDeg = 1;
-        org.junit.jupiter.api.Assertions.assertEquals(Math.toRadians(-1), PedroAuto.AimHeading(0, 0, 20, properties), 1e-9);
-        org.junit.jupiter.api.Assertions.assertEquals(Math.toRadians(1), PedroAuto.AimHeading(0, 0, -20, properties), 1e-9);
-        org.junit.jupiter.api.Assertions.assertEquals(0, PedroAuto.AimHeading(0, 0, 0, properties), 1e-9);
+        Assertions.assertEquals(Math.toRadians(-1), PedroAuto.AimHeading(0, 0, 20, properties), 1e-9);
+        Assertions.assertEquals(Math.toRadians(1), PedroAuto.AimHeading(0, 0, -20, properties), 1e-9);
+        Assertions.assertEquals(0, PedroAuto.AimHeading(0, 0, 0, properties), 1e-9);
     }
 }

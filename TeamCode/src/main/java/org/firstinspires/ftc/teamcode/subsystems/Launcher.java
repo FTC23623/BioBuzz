@@ -7,6 +7,7 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.RpmTable;
+import org.firstinspires.ftc.teamcode.objects.SpeedSettle;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
 /**
@@ -37,7 +38,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
  * (right bumper) or launch (right trigger) and the camera sees our hive, the
  * pollen launcher's target follows a curve of inches to RPM in 2-inch
- * steps (2800 at 110 in, 3275 from 140 in, bending upward between), plus {@code launcherRangeTrimRpm}. The
+ * steps (2735 at 110 in, 3240 from 140 in, bending upward between), plus {@code launcherRangeTrimRpm}. The
  * wheel is then already at the right speed when the trigger is pulled. With no tag in view
  * the target stays where it was. {@code launcherRangeTuning = false} turns this off.
  *
@@ -46,6 +47,12 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * the change, and a change on the dashboard reaches the wheel. Every 50 ms each
  * {@link LauncherWheel} measures its speed and picks a new power. See docs/decisions/0009
  * and 0023.
+ *
+ * <p><b>Settle before launch</b> (docs/decisions/0056): on the launch command,
+ * {@link #BeginSettle} LOCKS the pollen target (the distance stops moving it) and waits for
+ * the wheel to stay within {@code launchSettleBandRpm} of it for
+ * {@code launchSettleHoldSeconds}, or at most {@code launchSettleTimeoutSeconds}. The gates
+ * (TeleOp) or the auto ask {@link #SettleDone} before they open.
  *
  * <p>The balls are let go by {@link LaunchGates}, on the driver's right trigger.
  */
@@ -78,6 +85,10 @@ public class Launcher implements Subsystem {
     private double mHeldStepIn = Double.NaN;
     /** The curve, one RPM per step, looked up each loop instead of worked out. */
     private final RpmTable mRpmTable = new RpmTable();
+    /** Settle before launch: the pollen wheel on its locked target (0056). */
+    private final SpeedSettle mSettle = new SpeedSettle();
+    /** The clock the settle is timed with. */
+    private final ElapsedTime mSettleClock = new ElapsedTime();
 
     /**
      * @param vision the camera, so the pollen launcher's speed can follow the distance to the
@@ -185,6 +196,11 @@ public class Launcher implements Subsystem {
             mTimeSinceUpdate.reset();
             Update(secondsPassed);
         }
+        if (mSettle.IsActive() && !mSettle.IsDone()) {
+            mSettle.Update(mSettleClock.seconds(), mPollen.GetMeasuredRpm(), mProperties.pollenLauncherRpm,
+                    mProperties.launchSettleBandRpm, mProperties.launchSettleHoldSeconds,
+                    mProperties.launchSettleTimeoutSeconds);
+        }
         if (!mOp.mQuiet) {
             ShowStatus();
         } else if (mProperties.launcherOnlyTelemetry) {
@@ -200,6 +216,12 @@ public class Launcher implements Subsystem {
     private void FollowDistance() {
         if (!mProperties.launcherRangeTuning) {
             mRangeStatus = "OFF (launcherRangeTuning): D-pad sets the speed";
+            return;
+        }
+        if (mSettle.IsActive()) {
+            // A launch command: hold the target still so the wheel can settle on it (0056).
+            mRangeStatus = String.format(Locale.US, "LOCKED to settle, holding %.0f",
+                    mProperties.pollenLauncherRpm);
             return;
         }
         if (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsOpen()) {
@@ -339,8 +361,8 @@ public class Launcher implements Subsystem {
      *     step start = nearIn + whole steps past nearIn
      *     rpm = near + (far - near) x ((step start - nearIn) / (farIn - nearIn)) ^ curve
      *
-     *     near 110 in 2800, far 140 in 3275, curve 1.1, steps of 2 in:
-     *     110: 2800   112: 2824   120: 2942   130: 3104   139: 3240   140 and up: 3275
+     *     near 110 in 2735, far 140 in 3240, curve 1.1, steps of 2 in:
+     *     110: 2735   112: 2761   120: 2886   130: 3058   139: 3203   140 and up: 3240
      * </pre>
      *
      * Nearer than nearIn: the near speed. Farther than farIn: the far speed.
@@ -416,6 +438,38 @@ public class Launcher implements Subsystem {
         return mPollen.GetMeasuredRpm();
     }
 
+    /**
+     * The launch command: lock the pollen target where it is now and start waiting for the
+     * wheel to settle on it. A robot with no pollen wheel counts as settled at once.
+     */
+    public void BeginSettle() {
+        if (!mPollen.IsPresent()) {
+            mSettle.Finish();
+            return;
+        }
+        mSettle.Start(mSettleClock.seconds());
+    }
+
+    /** Stop waiting and unlock the target: the distance may move it again. */
+    public void CancelSettle() {
+        mSettle.Cancel();
+    }
+
+    /** true from BeginSettle() until CancelSettle(): the target is locked. */
+    public boolean IsSettling() {
+        return mSettle.IsActive();
+    }
+
+    /** true once the wheel has settled, or the wait timed out. */
+    public boolean SettleDone() {
+        return mSettle.IsDone();
+    }
+
+    /** One line for the Driver Station: settling, settled, or timed out. */
+    public String SettleStatus() {
+        return mSettle.Status();
+    }
+
     public double GetNectarMeasuredRpm() {
         return mNectar.GetMeasuredRpm();
     }
@@ -442,6 +496,7 @@ public class Launcher implements Subsystem {
     /** The numbers only: speed from distance, and each wheel's speeds and power. */
     private void ShowStats() {
         mOp.mTelemetry.addData("Launcher speed from distance", mRangeStatus);
+        mOp.mTelemetry.addData("Launcher settle", mSettle.Status());
         mPollen.ShowStatus();
         mNectar.ShowStatus();
     }

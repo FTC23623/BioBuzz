@@ -266,7 +266,7 @@ public class BotProperties {
     /** Nectar launcher target speed. D-pad right / left on gamepad 2 changes it. */
     public double nectarLauncherRpm = 0;
     /** How much one D-pad press changes a launcher's target speed (or its trim, below). */
-    public double launcherRpmStep = 50;
+    public double launcherRpmStep = 25;
 
     // ---- Launcher speed from distance (docs/decisions/0038) --------------------------------
     // A farther shot needs a faster wheel. While the camera sees our hive, the pollen
@@ -276,6 +276,9 @@ public class BotProperties {
     // straight line from 2900 to 3325, rounded; tune each on the robot. 2026-11-04: an inertia
     // wheel went on, so the near shot came down 150 to 2750; the far shot stayed 3325, then
     // came down 100 to 3225 the same day. 2026-11-05: the whole curve up 50, 2800 to 3275.
+    // Later: near shots overshot a little, so the near end came down 30 to 2770; the far end
+    // stayed 3275 (about -21 at 120 in, -11 at 130 in, 0 at 140 in). Then the whole curve
+    // came down another 35: 2735 to 3240.
 
     /**
      * true: the pollen launcher's target follows the distance curve below whenever a tag of
@@ -289,17 +292,24 @@ public class BotProperties {
     //     rpm = near + (far - near) x ((band start - nearIn) / (farIn - nearIn)) ^ launchCurve
     //
     // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.1, a gentle
-    // bend: 2800 at 110, 2942 at 120, 3104 at 130, 3275 at 140 (coach, 2026-11-04, and up 50
-    // on 2026-11-05; it was 1.25 for a few hours while the far shot was still 3325).
+    // bend: 2735 at 110, 2886 at 120, 3058 at 130, 3240 at 140 (coach, 2026-11-04, up 50
+    // on 2026-11-05, near end down 30 later, then all down 35; it was 1.25 for a few hours
+    // while the far shot was still 3325).
     // Nearer than nearIn uses the near speed; farther than farIn uses the far speed.
     /** The near measured shot: distance, in inches. */
     public double launchNearIn = 110;
-    /** The near measured shot: RPM that scored from there (2900, less 150 for the inertia wheel, +50 on 2026-11-05). */
-    public double launchNearRpm = 2800;
+    /**
+     * The near measured shot: RPM that scored from there (2900, less 150 for the inertia
+     * wheel, +50 on 2026-11-05, -30 for overshooting up close, -35 with the whole curve).
+     */
+    public double launchNearRpm = 2735;
     /** The far measured shot: distance, in inches. */
     public double launchFarIn = 140;
-    /** The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03, -100 on 2026-11-04, +50 on 2026-11-05). */
-    public double launchFarRpm = 3275;
+    /**
+     * The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03,
+     * -100 on 2026-11-04, +50 on 2026-11-05, -35 with the whole curve).
+     */
+    public double launchFarRpm = 3240;
     /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.1 since 2026-11-04. */
     public double launchCurve = 1.1;
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
@@ -349,6 +359,33 @@ public class BotProperties {
      * (today): it keeps following. TeleOp and the autos (docs/decisions/0050).
      */
     public boolean launchLocksRpm = true;
+    // ---- Settle before launch (docs/decisions/0056) ----------------------------------------
+    // On the launch command the pollen target stops following the distance (it is LOCKED),
+    // and the gates wait until the wheel has stayed within launchSettleBandRpm of it for
+    // launchSettleHoldSeconds. If it never does, they open anyway after
+    // launchSettleTimeoutSeconds. While driving, the distance still keeps the speed close.
+    /**
+     * TeleOp: true (today) = the driver's launch trigger locks the speed and waits for it to
+     * settle before the gates open. false = the gates open as soon as the camera lock allows.
+     */
+    public boolean teleopLaunchSettles = true;
+    /**
+     * Autos: true = each LAUNCH, once at autoLaunchMinRpm, also locks the speed and waits for
+     * it to settle. false (today) = it opens at autoLaunchMinRpm, as before.
+     */
+    public boolean autoLaunchSettles = false;
+    /**
+     * Autos, LAUNCH_WHEN_TAG_SEEN only: true (today) = settle like above even with
+     * autoLaunchSettles off. The tag sets a new, farther target just before the launch, and
+     * the turn to the hive has only just stopped, so the wheel needs a moment to get there.
+     */
+    public boolean autoTagLaunchSettles = true;
+    /** Settled means within this many RPM of the locked target, either way. 25 to 50 is sensible. */
+    public double launchSettleBandRpm = 40;
+    /** ...for this long without a break, in seconds. 0.15 = three speed readings (50 ms each). */
+    public double launchSettleHoldSeconds = 0.15;
+    /** The most a launch waits to settle before the gates open anyway, in seconds. */
+    public double launchSettleTimeoutSeconds = 1.0;
     /**
      * Added to every step of the curve. D-pad up / down on gamepad 2 moves it by
      * launcherRpmStep while range tuning is on, so the operator can nudge every shot faster
@@ -427,7 +464,7 @@ public class BotProperties {
      * Intake speed while gamepad 2 holds square: spitting balls back out, for when the robot
      * has picked up too many. A plus number; the code turns it into backward.
      */
-    public double intakeReverseRpm = 400;
+    public double intakeReverseRpm = 1000;
     /** Transfer speed while gamepad 2 holds square, carrying balls back down. A plus number. */
     public double transferReverseRpm = 400;
     // Auto-reject (docs/decisions/0040): the pollen switch sits where a ball only waits once
@@ -531,7 +568,7 @@ public class BotProperties {
     // path gets cut short, raise the margin first.
 
     /** The time limit is the expected time multiplied by this. 1.5 = 50% more. */
-    public double autoGiveUpMargin = 1.5;
+    public double autoGiveUpMargin = 2;
     /** Then this many seconds are added, for speeding up at the start and braking at the end. */
     public double autoGiveUpExtraSeconds = 1;
     /**
@@ -565,10 +602,11 @@ public class BotProperties {
      * fast, in RPM. The wheels did not hold within 50 RPM of the target long enough on the
      * robot, so the auto no longer waits for "at speed" (coach, 2026-11-03: 2800, then 2950).
      * 2800 since 2026-11-04: the near shot came down 150 with the inertia wheel, and a
-     * near target of 2750 would never reach 2950. The near shot is 2800 since 2026-11-05, the
-     * same as this.
+     * near target of 2750 would never reach 2950. The near shot was 2800 from 2026-11-05;
+     * both came down 30 to 2770 together, then 35 more to 2735, so a near target is never
+     * below this floor. Keep this at or below launchNearRpm.
      */
-    public double autoLaunchMinRpm = 2800;
+    public double autoLaunchMinRpm = 2735;
     /**
      * A LAUNCH_WHEN_TAG_SEEN step still waiting for one of our hive's tags this many seconds
      * after START launches anyway, facing the way it is. AUTO is 30 seconds (Competition
@@ -580,11 +618,14 @@ public class BotProperties {
     // The FLOWER step (docs/decisions/0042): from the spot it was recorded at, the robot backs
     // up, swings the extractor out, works the flower with short strokes forward and back,
     // and swings the extractor in, with the intake running the whole time. Every move is
-    // along the way the robot faces. Today: back 9, settle, out, forward 8, hold 1 s,
-    // back 8, in. The robot ends 9 inches behind the recorded spot (coach,
-    // 2026-11-03: 6 was too close, and the arm went out before the robot had stopped).
+    // along the way the robot faces. Today: back 6, settle, out, forward 8, hold 1 s,
+    // back 8, in. The robot ends 6 inches behind the recorded spot, and is 2 inches PAST
+    // it at the flower. History: back 9 (coach, 2026-11-03: 6 was too close for the long
+    // arm, and it went out before the robot had stopped). Then the extractor was cut about
+    // 3 inches shorter, so the whole step moved 3 inches forward: back 9 became back 6. The
+    // short arm's tip ends up where the long arm's did, both at arm-out and at the flower.
     /** How far the robot backs up from the recorded spot before the extractor goes out, in inches. */
-    public double autoFlowerBackIn = 9;
+    public double autoFlowerBackIn = 6;
     /**
      * After the back-up, the robot holds the backed-up spot this long, in seconds, so it has
      * stopped before the arm swings out.
@@ -818,16 +859,18 @@ public class BotProperties {
      */
     public int stripLedCount = 36;
     // Every LED range below is a FIRST and a LAST LED, counted from 0, and both are lit.
-    // "12 to 35" means LED 12, LED 35, and every LED between (24 LEDs).
+    // "0 to 35" means LED 0, LED 35, and every LED between (36 LEDs).
     /**
-     * Underglow: these LEDs show the alliance color from INIT to the end of the match.
-     * LEDs 12 to 35 (coach, 2026-10-31).
+     * Underglow: these LEDs show the alliance color from INIT to the end of the match,
+     * whenever no pollen is sensed. The WHOLE strip, 0 to 35. History: 12 to 35 (coach,
+     * 2026-10-31), then 0 to 23 (indexed with the ROYGBIV strip test), which left 24 to 35
+     * dark with no pollen. Pollen yellow still takes over the whole strip.
      */
-    public int underglowFirstLed = 12;
+    public int underglowFirstLed = 0;
     public int underglowLastLed = 35;
     /**
      * How the Prism counts the end of a run. true: it wants one past the last LED, so
-     * "12 to 35" is sent as start 12, stop 36 (the guide's example: start 0, stop 10 for ten
+     * "0 to 35" is sent as start 0, stop 36 (the guide's example: start 0, stop 10 for ten
      * LEDs). CHECK on the strip: if every run lights one LED too few, set this false.
      */
     public boolean prismStopIsOnePastLast = true;

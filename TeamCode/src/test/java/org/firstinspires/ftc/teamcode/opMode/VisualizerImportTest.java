@@ -50,8 +50,9 @@ class VisualizerImportTest {
         String java = PedroVisualizerImport.ToJava(json, "B.pp");
         // AutoStrategyB's own spots and steps, from its code.
         assertTrue(java.contains("Pose spot1 = new Pose(-15.4, 1.1);"), java);
-        assertTrue(java.contains("Pose spot4 = new Pose(-14.4, 47.9);"), java);
-        assertTrue(java.contains("paths.add(toSpot1);\npaths.add(LAUNCH_WHEN_TAG_SEEN);\npaths.add(toSpot2);\npaths.add(FLOWER);"), java);
+        // Only the paths in the list are drawn, so B's last spot (spot4 in its code) reads back as spot2.
+        assertTrue(java.contains("Pose spot2 = new Pose(-14.4, 49.9);"), java);
+        assertTrue(java.contains("paths.add(toSpot1);\npaths.add(LAUNCH_WHEN_TAG_SEEN);\npaths.add(toSpot2);\nreturn paths;"), java);
         assertTrue(java.contains("return new Pose(55.75, 132.50, Math.toRadians(90));"), java);
         assertTrue(java.contains("Path toSpot1 = line(StartPose(), spot1)"
                 + ".heading(Interpolator.linear(Math.toRadians(0), Math.toRadians(-12)));"), java);

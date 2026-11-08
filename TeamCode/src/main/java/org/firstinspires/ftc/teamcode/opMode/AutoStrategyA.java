@@ -71,13 +71,13 @@ public class AutoStrategyA extends PedroAuto {
 //     import com.pedropathing.paths.interpolator.Interpolator;
 // Start the auto from the spot the recording started from, facing the same way.
 
-        Pose spot1 = new Pose(-13.1, 4.3);   // heading -0 deg
+        Pose spot1 = new Pose(-13.6, 4.3);   // heading -0 deg
         Pose spot2 = new Pose(-25.4, -18.1);   // heading 32 deg
         Pose spot3 = new Pose(-39.5, -42.2);   // heading -93 deg
         Pose spot4 = new Pose(-31.7, -22.7);   // heading -181 deg
         Pose spot5 = new Pose(-100.0, -22.7);   // heading -177 deg
         Pose spot6 = new Pose(-110.9, -5.9);   // heading -175 deg
-        Pose spot7 = new Pose(-119.7, -6.5);   // heading -174 deg
+        Pose spot7 = new Pose(-118.7, -6.5);   // heading -174 deg
         Pose spot8 = new Pose(-111.0, -5.7);   // heading -173 deg
         Pose spot9 = new Pose(-84.6, -38.1);   // heading -162 deg
 

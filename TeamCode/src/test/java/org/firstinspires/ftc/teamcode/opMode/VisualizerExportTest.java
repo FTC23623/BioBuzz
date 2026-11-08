@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.pedropathing.api.Paths;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
+import com.pedropathing.paths.interpolator.Interpolator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import java.io.File;
 import java.io.FileWriter;
@@ -32,7 +34,8 @@ class VisualizerExportTest {
     /** The robot's center may come this close to a wall, in inches: half the robot, less a little. */
     private static final double wallMarginIn = 5;
 
-    private static final PedroAuto[] AUTOS = {new AutoStrategyA(), new AutoStrategyB(), new AutoStrategyC()};
+    private static final PedroAuto[] AUTOS = {new AutoStrategyA(), new AutoStrategyB(), new AutoStrategyC(),
+            new AutoStrategyGardenD(), new AutoStrategyGardenE()};
 
     /** One auto's route as field spots: the start, then where each path ends. */
     static List<Pose> Route(PedroAuto auto, Pose start) {
@@ -173,8 +176,8 @@ class VisualizerExportTest {
     @Test
     @DisplayName("a path's turn keeps its direction: 0 to -12 degrees is 12 right, not 348 left")
     void turnDirection() {
-        Path path = com.pedropathing.api.Paths.line(new Pose(0, 0), new Pose(-15, 1))
-                .heading(com.pedropathing.paths.interpolator.Interpolator.linear(0, Math.toRadians(-12)));
+        Path path = Paths.line(new Pose(0, 0), new Pose(-15, 1))
+                .heading(Interpolator.linear(0, Math.toRadians(-12)));
         assertEquals(-12, TurnDegrees(path), 0.01);
     }
 
