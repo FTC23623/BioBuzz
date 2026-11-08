@@ -90,7 +90,7 @@ public abstract class PedroAuto extends LinearOpMode {
      * Put this in the list after the path to a flower to work it there (docs/decisions/0042).
      * The intake runs, and from where the last path ended the robot:
      * <ol>
-     *   <li>backs up {@code autoFlowerBackIn} (9 in), and holds that spot
+     *   <li>backs up {@code autoFlowerBackIn} (6 in), and holds that spot
      *       {@code autoFlowerSettleSeconds} (0.3 s) so the robot has stopped,
      *   <li>swings the extractor out, and holds still {@code autoExtractorSeconds} (0.5 s)
      *       before the first stroke,
@@ -277,6 +277,9 @@ public abstract class PedroAuto extends LinearOpMode {
         boolean spinningUp = paths.get(pathNumber) == LAUNCH;
         // How many launches have opened the gates so far. The first one waits longer.
         int launchesDone = 0;
+        // true while a launch, already fast enough, waits for the speed to settle
+        // (autoLaunchSettles, docs/decisions/0056).
+        boolean settling = false;
         StartStep(bot, follower, paths.get(pathNumber), stepTimer);
 
         while (opModeIsActive()) {
@@ -323,7 +326,24 @@ public abstract class PedroAuto extends LinearOpMode {
             if (spinningUp) {
                 // Fast enough to launch: the pollen wheel at autoLaunchMinRpm or more.
                 boolean fastEnough = bot.PollenLauncherAtLeast(botProperties.autoLaunchMinRpm);
-                if (ReadyToOpen(fastEnough, stepTimer.seconds(), launchesDone == 0, botProperties)) {
+                boolean openNow = false;
+                if (settling) {
+                    // Speed locked: open once it has settled, or the settle timed out.
+                    if (bot.LaunchSettled()) {
+                        settling = false;
+                        bot.CancelLaunchSettle();
+                        openNow = true;
+                    }
+                } else if (ReadyToOpen(fastEnough, stepTimer.seconds(), launchesDone == 0, botProperties)) {
+                    if (SettlesBeforeLaunch(step, botProperties)) {
+                        // Fast enough: now lock the speed and let it settle (0056).
+                        settling = true;
+                        bot.BeginLaunchSettle();
+                    } else {
+                        openNow = true;
+                    }
+                }
+                if (openNow) {
                     // Up to speed (or waited as long as allowed): open the gates. The launch
                     // time counts from now. The rollers start once the gates are fully open.
                     spinningUp = false;
@@ -378,7 +398,9 @@ public abstract class PedroAuto extends LinearOpMode {
             telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
             telemetry.addData("Waiting for a tag", waitingForTag);
             telemetry.addData("Aiming at the tag", aiming);
-            if (spinningUp) {
+            if (settling) {
+                telemetry.addData("Waiting for launchers to reach speed", "settling: %s", bot.LaunchSettleStatus());
+            } else if (spinningUp) {
                 double limit = botProperties.autoSpinUpSeconds;
                 if (launchesDone == 0) {
                     limit = botProperties.autoFirstSpinUpSeconds;
@@ -457,6 +479,18 @@ public abstract class PedroAuto extends LinearOpMode {
     }
 
     /**
+     * Does this launch step lock the speed and wait for it to settle before the gates open
+     * (docs/decisions/0056)? Every launch with autoLaunchSettles on; LAUNCH_WHEN_TAG_SEEN
+     * also with autoTagLaunchSettles on, since the tag has just set a new target.
+     */
+    static boolean SettlesBeforeLaunch(Path step, BotProperties properties) {
+        if (properties.autoLaunchSettles) {
+            return true;
+        }
+        return step == LAUNCH_WHEN_TAG_SEEN && properties.autoTagLaunchSettles;
+    }
+
+    /**
      * May a LAUNCH step open the gates yet? Yes once the pollen launcher spins at
      * autoLaunchMinRpm or faster. If it never gets there, yes anyway after autoSpinUpSeconds, or
      * after autoFirstSpinUpSeconds for the first launch of the auto, so a slow or broken
@@ -527,8 +561,8 @@ public abstract class PedroAuto extends LinearOpMode {
      * first the back-up, then each stroke forward and back. Every pose keeps the heading.
      *
      * <pre>
-     *     facing 0 at (0, 0), back 9, strokes of 8, 2 passes (today's 1 pass stops after the third):
-     *     (-9, 0)  (-1, 0)  (-9, 0)  (-1, 0)  (-9, 0)
+     *     facing 0 at (0, 0), back 6, strokes of 8, 2 passes (today's 1 pass stops after the third):
+     *     (-6, 0)  (2, 0)  (-6, 0)  (2, 0)  (-6, 0)
      * </pre>
      */
     static List<Pose> FlowerMoves(Pose spot, BotProperties p) {
@@ -552,7 +586,7 @@ public abstract class PedroAuto extends LinearOpMode {
      * The FLOWER step in order, from the recorded spot:
      *
      * <pre>
-     *     move: back up                 autoFlowerBackIn (9)
+     *     move: back up                 autoFlowerBackIn (6)
      *     hold: settle                  autoFlowerSettleSeconds (0.3)
      *     arm out                       autoExtractorSeconds (0.5)
      *     move: stroke forward          autoFlowerStrokeIn (8)

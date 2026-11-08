@@ -139,7 +139,9 @@ public class Bot {
             "steadyRange", "steadyRangeAverage", "launchBandHoldIn",
             "launchLocksRpm", "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
-            "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock"};
+            "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock",
+            "teleopLaunchSettles", "autoLaunchSettles", "autoTagLaunchSettles", "launchSettleBandRpm", "launchSettleHoldSeconds",
+            "launchSettleTimeoutSeconds"};
     static final String[] LiveTuningIntake = {
             "intakeRpm", "transferRpm", "launchFeedIntakeScale", "launchFeedTransferScale",
             "intakeReverseRpm", "transferReverseRpm", "rollerUsePower",
@@ -212,6 +214,8 @@ public class Bot {
             // The launcher holds its speed while the gates are open (launchLocksRpm, 0050).
             if (mLauncher != null) {
                 mLauncher.SetLaunchGates(mLaunchGates);
+                // And the trigger settles on the speed before the gates open (0056).
+                mLaunchGates.SetLauncher(mLauncher);
             }
         }
         // The flower extractor is the operator's too: hold triangle and it swings out.
@@ -571,6 +575,39 @@ public class Bot {
             return true;
         }
         return mLauncher.AtSpeed();
+    }
+
+    /**
+     * The auto's launch command (autoLaunchSettles, 0056): lock the pollen speed and start
+     * waiting for it to settle. Does nothing with no launcher.
+     */
+    public void BeginLaunchSettle() {
+        if (mLauncher != null) {
+            mLauncher.BeginSettle();
+        }
+    }
+
+    /** true once the pollen speed has settled, or the wait timed out. Always true with no launcher. */
+    public boolean LaunchSettled() {
+        if (mLauncher == null) {
+            return true;
+        }
+        return mLauncher.SettleDone();
+    }
+
+    /** Stop waiting to settle and unlock the speed. Does nothing with no launcher. */
+    public void CancelLaunchSettle() {
+        if (mLauncher != null) {
+            mLauncher.CancelSettle();
+        }
+    }
+
+    /** Settling, settled or timed out, for the Driver Station. */
+    public String LaunchSettleStatus() {
+        if (mLauncher == null) {
+            return "no launcher";
+        }
+        return mLauncher.SettleStatus();
     }
 
     /** true: open both launch gates (launch!). false: close them. Does nothing with no gates. */

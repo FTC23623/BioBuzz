@@ -38,6 +38,12 @@ android {
                 // AGP compatibility we have to track across two repos.
                 useJUnitPlatform()
 
+                // Mockito 5.14.2 bundles a Byte Buddy that officially supports only up
+                // to Java 24. Newer JDKs (e.g. Android Studio's bundled JDK 25) make every
+                // mock fail with "Java 25 (69) is not supported". Experimental mode lets
+                // Byte Buddy handle newer class-file versions without changing pinned versions.
+                systemProperty 'net.bytebuddy.experimental', 'true'
+
                 testLogging {
                     events 'passed', 'skipped', 'failed'
                     exceptionFormat = 'full'

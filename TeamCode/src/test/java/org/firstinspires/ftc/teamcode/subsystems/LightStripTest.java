@@ -89,12 +89,12 @@ class LightStripTest {
         LightStrip strip = stripConfigured();
         strip.ShowStatus();
         strip.ShowStatus();
-        // LEDs 12 to 35, both lit: the Prism is sent stop 36, one past the last.
-        verify(prism, times(1)).SolidColor(1, 12, 36, properties.stripBrightness, 255, 0, 0);
+        // LEDs 0 to 35, both lit: the Prism is sent stop 36, one past the last.
+        verify(prism, times(1)).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
 
         op.mAlliance = Alliance.BLUE;
         strip.ShowStatus();
-        verify(prism, times(1)).SolidColor(1, 12, 36, properties.stripBrightness, 0, 0, 255);
+        verify(prism, times(1)).SolidColor(1, 0, 36, properties.stripBrightness, 0, 0, 255);
     }
 
     @Test
@@ -115,7 +115,7 @@ class LightStripTest {
         op.mAlliance = Alliance.RED;
         LightStrip strip = stripConfigured();
         strip.ShowStatus();
-        verify(prism, times(1)).SolidColor(1, 12, 36, properties.stripBrightness, 255, 0, 0);
+        verify(prism, times(1)).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
         verify(prism, never()).SolidColor(eq(2), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt());
 
         when(pollenTouch.isPressed()).thenReturn(true);
@@ -130,15 +130,15 @@ class LightStripTest {
         order.verify(prism).SolidColor(2, 0, 36, properties.stripBrightness, 255, 200, 0);
         verify(prism, times(1)).SolidColor(2, 0, 36, properties.stripBrightness, 255, 200, 0);
         // The underglow is not drawn back on top while the pollen shows.
-        verify(prism, times(1)).SolidColor(1, 12, 36, properties.stripBrightness, 255, 0, 0);
+        verify(prism, times(1)).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
 
         when(pollenTouch.isPressed()).thenReturn(false);
         strip.Process();
         strip.Process();
         // Cleared again (layer 2 for the second time), then the alliance comes back.
         order.verify(prism).ClearLayer(2);
-        order.verify(prism).SolidColor(1, 12, 36, properties.stripBrightness, 255, 0, 0);
-        verify(prism, times(2)).SolidColor(1, 12, 36, properties.stripBrightness, 255, 0, 0);
+        order.verify(prism).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
+        verify(prism, times(2)).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
     }
 
     @Test
@@ -181,11 +181,11 @@ class LightStripTest {
             verify(prism, times(1)).ClearLayer(layer);
         }
         strip.ShowStatus();
-        verify(prism, times(2)).SolidColor(1, 12, 36, properties.stripBrightness, 0, 0, 255);
+        verify(prism, times(2)).SolidColor(1, 0, 36, properties.stripBrightness, 0, 0, 255);
     }
 
     @Test
-    @DisplayName("INIT: every layer cleared first, then the alliance drawn on 12 to 35")
+    @DisplayName("INIT: every layer cleared first, then the alliance drawn on 0 to 35")
     void initClearsThenDraws() {
         op.mAlliance = Alliance.RED;
         LightStrip strip = stripConfigured();
@@ -195,20 +195,27 @@ class LightStripTest {
         for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
             order.verify(prism).ClearLayer(layer);
         }
-        order.verify(prism).SolidColor(1, 12, 36, properties.stripBrightness, 255, 0, 0);
+        order.verify(prism).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
         // Cleared once only, not every INIT loop.
         verify(prism, times(1)).ClearLayer(9);
     }
 
     @Test
-    @DisplayName("pollen already pressed at INIT: yellow comes back after the clear")
-    void pollenRedrawnAfterClear() {
+    @DisplayName("pollen already loaded at INIT: the alliance shows until START, then yellow")
+    void pollenWaitsForStart() {
+        properties.pollenHoldMs = 60_000;   // a long hold, so this test never times out
         when(pollenTouch.isPressed()).thenReturn(true);
+        op.mAlliance = Alliance.RED;
         LightStrip strip = stripConfigured();
         strip.Init();
-        InOrder order = inOrder(prism);
-        order.verify(prism).ClearLayer(2);
-        order.verify(prism).SolidColor(2, 0, 36, properties.stripBrightness, 255, 200, 0);
+        strip.Init();
+        // INIT: the alliance color, so the drive team can check it. No yellow.
+        verify(prism, times(1)).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
+        verify(prism, never()).SolidColor(eq(2), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt());
+
+        // START: the first Process() shows the pollen.
+        strip.Process();
+        verify(prism, times(1)).SolidColor(2, 0, 36, properties.stripBrightness, 255, 200, 0);
     }
 
     @Test
@@ -218,7 +225,7 @@ class LightStripTest {
         op.mAlliance = Alliance.BLUE;
         LightStrip strip = stripConfigured();
         strip.ShowStatus();
-        verify(prism).SolidColor(1, 12, 35, properties.stripBrightness, 0, 0, 255);
+        verify(prism).SolidColor(1, 0, 35, properties.stripBrightness, 0, 0, 255);
     }
 
     @Test

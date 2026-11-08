@@ -31,22 +31,31 @@ class MatchOpModesTest {
         assertEquals("Auto: Flower Side C", auto(AutoStrategyC.class).name());
         assertEquals("Red: Garden Side A", auto(AutoStrategyARed.class).name());
         assertEquals("Blue: Flower Side C", auto(AutoStrategyCBlue.class).name());
+        assertEquals("Auto: Garden Side D", auto(AutoStrategyGardenD.class).name());
+        assertEquals("Blue: Garden Side D", auto(AutoStrategyGardenDBlue.class).name());
+        assertEquals("Red: Garden Side D", auto(AutoStrategyGardenDRed.class).name());
+        assertEquals("Auto: Garden Side E", auto(AutoStrategyGardenE.class).name());
+        assertEquals("Blue: Garden Side E", auto(AutoStrategyGardenEBlue.class).name());
+        assertEquals("Red: Garden Side E", auto(AutoStrategyGardenERed.class).name());
     }
 
     @Test
     @DisplayName("groups Auto (reads the magnet), Blue and Red, in that order on the Driver Station")
     void order() {
         // The Driver Station sorts by group: Auto, then Blue, then Red.
-        Class<?>[] sensing = {AutoStrategyA.class, AutoStrategyB.class, AutoStrategyC.class};
+        Class<?>[] sensing = {AutoStrategyA.class, AutoStrategyB.class, AutoStrategyC.class,
+                AutoStrategyGardenD.class, AutoStrategyGardenE.class};
         for (Class<?> opMode : sensing) {
             assertEquals("Auto", auto(opMode).group(), opMode.getSimpleName());
         }
-        Class<?>[] blue = {AutoStrategyABlue.class, AutoStrategyBBlue.class, AutoStrategyCBlue.class};
+        Class<?>[] blue = {AutoStrategyABlue.class, AutoStrategyBBlue.class, AutoStrategyCBlue.class,
+                AutoStrategyGardenDBlue.class, AutoStrategyGardenEBlue.class};
         for (Class<?> opMode : blue) {
             assertEquals("Blue", auto(opMode).group(), opMode.getSimpleName());
             assertTrue(auto(opMode).name().startsWith("Blue: "), opMode.getSimpleName());
         }
-        Class<?>[] red = {AutoStrategyARed.class, AutoStrategyBRed.class, AutoStrategyCRed.class};
+        Class<?>[] red = {AutoStrategyARed.class, AutoStrategyBRed.class, AutoStrategyCRed.class,
+                AutoStrategyGardenDRed.class, AutoStrategyGardenERed.class};
         for (Class<?> opMode : red) {
             assertEquals("Red", auto(opMode).group(), opMode.getSimpleName());
             assertTrue(auto(opMode).name().startsWith("Red: "), opMode.getSimpleName());
@@ -60,6 +69,8 @@ class MatchOpModesTest {
         assertEquals(hyDrive, auto(AutoStrategyA.class).preselectTeleOp());
         assertEquals(hyDrive, auto(AutoStrategyB.class).preselectTeleOp());
         assertEquals(hyDrive, auto(AutoStrategyC.class).preselectTeleOp());
+        assertEquals(hyDrive, auto(AutoStrategyGardenD.class).preselectTeleOp());
+        assertEquals(hyDrive, auto(AutoStrategyGardenE.class).preselectTeleOp());
     }
 
     @Test
@@ -73,6 +84,10 @@ class MatchOpModesTest {
         assertEquals(blue, auto(AutoStrategyABlue.class).preselectTeleOp());
         assertEquals(blue, auto(AutoStrategyBBlue.class).preselectTeleOp());
         assertEquals(blue, auto(AutoStrategyCBlue.class).preselectTeleOp());
+        assertEquals(red, auto(AutoStrategyGardenDRed.class).preselectTeleOp());
+        assertEquals(blue, auto(AutoStrategyGardenDBlue.class).preselectTeleOp());
+        assertEquals(red, auto(AutoStrategyGardenERed.class).preselectTeleOp());
+        assertEquals(blue, auto(AutoStrategyGardenEBlue.class).preselectTeleOp());
     }
 
     @Test
@@ -81,6 +96,8 @@ class MatchOpModesTest {
         assertEquals(90, new AutoStrategyA().StartFacingDeg(), 1e-9);
         assertEquals(-90, new AutoStrategyB().StartFacingDeg(), 1e-9);
         assertEquals(-90, new AutoStrategyC().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyGardenD().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyGardenE().StartFacingDeg(), 1e-9);
         // The backups start the same way as the auto they copy.
         assertEquals(90, new AutoStrategyARed().StartFacingDeg(), 1e-9);
         assertEquals(-90, new AutoStrategyCBlue().StartFacingDeg(), 1e-9);

@@ -20,11 +20,13 @@ import org.firstinspires.ftc.teamcode.types.Alliance;
  * from the last OpMode stays lit. Then the strip is drawn fresh.
  *
  * <p><b>Alliance color</b> (docs/decisions/0021 and 0026): the underglow LEDs
- * ({@code underglowFirstLed} to {@code underglowLastLed}, 12 to 35) show our alliance, red
+ * ({@code underglowFirstLed} to {@code underglowLastLed}, 0 to 35: the whole strip) show our alliance, red
  * or blue, from INIT to the end of the match. Nothing about them changes at START. The
  * alliance is on layer 1.
  *
- * <p><b>Pollen</b> (docs/decisions/0026, 0033, 0034, 0035): the moment pollen is detected,
+ * <p><b>Pollen</b> (docs/decisions/0026, 0033, 0034, 0035): only after START. During INIT
+ * the strip always shows the alliance, even with pollen loaded, so the drive team can check
+ * the color before the auto starts. After START, the moment pollen is detected,
  * EVERY layer is cleared and the whole strip ({@code pollenLedsFirst} to
  * {@code pollenLedsLast}) turns yellow on layer 2. Clearing first means nothing else shows,
  * whichever order the Prism draws its layers in. "Detected" means the switch was pressed
@@ -63,6 +65,11 @@ public class LightStrip implements Subsystem {
     private Alliance mAllianceShown = null;
     /** true while the pollen LEDs are yellow, so the strip is only told when that changes. */
     private boolean mPollenShown = false;
+    /**
+     * false during INIT: pollen is ignored, so the strip shows the alliance color for the
+     * drive team to check. true from the first loop after START.
+     */
+    private boolean mMatchStarted = false;
 
     public LightStrip(HydraOpMode op, BotProperties properties, PollenSensor pollenSensor) {
         mOp = op;
@@ -94,9 +101,10 @@ public class LightStrip implements Subsystem {
     public void HandleUserInput() {
     }
 
-    /** Same as before START: keep the underglow and the pollen LEDs up to date. */
+    /** After START: keep the underglow and the pollen LEDs up to date. Pollen counts from here on. */
     @Override
     public void Process() {
+        mMatchStarted = true;
         ShowStatus();
     }
 
@@ -210,7 +218,9 @@ public class LightStrip implements Subsystem {
 
     public void ShowStatus() {
         // Each is sent only when it changes. Each message to the strip takes loop time.
-        boolean pollen = mPollenSensor != null && mPollenSensor.IsDetected();
+        boolean pollenSensed = mPollenSensor != null && mPollenSensor.IsDetected();
+        // During INIT the alliance color wins, so the drive team sees the right color.
+        boolean pollen = mMatchStarted && pollenSensed;
         if (pollen != mPollenShown) {
             ShowPollen(pollen);
         }
@@ -223,6 +233,9 @@ public class LightStrip implements Subsystem {
             return;
         }
         mOp.mTelemetry.addData("Light strip", "showing " + mShowing);
+        if (!mMatchStarted && pollenSensed) {
+            mOp.mTelemetry.addLine("Pollen sensed: the strip turns yellow after START");
+        }
         mOp.mTelemetry.addData("Strip device id", "0x%02X (register 0x00)", mDeviceId);
         if (mStatus.length == 4) {
             // Guide: bits 0 to 7 of the status register are the number of LEDs, 8 to 23 the FPS.
