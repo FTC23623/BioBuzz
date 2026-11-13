@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="724" viewBox="0 0 980 724">
+<desc>HydraBuzz Strategy A auto route, top-down on the BIOBUZZ field, red alliance: start on the garden wall in front of the hive, back up and launch, work the flower on the left wall, drive past the hive to the far side, launch twice with the far flower in between, and end near the loading zone.</desc>
+<defs>
+<marker id="arrowG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#008300"/></marker>
+<marker id="arrowO" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#eda100"/></marker>
+</defs>
+<rect width="980" height="724" fill="#ffffff"/>
+<text x="50" y="38" font-size="20" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">HydraBuzz, Strategy A auto: garden-side start, three launches, two flowers</text>
+<text x="50" y="60" font-size="13" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Top-down, red alliance. On blue the same route is turned half a turn around the center of the field.</text>
+<rect x="50" y="80" width="540" height="540" fill="#f1f1ef"/>
+<line x1="140" y1="80" x2="140" y2="620" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="50" y1="530" x2="590" y2="530" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="230" y1="80" x2="230" y2="620" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="50" y1="440" x2="590" y2="440" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="320" y1="80" x2="320" y2="620" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="50" y1="350" x2="590" y2="350" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="410" y1="80" x2="410" y2="620" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="50" y1="260" x2="590" y2="260" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="500" y1="80" x2="500" y2="620" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="50" y1="170" x2="590" y2="170" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="320" y1="80" x2="320" y2="620" stroke="#b9b9b3" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="140" y="132.5" font-size="10" fill="#c0392b" text-anchor="middle" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">red side</text>
+<text x="470" y="106.3" font-size="10" fill="#2e5fb8" text-anchor="middle" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">blue side</text>
+<rect x="50" y="601.25" width="90" height="18.75" fill="#c0392b" fill-opacity="0.14"/>
+<rect x="500" y="80" width="90" height="18.75" fill="#2e5fb8" fill-opacity="0.14"/>
+<circle cx="61.25" cy="611" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<circle cx="578.75" cy="89.00000000000003" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<circle cx="77.375" cy="611" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<circle cx="562.625" cy="89.00000000000003" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<circle cx="93.5" cy="611" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<circle cx="546.5" cy="89.00000000000003" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<circle cx="109.625" cy="611" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<circle cx="530.375" cy="89.00000000000003" r="7.875" fill="#eda100" stroke="#b57b00" stroke-width="1"/>
+<text x="147.5" y="614.4" font-size="10" fill="#c0392b" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">red garden</text>
+<text x="492.5" y="95" font-size="10" fill="#2e5fb8" text-anchor="end" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">blue garden</text>
+<rect x="50" y="170" width="45" height="90" fill="#c0392b" fill-opacity="0.12" stroke="#c0392b" stroke-width="1.5"/>
+<rect x="545" y="440" width="45" height="90" fill="#2e5fb8" fill-opacity="0.12" stroke="#2e5fb8" stroke-width="1.5"/>
+<text x="72.5" y="215" font-size="9" fill="#c0392b" text-anchor="middle" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(-90 72.5 215)">LOADING ZONE</text>
+<text x="567.5" y="485" font-size="9" fill="#2e5fb8" text-anchor="middle" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(-90 567.5 485)">LOADING ZONE</text>
+<text x="30" y="350" font-size="11" fill="#c0392b" text-anchor="middle" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(-90 30 350)">RED ALLIANCE AREA (drive team)</text>
+<text x="608" y="350" font-size="11" fill="#2e5fb8" text-anchor="middle" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif" transform="rotate(90 608 350)">BLUE ALLIANCE AREA</text>
+<rect x="230" y="260" width="180" height="180" rx="6" fill="#e3e3df" stroke="#c9c9c3" stroke-width="1"/>
+<polygon points="222.5,387.5 239.4,363.1 273.1,363.1 290,387.5 273.1,411.9 239.4,411.9" fill="#ffffff" stroke="#c0392b" stroke-width="2.5"/>
+<circle cx="241.25" cy="387.5" r="6.375" fill="#c0392b"/>
+<circle cx="256.25" cy="387.5" r="6.375" fill="#c0392b"/>
+<circle cx="271.25" cy="387.5" r="6.375" fill="#c0392b"/>
+<polygon points="230,290 246.9,265.6 280.6,265.6 297.5,290 280.6,314.4 246.9,314.4" fill="#ffffff" stroke="#c0392b" stroke-width="2.5"/>
+<polygon points="338.8,410 355.6,385.6 389.4,385.6 406.3,410 389.4,434.4 355.6,434.4" fill="#ffffff" stroke="#2e5fb8" stroke-width="2.5"/>
+<polygon points="346.3,312.5 363.1,288.1 396.9,288.1 413.8,312.5 396.9,336.9 363.1,336.9" fill="#ffffff" stroke="#2e5fb8" stroke-width="2.5"/>
+<circle cx="365" cy="312.5" r="6.375" fill="#2e5fb8"/>
+<circle cx="380" cy="312.5" r="6.375" fill="#2e5fb8"/>
+<circle cx="395" cy="312.5" r="6.375" fill="#2e5fb8"/>
+<text x="260" y="342.5" font-size="10" fill="#c0392b" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">RED HIVE</text>
+<text x="376.3" y="365" font-size="10" fill="#2e5fb8" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">BLUE HIVE</text>
+<circle cx="230" cy="95" r="15" fill="#eda100" stroke="#008300" stroke-width="2.5"/>
+<circle cx="575" cy="260" r="15" fill="#eda100" stroke="#008300" stroke-width="2.5"/>
+<circle cx="65" cy="440" r="15" fill="#eda100" stroke="#008300" stroke-width="2.5"/>
+<circle cx="410" cy="605" r="15" fill="#eda100" stroke="#008300" stroke-width="2.5"/>
+<rect x="50" y="80" width="540" height="540" fill="none" stroke="#52514e" stroke-width="4"/>
+<g transform="translate(267.5 586.3) rotate(-270)">
+<rect x="-33.75" y="-33.75" width="67.5" height="67.5" rx="3" fill="#ffffff" fill-opacity="0.6" stroke="#1f2a1f" stroke-width="1.5" stroke-dasharray="5 4"/>
+</g>
+<g transform="translate(267.1 545) rotate(-269)">
+<rect x="-33.75" y="-33.75" width="67.5" height="67.5" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#1f2a1f" stroke-width="1.5"/>
+<line x1="33.75" y1="-28.75" x2="33.75" y2="28.75" stroke="#008300" stroke-width="5"/>
+<line x1="-33.75" y1="-28.75" x2="-33.75" y2="28.75" stroke="#eda100" stroke-width="5"/>
+</g>
+<g transform="translate(110.8 441.1) rotate(-179)">
+<rect x="-33.75" y="-33.75" width="67.5" height="67.5" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#1f2a1f" stroke-width="1.5"/>
+<line x1="33.75" y1="-28.75" x2="33.75" y2="28.75" stroke="#008300" stroke-width="5"/>
+<line x1="-33.75" y1="-28.75" x2="-33.75" y2="28.75" stroke="#eda100" stroke-width="5"/>
+</g>
+<g transform="translate(286.6 169.6) rotate(-86)">
+<rect x="-33.75" y="-33.75" width="67.5" height="67.5" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#1f2a1f" stroke-width="1.5"/>
+<line x1="33.75" y1="-28.75" x2="33.75" y2="28.75" stroke="#008300" stroke-width="5"/>
+<line x1="-33.75" y1="-28.75" x2="-33.75" y2="28.75" stroke="#eda100" stroke-width="5"/>
+</g>
+<g transform="translate(244.3 137.8) rotate(-93)">
+<rect x="-33.75" y="-33.75" width="67.5" height="67.5" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#1f2a1f" stroke-width="1.5"/>
+<line x1="33.75" y1="-28.75" x2="33.75" y2="28.75" stroke="#008300" stroke-width="5"/>
+<line x1="-33.75" y1="-28.75" x2="-33.75" y2="28.75" stroke="#eda100" stroke-width="5"/>
+</g>
+<g transform="translate(150.5 187.6) rotate(-111)">
+<rect x="-33.75" y="-33.75" width="67.5" height="67.5" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#1f2a1f" stroke-width="1.5"/>
+<line x1="33.75" y1="-28.75" x2="33.75" y2="28.75" stroke="#008300" stroke-width="5"/>
+<line x1="-33.75" y1="-28.75" x2="-33.75" y2="28.75" stroke="#eda100" stroke-width="5"/>
+</g>
+<line x1="144.8" y1="423" x2="114.8" y2="422.4" stroke="#eda100" stroke-width="2.5" marker-start="url(#arrowO)" marker-end="url(#arrowO)"/>
+<line x1="264.7" y1="170.5" x2="263.2" y2="140.5" stroke="#eda100" stroke-width="2.5" marker-start="url(#arrowO)" marker-end="url(#arrowO)"/>
+<polyline points="267.5,586.3 267.1,545 164,441.9 110.8,441.1 144.5,441.7 162.1,451.6 190.3,169.6 286.6,169.6 244.3,137.8 246,171.5 281.8,150.1 150.5,187.6" fill="none" stroke="#008300" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrowG)"/>
+<line x1="210.4" y1="488.3" x2="210.4" y2="488.3" stroke="#008300" stroke-width="3" marker-end="url(#arrowG)"/>
+<line x1="176.2" y1="310.7" x2="176.2" y2="310.6" stroke="#008300" stroke-width="3" marker-end="url(#arrowG)"/>
+<line x1="132.1" y1="441.4" x2="132.1" y2="441.4" stroke="#008300" stroke-width="3" marker-end="url(#arrowG)"/>
+<line x1="267.8" y1="503.8" x2="269.4" y2="417.5" stroke="#eda100" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#arrowO)"/>
+<text x="286.3" y="470" font-size="11" fill="#9a6a00" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">LAUNCH 1</text>
+<line x1="282.7" y1="201.1" x2="280.9" y2="253.6" stroke="#eda100" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#arrowO)"/>
+<text x="312.5" y="230" font-size="11" fill="#9a6a00" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">LAUNCH 2 and 3</text>
+<circle cx="327.5" cy="601.3" r="10" fill="#008300"/>
+<text x="327.5" y="605.3" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">1</text>
+<text x="341.5" y="605.3" font-size="11" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">start</text>
+<circle cx="327.5" cy="530" r="10" fill="#008300"/>
+<text x="327.5" y="534" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">2</text>
+<text x="341.5" y="534" font-size="11" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">launch 1</text>
+<circle cx="80" cy="507.5" r="10" fill="#008300"/>
+<text x="80" y="511.5" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">3</text>
+<text x="94" y="511.5" font-size="11" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">flower 1</text>
+<circle cx="342.5" cy="170" r="10" fill="#008300"/>
+<text x="342.5" y="174" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">4</text>
+<text x="356.5" y="174" font-size="11" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">launch 2</text>
+<circle cx="196.3" cy="102.5" r="10" fill="#008300"/>
+<text x="196.3" y="106.5" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">5</text>
+<text x="182.3" y="106.5" font-size="11" fill="#1f2a1f" text-anchor="end" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">flower 2</text>
+<circle cx="342.5" cy="140" r="10" fill="#008300"/>
+<text x="342.5" y="144" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">6</text>
+<text x="356.5" y="144" font-size="11" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">launch 3</text>
+<circle cx="125" cy="263.8" r="10" fill="#008300"/>
+<text x="125" y="267.8" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">7</text>
+<text x="111" y="267.8" font-size="11" fill="#1f2a1f" text-anchor="end" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">end</text>
+<text x="640" y="92" font-size="15" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">What the robot does</text>
+<circle cx="650" cy="114" r="10" fill="#008300"/>
+<text x="650" y="118" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">1</text>
+<text x="668" y="118" font-size="12" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">START</text>
+<text x="668" y="134" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Front (the intake) on the garden wall, about 58 in</text>
+<text x="668" y="148" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">from the left wall, in front of the red hive. Four</text>
+<text x="668" y="162" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">pollen loaded. The launchers spin up at START.</text>
+<circle cx="650" cy="182" r="10" fill="#008300"/>
+<text x="650" y="186" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">2</text>
+<text x="668" y="186" font-size="12" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">LAUNCH 1</text>
+<text x="668" y="202" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Back up 11 in and hold. The gates open for 2 s</text>
+<text x="668" y="216" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">once the pollen wheel is past 2950 RPM.</text>
+<circle cx="650" cy="236" r="10" fill="#008300"/>
+<text x="650" y="240" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">3</text>
+<text x="668" y="240" font-size="12" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">FLOWER 1</text>
+<text x="668" y="256" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Turn right to face the flower on the alliance wall</text>
+<text x="668" y="270" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">and drive to it. Back 9 in, arm out, stroke 8 in forward,</text>
+<text x="668" y="284" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">hold 1 s, back out, arm in. Intake roller on only here.</text>
+<circle cx="650" cy="304" r="10" fill="#008300"/>
+<text x="650" y="308" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">4</text>
+<text x="668" y="308" font-size="12" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">LAUNCH 2</text>
+<text x="668" y="324" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Drive 75 in up the left side, past the hive, turning</text>
+<text x="668" y="338" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">to face the far wall. Slide 26 in across to sit on the</text>
+<text x="668" y="352" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">far side of the hive, launchers toward it. Launch.</text>
+<circle cx="650" cy="372" r="10" fill="#008300"/>
+<text x="650" y="376" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">5</text>
+<text x="668" y="376" font-size="12" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">FLOWER 2</text>
+<text x="668" y="392" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Drive to the flower on the far wall. Same routine.</text>
+<circle cx="650" cy="412" r="10" fill="#008300"/>
+<text x="650" y="416" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">6</text>
+<text x="668" y="416" font-size="12" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">LAUNCH 3</text>
+<text x="668" y="432" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Step back to the launch spot, 5 in from the last</text>
+<text x="668" y="446" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">one, and launch again.</text>
+<circle cx="650" cy="466" r="10" fill="#008300"/>
+<text x="650" y="470" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">7</text>
+<text x="668" y="470" font-size="12" fill="#1f2a1f" text-anchor="start" font-weight="bold" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">END</text>
+<text x="668" y="486" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Drive toward the loading zone and stop, facing</text>
+<text x="668" y="500" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">the far wall. VERIFY: as drawn it stops 3 in short of</text>
+<text x="668" y="514" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">the zone, so PARK is not certain.</text>
+<line x1="640" y1="540" x2="960" y2="540" stroke="#d9d9d4" stroke-width="1"/>
+<line x1="640" y1="554" x2="670" y2="554" stroke="#008300" stroke-width="3" marker-end="url(#arrowG)"/>
+<text x="680" y="558" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">route: Pedro paths, driven at full speed</text>
+<line x1="640" y1="572" x2="670" y2="572" stroke="#eda100" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#arrowO)"/>
+<text x="680" y="576" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">launch: pollen out of the back of the robot</text>
+<rect x="644" y="581" width="22" height="14" rx="2" fill="#ffffff" stroke="#1f2a1f" stroke-width="1.5"/>
+<line x1="666" y1="583" x2="666" y2="593" stroke="#008300" stroke-width="4"/>
+<line x1="644" y1="583" x2="644" y2="593" stroke="#eda100" stroke-width="4"/>
+<text x="680" y="594" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">robot, 18 by 18 in: green edge intake (front),</text>
+<text x="680" y="608" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">orange edge launchers and camera (back)</text>
+<circle cx="655" cy="622" r="7" fill="#eda100" stroke="#008300" stroke-width="2"/>
+<text x="680" y="626" font-size="11.5" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">flower on the wall, 4 pollen each; 1 tile = 24 in</text>
+<text x="50" y="662" font-size="11" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">Spots are the pose recorder’s numbers in AutoStrategyD.java, the route the team calls Strategy A (uncommitted, November 4): three LAUNCH steps</text>
+<text x="50" y="677" font-size="11" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">and two FLOWER steps. Field from Competition Manual Figure 10-2 (TU05): 6 by 6 tiles, hives in the center, a flower on each wall, gardens and</text>
+<text x="50" y="692" font-size="11" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">loading zones in the corners; zone sizes are approximate. The start spot is not in the code: 58 in from the left wall is read from where the</text>
+<text x="50" y="707" font-size="11" fill="#52514e" text-anchor="start" font-family="Calibri, 'Helvetica Neue', Helvetica, Arial, sans-serif">recorded route meets the two flowers. Measure it, and the end spot, on the field before the one-pager goes to a partner.</text>
+</svg>

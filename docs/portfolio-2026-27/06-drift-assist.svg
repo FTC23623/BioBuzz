@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 560" width="920" height="560" role="img" aria-labelledby="t6 d6">
+  <title id="t6">Drift assist: torque vectoring the turn onto the inside back wheel</title>
+  <desc id="d6">Three panels. Left: a top view of the robot in a normal left turn. The left wheels run backward and the right wheels forward, all at full power, and the robot spins about its middle. Middle: the same turn with drift assist held. The inside back wheel is stopped and is the pivot, the inside front wheel runs backward at half power, the outside front wheel forward at full and the outside back wheel forward at half, so the nose swings left around the stopped wheel, shown by a dashed outline of the robot part way through the swing. Right: the math. While the left trigger is held the code adds a forward drive of half the turn and a strafe toward the inside of half the turn, then runs the normal mecanum mix, in which the inside back wheel's power comes out at zero. A table lists each wheel's power in a normal turn and in a drift turn.</desc>
+  <style>
+    text { font-family: Calibri, "Helvetica Neue", Arial, sans-serif; fill: #1f2a1f; }
+    .title { font-size: 21px; font-weight: 700; }
+    .sub { font-size: 13px; fill: #52514e; }
+    .h { font-size: 13.5px; font-weight: 700; }
+    .t { font-size: 12.5px; }
+    .b { font-size: 12.5px; font-weight: 700; }
+    .t2 { font-size: 12px; }
+    .b2 { font-size: 12px; font-weight: 700; }
+    .s { font-size: 11.5px; fill: #52514e; }
+    .m { font-size: 12.5px; font-family: Menlo, Consolas, "Courier New", monospace; }
+    .box { fill: #eef5e6; stroke: #70ad47; stroke-width: 1.5; }
+    .band { fill: #c6d9a3; }
+    .body { fill: #eef5e6; stroke: #70ad47; stroke-width: 1.5; }
+    .ghost { fill: none; stroke: #70ad47; stroke-width: 1.25; stroke-dasharray: 5 4; }
+    .wheel { fill: #8794a3; }
+    .wheelstop { fill: #ffffff; stroke: #1f2a1f; stroke-width: 1.5; }
+    .fwd { fill: none; stroke: #008300; stroke-width: 2.5; stroke-linecap: round; }
+    .back { fill: none; stroke: #1f2a1f; stroke-width: 2.5; stroke-linecap: round; }
+    .swing { fill: none; stroke: #008300; stroke-width: 2; stroke-dasharray: 6 4; }
+    .rule { stroke: #e1e0d9; stroke-width: 1; }
+    .rulebold { stroke: #c3c2b7; stroke-width: 1; }
+  </style>
+  <defs>
+    <marker id="f6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#008300"/></marker>
+    <marker id="k6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1f2a1f"/></marker>
+    <marker id="s6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#008300"/></marker>
+  </defs>
+  <rect width="920" height="560" fill="#ffffff"/>
+  <text class="title" x="30" y="40">Drift assist: torque vectoring the turn onto the inside back wheel</text>
+  <text class="sub" x="30" y="62">Hold the left trigger while turning. The robot pivots on its inside back wheel, like a car drifting, instead of spinning about its middle.</text>
+
+  <!-- Panel A: normal turn. Robot body 120 x 128 at (100,170). -->
+  <text class="h" x="30" y="100">Normal left turn</text>
+  <text class="s" x="30" y="116">pivot: the robot's middle</text>
+  <g>
+    <rect class="wheel" x="92" y="176" width="14" height="30" rx="3"/>
+    <rect class="wheel" x="92" y="262" width="14" height="30" rx="3"/>
+    <rect class="wheel" x="214" y="176" width="14" height="30" rx="3"/>
+    <rect class="wheel" x="214" y="262" width="14" height="30" rx="3"/>
+    <rect class="body" x="100" y="170" width="120" height="128" rx="8"/>
+    <rect x="148" y="164" width="24" height="10" rx="2" fill="#1f2a1f"/>
+    <text class="s" x="178" y="184">front</text>
+    <path class="swing" d="M200,234 A40,40 0 0 0 160,194" marker-end="url(#s6)"/>
+    <path class="back" d="M84,176 V204" marker-end="url(#k6)"/>
+    <path class="back" d="M84,262 V290" marker-end="url(#k6)"/>
+    <path class="fwd" d="M236,206 V178" marker-end="url(#f6)"/>
+    <path class="fwd" d="M236,292 V264" marker-end="url(#f6)"/>
+    <circle cx="160" cy="234" r="5" fill="#1f2a1f"/>
+    <text class="s" x="160" y="253" text-anchor="middle">pivot</text>
+  </g>
+  <text class="t" x="30" y="324">Left wheels back, right wheels forward,</text>
+  <text class="t" x="30" y="340">all at full power. The robot spins in place.</text>
+
+  <!-- Panel B: drift. Robot body at (400,170); pivot = the back-left wheel at (399,277). -->
+  <text class="h" x="330" y="100">Same turn with drift assist</text>
+  <text class="s" x="330" y="116">pivot: the inside back wheel</text>
+  <g>
+    <rect class="wheel" x="392" y="176" width="14" height="30" rx="3"/>
+    <rect class="wheelstop" x="392" y="262" width="14" height="30" rx="3"/>
+    <rect class="wheel" x="514" y="176" width="14" height="30" rx="3"/>
+    <rect class="wheel" x="514" y="262" width="14" height="30" rx="3"/>
+    <rect class="body" x="400" y="170" width="120" height="128" rx="8"/>
+    <rect x="448" y="164" width="24" height="10" rx="2" fill="#1f2a1f"/>
+    <text class="s" x="478" y="184">front</text>
+    <g class="ghost" transform="rotate(-18 399 277)">
+      <rect x="400" y="170" width="120" height="128" rx="8"/>
+      <rect x="448" y="164" width="24" height="10" rx="2"/>
+    </g>
+    <path class="swing" d="M520,170 A161.5,161.5 0 0 0 482,139" marker-end="url(#s6)"/>
+    <path class="back" d="M384,183 V197" marker-end="url(#k6)"/>
+    <path class="fwd" d="M536,206 V178" marker-end="url(#f6)"/>
+    <path class="fwd" d="M536,285 V271" marker-end="url(#f6)"/>
+    <circle cx="399" cy="277" r="5" fill="#eda100" stroke="#1f2a1f" stroke-width="1.25"/>
+    <text class="s" x="383" y="274" text-anchor="end">stopped:</text>
+    <text class="s" x="383" y="288" text-anchor="end">the pivot</text>
+  </g>
+  <text class="t" x="330" y="324">Inside back wheel stopped, inside front at half,</text>
+  <text class="t" x="330" y="340">outside wheels do the work. The nose swings left.</text>
+
+  <!-- arrow key -->
+  <path class="fwd" d="M30,364 H58" marker-end="url(#f6)"/>
+  <text class="s" x="66" y="368">motor forward</text>
+  <path class="back" d="M160,364 H188" marker-end="url(#k6)"/>
+  <text class="s" x="196" y="368">motor backward</text>
+  <text class="s" x="318" y="368">arrow length = power</text>
+  <text class="s" x="30" y="388">Dashed outline: the robot part way through the swing. Orange dot: the pivot.</text>
+
+  <!-- Panel C: the math -->
+  <rect class="box" x="620" y="90" width="270" height="236"/>
+  <rect class="band" x="620.75" y="90.75" width="268.5" height="24"/>
+  <text class="h" x="632" y="107">While the trigger is held</text>
+  <text class="t" x="632" y="134">Two extra inputs, both robot-centric:</text>
+  <text class="m" x="632" y="156">drive  += −|turn| × 0.5</text>
+  <text class="s" x="632" y="171">always forward, whichever way it turns</text>
+  <text class="m" x="632" y="193">strafe += turn × 0.5</text>
+  <text class="s" x="632" y="208">toward the inside of the turn</text>
+  <text class="t" x="632" y="232">Then the normal mecanum mix:</text>
+  <text class="m" x="632" y="252">FL = drive + strafe + turn</text>
+  <text class="m" x="632" y="268">BL = drive − strafe + turn</text>
+  <text class="m" x="632" y="284">FR = drive − strafe − turn</text>
+  <text class="m" x="632" y="300">BR = drive + strafe − turn</text>
+  <text class="s" x="632" y="317">BL comes out at 0: that wheel is the pivot.</text>
+
+  <!-- the table -->
+  <text class="h" x="620" y="352">Motor power, full left turn</text>
+  <line class="rulebold" x1="620" y1="362" x2="890" y2="362"/>
+  <text class="b" x="620" y="378">Wheel</text>
+  <text class="b" x="740" y="378">Normal</text>
+  <text class="b" x="822" y="378">Drift</text>
+  <line class="rulebold" x1="620" y1="385" x2="890" y2="385"/>
+  <text class="t2" x="620" y="402">Front left (inside)</text>
+  <text class="t2" x="740" y="402">full back</text>
+  <text class="t2" x="822" y="402">½ back</text>
+  <line class="rule" x1="620" y1="409" x2="890" y2="409"/>
+  <text class="t2" x="620" y="426">Back left (inside)</text>
+  <text class="t2" x="740" y="426">full back</text>
+  <text class="b2" x="822" y="426">0, the pivot</text>
+  <line class="rule" x1="620" y1="433" x2="890" y2="433"/>
+  <text class="t2" x="620" y="450">Front right (outside)</text>
+  <text class="t2" x="740" y="450">full forward</text>
+  <text class="t2" x="822" y="450">full forward</text>
+  <line class="rule" x1="620" y1="457" x2="890" y2="457"/>
+  <text class="t2" x="620" y="474">Back right (outside)</text>
+  <text class="t2" x="740" y="474">full forward</text>
+  <text class="t2" x="822" y="474">½ forward</text>
+  <line class="rulebold" x1="620" y1="481" x2="890" y2="481"/>
+  <text class="s" x="620" y="498">turn = 1, so drive = −0.5 and strafe = 0.5; the four</text>
+  <text class="s" x="620" y="512">powers 1, 0, −2, −1 are scaled to fit under 1.</text>
+
+  <text class="s" x="30" y="528">driveDriftSideGain 0.5 and driveDriftRearGain 0.5 put the pivot on the wheel of a square robot; a longer robot tunes them on the field (BotProperties).</text>
+  <text class="s" x="30" y="543">The pivot is a spot on the robot, so the extra drive and strafe stay robot-centric even though the sticks are field-centric. Math: MecanumMath.DriftDrive / DriftStrafe.</text>
+</svg>

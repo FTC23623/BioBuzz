@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 525" width="900" height="525" role="img" aria-labelledby="t4 d4">
+  <title id="t4">How the launcher holds its speed</title>
+  <desc id="d4">A control loop. A target RPM comes from the distance curve. Every 50 milliseconds the speed controller computes error as target minus measured, then power as feed forward plus proportional plus integral, kept between 0 and 1. Example: target 3100, measured 3050: 0.750 plus 0.150 plus 0 is 0.90 power. The power goes to the launcher motor. The encoder measures ticks per second, divided by 28 and times 60 gives the measured RPM, which feeds back. Side notes: at speed means within 50 RPM, and an auto launch opens the gates once the pollen wheel passes 2950 RPM; a wheel backward for one second while powered is stopped. An inset shows RPM dipping after each of four balls and recovering.</desc>
+  <style>
+    text { font-family: Calibri, "Helvetica Neue", Arial, sans-serif; fill: #1f2a1f; }
+    .title { font-size: 21px; font-weight: 700; }
+    .sub { font-size: 13px; fill: #52514e; }
+    .h { font-size: 13.5px; font-weight: 700; }
+    .t { font-size: 12.5px; }
+    .b { font-size: 12.5px; font-weight: 700; }
+    .s { font-size: 11.5px; fill: #52514e; }
+    .box { fill: #eef5e6; stroke: #70ad47; stroke-width: 1.5; }
+    .band { fill: #c6d9a3; }
+    .plain { fill: #f4f6f8; stroke: #8794a3; stroke-width: 1.25; }
+    .world { fill: #ffffff; stroke: #1f2a1f; stroke-width: 1.5; }
+    .edge { fill: none; stroke: #2f5f2f; stroke-width: 1.75; stroke-linejoin: round; }
+    .back { fill: none; stroke: #008300; stroke-width: 2; stroke-linejoin: round; }
+    .target { stroke: #c3c2b7; stroke-width: 1; stroke-dasharray: 4 3; }
+    .data { fill: none; stroke: #008300; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  </style>
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2f5f2f"/></marker>
+    <marker id="g4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#008300"/></marker>
+  </defs>
+  <rect width="900" height="525" fill="#ffffff"/>
+  <text class="title" x="30" y="40">How the launcher holds its speed</text>
+  <text class="sub" x="30" y="62">Two wheels, pollen and nectar, each with its own target. A fixed power would drift as the battery drains and dip after every ball.</text>
+
+  <!-- target -->
+  <rect class="plain" x="30" y="120" width="180" height="122" rx="6"/>
+  <text class="h" x="42" y="141">Target RPM</text>
+  <text class="t" x="42" y="162">Pollen: the distance curve,</text>
+  <text class="t" x="42" y="178">2900 to 3325 RPM, while the</text>
+  <text class="t" x="42" y="194">driver holds aim or launch.</text>
+  <text class="t" x="42" y="210">D-pad trims it ±50 RPM.</text>
+  <text class="t" x="42" y="230">Nectar: its own target.</text>
+  <path class="edge" d="M210,175 H260" marker-end="url(#a4)"/>
+  <text class="s" x="235" y="168" text-anchor="middle">3100</text>
+
+  <!-- controller -->
+  <rect class="box" x="260" y="100" width="380" height="160"/>
+  <rect class="band" x="260.75" y="100.75" width="378.5" height="24"/>
+  <text class="h" x="272" y="117">Speed controller, every 50 ms</text>
+  <text class="t" x="272" y="146">error = target − measured = 3100 − 3050 = 50</text>
+  <text class="t" x="272" y="168">feed forward = kF × target = 0.000242 × 3100 = 0.750</text>
+  <text class="t" x="272" y="190">proportional = kP × error = 0.003 × 50 = 0.150</text>
+  <text class="t" x="272" y="212">integral = kI × error over time = 0 (kI is 0 today)</text>
+  <text class="b" x="272" y="240">power = 0.750 + 0.150 + 0 = 0.90, kept between 0 and 1</text>
+  <path class="edge" d="M640,175 H690" marker-end="url(#a4)"/>
+  <text class="s" x="665" y="168" text-anchor="middle">0.90</text>
+
+  <!-- motor -->
+  <rect class="world" x="690" y="120" width="180" height="110" rx="6"/>
+  <text class="h" x="702" y="141">Launcher motor</text>
+  <text class="t" x="702" y="162">setPower(0.90)</text>
+  <text class="t" x="702" y="178">Our code picks the power;</text>
+  <text class="t" x="702" y="194">the encoder only measures.</text>
+  <text class="t" x="702" y="214">Coasts when switched off.</text>
+
+  <!-- feedback -->
+  <path class="back" d="M780,230 V330 H650" marker-end="url(#g4)"/>
+  <text class="s" x="790" y="282">the wheel spins</text>
+  <rect class="plain" x="370" y="300" width="280" height="60" rx="6"/>
+  <text class="h" x="382" y="321">Encoder</text>
+  <text class="t" x="382" y="339">measured RPM = ticks per second ÷ 28 × 60</text>
+  <text class="t" x="382" y="354">= 3050 this time</text>
+  <path class="back" d="M370,330 H235 V215 H260" marker-end="url(#g4)"/>
+  <text class="s" x="228" y="270" text-anchor="end">measured</text>
+  <text class="s" x="228" y="284" text-anchor="end">3050 RPM</text>
+
+  <!-- side notes -->
+  <text class="b" x="30" y="376">At speed</text>
+  <text class="t" x="30" y="393">measured within 50 RPM of target. An AUTO</text>
+  <text class="t" x="30" y="409">launch opens once the pollen wheel passes 2950.</text>
+  <text class="b" x="30" y="435">Wrong way</text>
+  <text class="t" x="30" y="452">backward for 1 s while powered: stopped</text>
+  <text class="t" x="30" y="468">before it runs away. Off and on clears it.</text>
+
+  <!-- inset: RPM during four launches -->
+  <text class="s" x="690" y="382">RPM during four launches</text>
+  <line class="target" x1="690" y1="402" x2="870" y2="402"/>
+  <path class="data" d="M690,402 H708 L716,424 L736,403 H752 L760,424 L780,403 H796 L804,424 L824,403 H840 L848,424 L868,404"/>
+  <circle cx="708" cy="402" r="4" fill="#eda100"/>
+  <circle cx="752" cy="402" r="4" fill="#eda100"/>
+  <circle cx="796" cy="402" r="4" fill="#eda100"/>
+  <circle cx="840" cy="402" r="4" fill="#eda100"/>
+  <text class="s" x="690" y="442">each ball slows it; kP brings it back</text>
+
+  <text class="s" x="30" y="506">Numbers from BotProperties: launcherKF 0.000242, launcherKP 0.003, launcherKI 0, launcherTicksPerRev 28,</text>
+  <text class="s" x="30" y="520">launcherUpdateMs 50, launcherAtSpeedRpm 50, launcherWrongWaySeconds 1, autoLaunchMinRpm 2950.</text>
+</svg>

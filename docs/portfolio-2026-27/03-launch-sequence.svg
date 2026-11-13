@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" width="920" height="480" role="img" aria-labelledby="t3 d3">
+  <title id="t3">What happens when the driver pulls the launch trigger</title>
+  <desc id="d3">A timeline with six lanes. The driver holds the right trigger from time zero. The launch gates open over 0.20 seconds, then stay open until the trigger is released. The transfer stops during those 0.20 seconds so no ball is pushed into a half-open gate, then feeds slowly, at 30 percent of its speed, so balls enter one at a time. The intake keeps doing what it was, then feeds at half speed. The launcher wheels are held at their target RPM the whole time. Balls leave one at a time while the gates are open. When the trigger is released the gates close and the rollers go back to what the operator set.</desc>
+  <style>
+    text { font-family: Calibri, "Helvetica Neue", Arial, sans-serif; fill: #1f2a1f; }
+    .title { font-size: 21px; font-weight: 700; }
+    .sub { font-size: 13px; fill: #52514e; }
+    .lane { font-size: 13px; font-weight: 700; }
+    .t { font-size: 12px; text-anchor: middle; }
+    .s { font-size: 11.5px; fill: #52514e; }
+    .ax { font-size: 12px; fill: #52514e; text-anchor: middle; }
+    .on { fill: #c6d9a3; stroke: #70ad47; stroke-width: 1.25; }
+    .off { fill: #f4f6f8; stroke: #c3c2b7; stroke-width: 1.25; }
+    .swing { fill: #ffffff; stroke: #70ad47; stroke-width: 1.25; stroke-dasharray: 4 3; }
+    .stop { fill: #ffffff; stroke: #1f2a1f; stroke-width: 1.5; }
+    .hold { fill: #eef5e6; stroke: #70ad47; stroke-width: 1.25; }
+    .mark { stroke: #898781; stroke-width: 1.25; stroke-dasharray: 5 4; }
+    .axis { stroke: #c3c2b7; stroke-width: 1; }
+  </style>
+  <rect width="920" height="480" fill="#ffffff"/>
+  <text class="title" x="30" y="40">What happens when the driver pulls the launch trigger</text>
+  <text class="sub" x="30" y="62">Hold to launch, let go to close. The transfer waits for the gate, so no ball is pushed into a gate that is still swinging open.</text>
+
+  <!-- lane labels -->
+  <text class="lane" x="20" y="125">Driver</text>
+  <text class="lane" x="20" y="175">Launch gates</text>
+  <text class="lane" x="20" y="225">Transfer</text>
+  <text class="lane" x="20" y="275">Intake</text>
+  <text class="lane" x="20" y="325">Launcher wheels</text>
+  <text class="lane" x="20" y="371">Balls out</text>
+
+  <!-- time markers -->
+  <line class="mark" x1="230" y1="92" x2="230" y2="385"/>
+  <line class="mark" x1="286" y1="92" x2="286" y2="385"/>
+  <line class="mark" x1="650" y1="92" x2="650" y2="385"/>
+  <text class="ax" x="230" y="86">trigger pulled</text>
+  <text class="ax" x="650" y="86">trigger let go</text>
+
+  <!-- Driver -->
+  <rect class="on" x="230" y="105" width="420" height="30"/>
+  <text class="t" x="440" y="124">right trigger held</text>
+
+  <!-- Launch gates -->
+  <rect class="off" x="140" y="155" width="90" height="30"/>
+  <text class="t" x="185" y="174">closed</text>
+  <rect class="swing" x="230" y="155" width="56" height="30"/>
+  <text class="t" x="258" y="174" font-size="11">opening</text>
+  <rect class="on" x="286" y="155" width="364" height="30"/>
+  <text class="t" x="468" y="174">OPEN: balls can go through</text>
+  <rect class="off" x="650" y="155" width="84" height="30"/>
+  <text class="t" x="692" y="174">closed</text>
+
+  <!-- Transfer -->
+  <rect class="off" x="140" y="205" width="90" height="30"/>
+  <text class="t" x="185" y="220" font-size="10.5">as the</text>
+  <text class="t" x="185" y="231" font-size="10.5">operator set it</text>
+  <rect class="stop" x="230" y="205" width="56" height="30"/>
+  <text class="t" x="258" y="224" font-size="11" font-weight="700">STOPPED</text>
+  <rect class="on" x="286" y="205" width="364" height="30"/>
+  <text class="t" x="468" y="224">feeding slowly: 30% of speed, so balls go in one at a time</text>
+  <rect class="off" x="650" y="205" width="84" height="30"/>
+  <text class="t" x="692" y="220" font-size="10.5">back to the</text>
+  <text class="t" x="692" y="231" font-size="10.5">operator</text>
+
+  <!-- Intake -->
+  <rect class="off" x="140" y="255" width="146" height="30"/>
+  <text class="t" x="213" y="274">as it was</text>
+  <rect class="on" x="286" y="255" width="364" height="30"/>
+  <text class="t" x="468" y="274">feeding at 50% speed, pushing up any ball stuck below</text>
+  <rect class="off" x="650" y="255" width="84" height="30"/>
+  <text class="t" x="692" y="274">as it was</text>
+
+  <!-- Launcher wheels -->
+  <rect class="hold" x="140" y="305" width="594" height="30"/>
+  <text class="t" x="437" y="324">held at the target RPM by the speed controller, spinning since START</text>
+
+  <!-- Balls out -->
+  <line class="axis" x1="286" y1="367" x2="650" y2="367"/>
+  <circle cx="330" cy="367" r="9" fill="#ffffff"/>
+  <circle cx="330" cy="367" r="7" fill="#eda100"/>
+  <circle cx="410" cy="367" r="9" fill="#ffffff"/>
+  <circle cx="410" cy="367" r="7" fill="#eda100"/>
+  <circle cx="490" cy="367" r="9" fill="#ffffff"/>
+  <circle cx="490" cy="367" r="7" fill="#eda100"/>
+  <circle cx="570" cy="367" r="9" fill="#ffffff"/>
+  <circle cx="570" cy="367" r="7" fill="#eda100"/>
+  <text class="s" x="660" y="371">one at a time (spacing not to scale)</text>
+
+  <!-- time axis -->
+  <line class="axis" x1="140" y1="395" x2="734" y2="395"/>
+  <text class="ax" x="230" y="412">0</text>
+  <text class="ax" x="286" y="412">0.20 s</text>
+  <text class="ax" x="370" y="412">0.5 s</text>
+  <text class="ax" x="510" y="412">1.0 s</text>
+  <text class="ax" x="650" y="412">release</text>
+  <text class="s" x="30" y="438">0.20 s to open = 80° of servo travel at 0.11 s per 60°, plus 0.05 s margin (launchServoSecondsPer60Deg, launchServoExtraSeconds).</text>
+  <text class="s" x="30" y="453">Feed shares: launchFeedIntakeScale 0.5 and launchFeedTransferScale 0.3 of 1150 RPM (575 and 345 RPM). At half, the balls ran into each other at the launcher.</text>
+  <text class="s" x="30" y="468">Camera lock (launchNeedsLock, off today): the trigger only opens the gates once the hive's middle is within 1° of the aim; the operator's right trigger overrides it.</text>
+</svg>

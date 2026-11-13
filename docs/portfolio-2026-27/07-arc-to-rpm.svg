@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 560" width="920" height="560" role="img" aria-labelledby="t7 d7">
+  <title id="t7">From the arc to the launch speed</title>
+  <desc id="d7">Left: a side view. The robot sits on the floor at the left with the launcher exit at height h one. A ball leaves at angle theta and flies in an arc to the hive opening at the right, at height h two, a horizontal distance d away. Right: three numbered boxes. One, the speed the ball needs with no air: v equals d over cos theta, times the square root of g over two times the quantity d tan theta minus delta h. Two, wheel speed from ball speed: RPM equals sixty v over k pi D, where D is the wheel diameter and k is the share of the wheel's surface speed the ball leaves with, about one half for one wheel against a fixed wall. Three, what the robot runs: a curve through two measured shots, RPM equals 2900 plus 425 times the fraction of the way from 110 to 140 inches to the power 1.1, because drag, spin and slip are left out of the formula and measured shots include them.</desc>
+  <style>
+    text { font-family: Calibri, "Helvetica Neue", Arial, sans-serif; fill: #1f2a1f; }
+    .title { font-size: 21px; font-weight: 700; }
+    .sub { font-size: 13px; fill: #52514e; }
+    .h { font-size: 13.5px; font-weight: 700; }
+    .t { font-size: 12.5px; }
+    .b { font-size: 12.5px; font-weight: 700; }
+    .f { font-size: 13px; font-weight: 700; }
+    .s { font-size: 11.5px; fill: #52514e; }
+    .i { font-style: italic; }
+    .box { fill: #eef5e6; stroke: #70ad47; stroke-width: 1.5; }
+    .band { fill: #c6d9a3; }
+    .plain { fill: #f4f6f8; stroke: #8794a3; stroke-width: 1.25; }
+    .floor { stroke: #898781; stroke-width: 1.5; }
+    .arc { fill: none; stroke: #008300; stroke-width: 2.5; stroke-linecap: round; }
+    .dim { stroke: #898781; stroke-width: 1; }
+    .dash { stroke: #898781; stroke-width: 1; stroke-dasharray: 4 3; }
+    .angle { fill: none; stroke: #1f2a1f; stroke-width: 1.25; }
+  </style>
+  <defs>
+    <marker id="d7a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#898781"/></marker>
+  </defs>
+  <rect width="920" height="560" fill="#ffffff"/>
+  <text class="title" x="30" y="40">From the arc to the launch speed</text>
+  <text class="sub" x="30" y="62">Why a farther shot needs a faster wheel, and how the measured curve stands in for the physics.</text>
+
+  <!-- side view -->
+  <text class="s" x="30" y="98">Side view</text>
+  <line class="floor" x1="40" y1="330" x2="580" y2="330"/>
+  <text class="s" x="40" y="346">floor</text>
+
+  <!-- robot -->
+  <rect class="plain" x="70" y="262" width="100" height="56" rx="6"/>
+  <circle cx="92" cy="322" r="8" fill="#8794a3"/>
+  <circle cx="148" cy="322" r="8" fill="#8794a3"/>
+  <circle cx="154" cy="258" r="14" fill="#ffffff" stroke="#1f2a1f" stroke-width="1.5"/>
+  <circle cx="154" cy="258" r="3" fill="#1f2a1f"/>
+  <text class="s" x="120" y="302" text-anchor="middle">robot</text>
+  <text class="s" x="40" y="236">wheel, diameter D</text>
+
+  <!-- hive -->
+  <rect class="plain" x="440" y="150" width="70" height="180" rx="4"/>
+  <rect x="448" y="150" width="54" height="6" fill="#008300"/>
+  <text class="s" x="475" y="174" text-anchor="middle">opening</text>
+  <text class="s" x="490" y="250" text-anchor="middle">hive</text>
+
+  <!-- the arc, from the exit (168,250) to the opening (470,150) -->
+  <path class="arc" d="M168,250 Q320,30 470,150"/>
+  <circle cx="320" cy="115" r="9" fill="#ffffff"/>
+  <circle cx="320" cy="115" r="7" fill="#eda100"/>
+  <text class="s" x="320" y="99" text-anchor="middle">ball</text>
+
+  <!-- launch angle -->
+  <line class="dash" x1="168" y1="250" x2="260" y2="250"/>
+  <path class="angle" d="M228,250 A60,60 0 0 0 202,201"/>
+  <text class="t i" x="236" y="228">θ</text>
+  <text class="s" x="236" y="243">launch angle</text>
+
+  <!-- heights -->
+  <line class="dim" x1="60" y1="330" x2="60" y2="250" marker-start="url(#d7a)" marker-end="url(#d7a)"/>
+  <line class="dash" x1="60" y1="250" x2="168" y2="250"/>
+  <text class="t i" x="46" y="294" text-anchor="end">h₁</text>
+  <line class="dim" x1="530" y1="330" x2="530" y2="150" marker-start="url(#d7a)" marker-end="url(#d7a)"/>
+  <line class="dash" x1="510" y1="150" x2="560" y2="150"/>
+  <text class="t i" x="538" y="244">h₂</text>
+  <!-- delta h -->
+  <line class="dim" x1="560" y1="250" x2="560" y2="150" marker-start="url(#d7a)" marker-end="url(#d7a)"/>
+  <line class="dash" x1="168" y1="250" x2="560" y2="250"/>
+  <text class="t i" x="568" y="196">Δh =</text>
+  <text class="t i" x="568" y="211">h₂ − h₁</text>
+
+  <!-- distance -->
+  <line class="dim" x1="168" y1="366" x2="470" y2="366" marker-start="url(#d7a)" marker-end="url(#d7a)"/>
+  <line class="dash" x1="168" y1="250" x2="168" y2="366"/>
+  <line class="dash" x1="470" y1="150" x2="470" y2="366"/>
+  <text class="t i" x="319" y="384" text-anchor="middle">d, horizontal distance from the exit to the opening</text>
+
+  <text class="s" x="30" y="416">The Limelight reports the straight line from the camera to the tag. The curve in box 3 is fit</text>
+  <text class="s" x="30" y="431">against that range directly, so the robot never works out d, θ or Δh during a match.</text>
+
+  <!-- box 1 -->
+  <rect class="box" x="620" y="90" width="270" height="136"/>
+  <rect class="band" x="620.75" y="90.75" width="268.5" height="24"/>
+  <text class="h" x="632" y="107">1  Speed the ball needs</text>
+  <text class="f" x="632" y="134">v = (d ÷ cos θ) ×</text>
+  <text class="f" x="632" y="152">√( g ÷ (2 (d tan θ − Δh)) )</text>
+  <text class="t" x="632" y="174">The arc with no air: the ball must have</text>
+  <text class="t" x="632" y="190">climbed Δh by the time it has gone d.</text>
+  <text class="t" x="632" y="206">g = 386 in/s², so v is in inches per second.</text>
+
+  <!-- box 2 -->
+  <rect class="box" x="620" y="238" width="270" height="120"/>
+  <rect class="band" x="620.75" y="238.75" width="268.5" height="24"/>
+  <text class="h" x="632" y="255">2  Wheel speed from ball speed</text>
+  <text class="f" x="632" y="284">RPM = 60 v ÷ (k × π × D)</text>
+  <text class="t" x="632" y="306">D = wheel diameter in inches. k = the share</text>
+  <text class="t" x="632" y="322">of the wheel's surface speed the ball leaves</text>
+  <text class="t" x="632" y="338">with: about ½ for one wheel against a wall.</text>
+
+  <!-- box 3 -->
+  <rect class="box" x="620" y="370" width="270" height="136"/>
+  <rect class="band" x="620.75" y="370.75" width="268.5" height="24"/>
+  <text class="h" x="632" y="387">3  What the robot runs</text>
+  <text class="f" x="632" y="416">RPM = 2900 + 425 × ((d − 110) ÷ 30)^1.1</text>
+  <text class="t" x="632" y="438">A curve through two measured shots, in</text>
+  <text class="t" x="632" y="454">2-inch steps. The real ball has air drag,</text>
+  <text class="t" x="632" y="470">spin and wheel slip the formula leaves out,</text>
+  <text class="t" x="632" y="486">so measured shots set both ends.</text>
+
+  <text class="s" x="30" y="528">To check the formula against the robot, measure θ, h₁, h₂ and D, then compute the RPM at 110 and 140 in from boxes 1 and 2 and compare the ratio with</text>
+  <text class="s" x="30" y="543">the measured 3325 ÷ 2900 = 1.15. Air drag and wheel slip account for the difference; the 1.1 exponent in box 3 is where the robot absorbs it.</text>
+</svg>

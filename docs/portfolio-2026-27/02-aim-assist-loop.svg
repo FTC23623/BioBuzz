@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" width="900" height="540" role="img" aria-labelledby="t2 d2">
+  <title id="t2">Aim assist: the whole robot turns to face the hive's middle</title>
+  <desc id="d2">Left: a top view of the robot below a hive cell with four AprilTags. The camera is on the back of the robot, next to the launchers, so the back faces the hive while aiming. Thin lines run from the camera to each tag; a bold line runs to the middle of the group, 14 degrees right of straight ahead. Right: a four-step loop. One, the Limelight lists every tag in its picture. Two, the other alliance's tags are dropped. Three, the bearings of the tags in the nearest tag's group are averaged to find the hive's middle. Four, the robot turns toward it with a proportional turn, capped and with a one degree dead band, holding the hive one degree left of center because the pollen launcher sits left of the camera. The loop repeats about fifty times a second.</desc>
+  <style>
+    text { font-family: Calibri, "Helvetica Neue", Arial, sans-serif; fill: #1f2a1f; }
+    .title { font-size: 21px; font-weight: 700; }
+    .sub { font-size: 13px; fill: #52514e; }
+    .h { font-size: 13.5px; font-weight: 700; }
+    .t { font-size: 12.5px; }
+    .s { font-size: 11.5px; fill: #52514e; }
+    .tag { font-size: 12px; font-weight: 700; text-anchor: middle; }
+    .box { fill: #eef5e6; stroke: #70ad47; stroke-width: 1.5; }
+    .band { fill: #c6d9a3; }
+    .plain { fill: #f4f6f8; stroke: #8794a3; stroke-width: 1.25; }
+    .edge { fill: none; stroke: #2f5f2f; stroke-width: 1.75; stroke-linejoin: round; }
+    .ray { stroke: #c3c2b7; stroke-width: 1; }
+    .aim { fill: none; stroke: #008300; stroke-width: 2.5; stroke-linecap: round; }
+    .ahead { stroke: #898781; stroke-width: 1.25; stroke-dasharray: 5 4; }
+    .arc { fill: none; stroke: #1f2a1f; stroke-width: 1.25; }
+  </style>
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2f5f2f"/></marker>
+    <marker id="g2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#008300"/></marker>
+  </defs>
+  <rect width="900" height="540" fill="#ffffff"/>
+  <text class="title" x="30" y="40">Aim assist: the whole robot turns to face the hive's middle</text>
+  <text class="sub" x="30" y="62">Held on the right bumper, or on the launch trigger so a launch snaps to the hive. There is no turret this year.</text>
+
+  <!-- top view -->
+  <text class="s" x="30" y="100">Top view</text>
+  <text class="t" x="220" y="100" text-anchor="middle">Our hive's cell: four AprilTags (blue 38 to 41)</text>
+  <rect class="plain" x="120" y="110" width="200" height="40" rx="4"/>
+  <rect x="132" y="117" width="28" height="26" fill="#ffffff" stroke="#008300" stroke-width="2.5"/>
+  <rect x="180" y="117" width="28" height="26" fill="#ffffff" stroke="#1f2a1f" stroke-width="1.25"/>
+  <rect x="228" y="117" width="28" height="26" fill="#ffffff" stroke="#1f2a1f" stroke-width="1.25"/>
+  <rect x="276" y="117" width="28" height="26" fill="#ffffff" stroke="#1f2a1f" stroke-width="1.25"/>
+  <text class="tag" x="146" y="134">38</text>
+  <text class="tag" x="194" y="134">39</text>
+  <text class="tag" x="242" y="134">40</text>
+  <text class="tag" x="290" y="134">41</text>
+  <text class="s" x="112" y="134" text-anchor="end">nearest tag</text>
+
+  <!-- rays to each tag, bold line to the group's middle -->
+  <line class="ray" x1="150" y1="420" x2="146" y2="143"/>
+  <line class="ray" x1="150" y1="420" x2="194" y2="143"/>
+  <line class="ray" x1="150" y1="420" x2="242" y2="143"/>
+  <line class="ray" x1="150" y1="420" x2="290" y2="143"/>
+  <line class="ahead" x1="150" y1="420" x2="150" y2="165"/>
+  <text class="s" x="144" y="178" text-anchor="end">camera center</text>
+  <path class="aim" d="M150,420 L218,150" marker-end="url(#g2)"/>
+  <circle cx="218" cy="150" r="5" fill="#008300"/>
+  <text class="t" x="300" y="170">aim point: the hive's</text>
+  <text class="t" x="300" y="185">middle, the average of</text>
+  <text class="t" x="300" y="200">the 4 bearings, held</text>
+  <text class="t" x="300" y="215">1° left of center: the</text>
+  <text class="t" x="300" y="230">pollen launcher sits</text>
+  <text class="t" x="300" y="245">left of the camera</text>
+
+  <!-- bearing arc at the camera -->
+  <path class="arc" d="M150,360 A60,60 0 0 1 164.6,361.8"/>
+  <text class="t" x="200" y="358">bearing: 14° right</text>
+  <text class="s" x="200" y="373">so the robot turns right</text>
+
+  <!-- the robot -->
+  <rect x="104" y="404" width="12" height="20" rx="2" fill="#8794a3"/>
+  <rect x="184" y="404" width="12" height="20" rx="2" fill="#8794a3"/>
+  <rect x="104" y="446" width="12" height="20" rx="2" fill="#8794a3"/>
+  <rect x="184" y="446" width="12" height="20" rx="2" fill="#8794a3"/>
+  <rect class="box" x="110" y="400" width="80" height="70" rx="8"/>
+  <rect x="140" y="394" width="20" height="12" rx="2" fill="#1f2a1f"/>
+  <text class="s" x="150" y="440" text-anchor="middle">camera on</text>
+  <text class="s" x="150" y="455" text-anchor="middle">the back</text>
+  <rect x="140" y="468" width="20" height="8" rx="2" fill="#8794a3"/>
+  <text class="t" x="150" y="492" text-anchor="middle">robot, front at the bottom</text>
+
+  <!-- the loop -->
+  <g>
+    <rect class="box" x="450" y="110" width="200" height="100"/>
+    <rect class="band" x="450.75" y="110.75" width="198.5" height="24"/>
+    <text class="h" x="460" y="127">1  See</text>
+    <text class="t" x="460" y="156">The Limelight lists every</text>
+    <text class="t" x="460" y="173">AprilTag in its picture,</text>
+    <text class="t" x="460" y="190">100 times a second.</text>
+  </g>
+  <g>
+    <rect class="box" x="670" y="110" width="200" height="100"/>
+    <rect class="band" x="670.75" y="110.75" width="198.5" height="24"/>
+    <text class="h" x="680" y="127">2  Keep only ours</text>
+    <text class="t" x="680" y="156">Drop the other alliance's tags.</text>
+    <text class="t" x="680" y="173">Red: 30 to 37. Blue: 38 to 45.</text>
+    <text class="t" x="680" y="190">Alliance read from the magnet.</text>
+  </g>
+  <g>
+    <rect class="box" x="670" y="300" width="200" height="100"/>
+    <rect class="band" x="670.75" y="300.75" width="198.5" height="24"/>
+    <text class="h" x="680" y="317">3  Pick the aim point</text>
+    <text class="t" x="680" y="346">Average the bearings of the</text>
+    <text class="t" x="680" y="363">tags in the nearest tag's</text>
+    <text class="t" x="680" y="380">group: the middle of the hive.</text>
+  </g>
+  <g>
+    <rect class="box" x="450" y="300" width="200" height="100"/>
+    <rect class="band" x="450.75" y="300.75" width="198.5" height="24"/>
+    <text class="h" x="460" y="317">4  Turn the robot</text>
+    <text class="t" x="460" y="346">turn = 0.02 × (bearing − 1°),</text>
+    <text class="t" x="460" y="363">at most 0.6. Within 1°: no turn.</text>
+    <text class="t" x="460" y="380">Sticks still drive and strafe.</text>
+  </g>
+  <path class="edge" d="M650,160 H670" marker-end="url(#a2)"/>
+  <path class="edge" d="M770,210 V300" marker-end="url(#a2)"/>
+  <path class="edge" d="M670,312 H650" marker-end="url(#a2)"/>
+  <path class="edge" d="M550,300 V210" marker-end="url(#a2)"/>
+  <text class="s" x="558" y="251">again, about</text>
+  <text class="s" x="558" y="265">50 times a second</text>
+
+  <text class="s" x="450" y="426">A tag not seen for 250 ms counts as gone: the robot never chases a ghost.</text>
+  <text class="s" x="450" y="441">Aim runs only while the button is down, checked again every loop.</text>
+  <text class="s" x="450" y="456">D-pad left / right while aiming arcs the robot around the hive and holds</text>
+  <text class="s" x="450" y="471">the distance it started at (arcStrafePower 0.4, arcRangeKP 0.02).</text>
+  <text class="s" x="450" y="486">Numbers: aimKP 0.02, aimMaxRotate 0.6, aimDoneDegrees 1, aimHiveBearingDeg 1.</text>
+  <text class="s" x="30" y="526">Bearing is counted left-positive, like the heading. In an AUTO, the same aim point is picked once at LAUNCH WHEN TAG SEEN and held while the balls launch.</text>
+</svg>
