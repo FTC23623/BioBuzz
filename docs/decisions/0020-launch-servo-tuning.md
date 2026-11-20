@@ -26,8 +26,10 @@ and open, for the pollen and nectar servos. The coach wants a TeleOp that steps 
 - **The screen shows both units**, for example `position 0.517 = 155 deg`. **Record the
   position number.** That is what `Servo.setPosition` takes, and it stays right even if
   the degrees setting is wrong.
-- **Nothing moves during INIT.** A servo can't report where it is, so INIT shows where
-  each will go at START: all three to closed.
+- **Nothing moves during INIT** in this tuning OpMode. A servo can't report where it is, so
+  INIT shows where each will go at START: all three to closed. (In HyDrive and the autos,
+  `LaunchGates` now sends the pollen and nectar gates to closed once at INIT, with
+  `launchGatesCloseAtInit` on, so a gate left open is reset before the match.)
 - **Safe range, measured 2026-10-29.** Each launch servo only moves between its closed and
   open spots: nectar closed 0, open 0.267; pollen closed 0.267, open 0 (it faces the other
   way). These are `nectarServoClosed/Open` and `pollenServoClosed/Open`, ready for the

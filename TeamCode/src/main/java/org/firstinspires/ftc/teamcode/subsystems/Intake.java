@@ -13,21 +13,19 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *
  * <p>Controls (operator, gamepad 2):
  * <ul>
- *   <li><b>Left bumper</b>: intake and transfer on. Press again: off. It sits above the
- *       left trigger, which runs the same rollers while held.
- *   <li><b>Left trigger (hold)</b>: intake and transfer on while held, the same as the
- *       bumper. Let go: back to what the bumper says.
- *   <li><b>Square / X (hold)</b>: both run BACKWARD, slower than forward, to spit balls out
+ *   <li><b>Cross / A</b>: intake and transfer on. Press again: off. (The bumpers and
+ *       triggers aim and launch now, see {@link LaunchChoice}.)
+ *   <li><b>Square (hold)</b>: both run BACKWARD, slower than forward, to spit balls out
  *       one at a time when the robot has picked up too many. Let go and they go back to
  *       what they were doing.
  * </ul>
  *
- * <p><b>Launching</b> (driver's right trigger, {@link LaunchGates}): while the gates are
+ * <p><b>Launching</b> (the operator's launch triggers, {@link LaunchGates}): while the gates are
  * still swinging open, the transfer STOPS, even if it was running, so no ball is pushed
  * against a half-open gate (docs/decisions/0034). The intake, if it was running, drops to
  * its launch-feed speed the moment the trigger is pulled. Once the gates are fully open, the intake AND the transfer run forward even if they
- * were off, each at a share of its speed ({@code launchFeedIntakeScale} half,
- * {@code launchFeedTransferScale} 30%), so balls go into the launcher one at a time: the
+ * were off, each at a share of its speed ({@code launchFeedIntakeScale} 80%,
+ * {@code launchFeedTransferScale} 80%), so balls go into the launcher one at a time: the
  * transfer pushes the balls into the launchers, the intake pushes along any ball stuck
  * lower down. Launching wins over the bumper: the feed speed is
  * about the launcher, not the operator (docs/decisions/0037). Square still wins over both:
@@ -37,8 +35,8 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * robot is full. While the operator is intaking, pollen detected for
  * {@code pollenRejectAfterSeconds} (1 s) means one ball too many: the intake runs backward
  * to spit it out while the transfer keeps the rest moving up, for {@code pollenRejectSeconds}
- * (0.75 s). Then the operator's intake and transfer stop, and stay stopped until the left
- * bumper and the left trigger are both let go. Launching and square are never interrupted.
+ * (0.75 s). Then the operator's intake and transfer stop, and stay stopped until cross is
+ * let go. Launching and square are never interrupted.
  *
  * <p>Each roller has its own speed in BotProperties: {@code intakeRpm}, {@code transferRpm},
  * and the backward ones {@code intakeReverseRpm}, {@code transferReverseRpm}. They are read
@@ -57,9 +55,9 @@ public class Intake implements Subsystem {
     private boolean mOn = false;
     /** Tool: Pose Recorder's blip, this loop only. 0 = none. */
     private double mBlipRpm = 0;
-    private boolean mTriggerHeld = false;
     private boolean mReverseHeld = false;
-    private boolean mBumperHeld = false;
+    /** The on / off button (cross), held right now. */
+    private boolean mOnOffHeld = false;
 
     /** null when there is no pollen sensor: then nothing is ever rejected. */
     private final PollenSensor mPollenSensor;
@@ -69,7 +67,7 @@ public class Intake implements Subsystem {
     /** true while the intake is spitting an extra ball out. */
     private boolean mRejecting = false;
     private final ElapsedTime mRejectTimer = new ElapsedTime();
-    /** true after a reject, until the operator lets go of both intake buttons. */
+    /** true after a reject, until the operator lets go of cross. */
     private boolean mBlocked = false;
     /**
      * false: the intake roller stays off and only the transfer runs, whatever else says.
@@ -107,17 +105,15 @@ public class Intake implements Subsystem {
 
     @Override
     public void HandleUserInput() {
-        mBumperHeld = mGamepad.left_bumper;
-        mOnOffButton.In(mBumperHeld);
+        mOnOffHeld = mGamepad.cross;
+        mOnOffButton.In(mOnOffHeld);
         if (mOnOffButton.Out()) {
             mOnOffButton.Used();
-            // After a reject the bumper does nothing until it has been let go.
+            // After a reject the button does nothing until it has been let go.
             if (!mBlocked) {
                 mOn = !mOn;
             }
         }
-        // Held triggers need no debounce: on the moment it is pulled, off when let go.
-        mTriggerHeld = mGamepad.left_trigger > mProperties.trgBtnThresh;
         // Reverse only while held: no debounce, so it stops the moment it is let go.
         mReverseHeld = mGamepad.square;
     }
@@ -161,7 +157,7 @@ public class Intake implements Subsystem {
             mIntake.SetRpm(-mProperties.intakeReverseRpm);
             mTransfer.SetRpm(mProperties.transferRpm);
         } else if (IsRunning()) {
-            // Intaking on purpose (the left bumper or trigger, or an auto): full speed.
+            // Intaking on purpose (cross, or an auto): full speed.
             mIntake.SetRpm(IntakeRoller(mProperties.intakeRpm));
             mTransfer.SetRpm(mProperties.transferRpm);
         } else {
@@ -178,7 +174,7 @@ public class Intake implements Subsystem {
     /**
      * Auto-reject: count how long pollen has been detected while intaking, start a reject
      * past pollenRejectAfterSeconds, end it after pollenRejectSeconds, and lift the block
-     * once the operator lets go of both intake buttons.
+     * once the operator lets go of the intake button.
      */
     private void WatchForAnExtraBall() {
         if (mRejecting && mRejectTimer.seconds() >= mProperties.pollenRejectSeconds) {
@@ -186,7 +182,7 @@ public class Intake implements Subsystem {
             mOn = false;
             mBlocked = true;
         }
-        if (mBlocked && !mBumperHeld && !mTriggerHeld) {
+        if (mBlocked && !mOnOffHeld) {
             mBlocked = false;
         }
         // Only while the intake roller itself is picking balls up: with it off (an auto between
@@ -211,11 +207,11 @@ public class Intake implements Subsystem {
     }
 
     /**
-     * true when the left bumper has them on, or the left trigger is held, and no reject has
-     * stopped them (they stay stopped until both buttons are let go).
+     * true when cross (or an auto) has them on, and no reject has stopped them (they stay
+     * stopped until cross is let go).
      */
     public boolean IsRunning() {
-        return (mOn || mTriggerHeld) && !mBlocked;
+        return mOn && !mBlocked;
     }
 
     /** The intake roller's forward speed, or 0 while the roller is switched off. */
@@ -285,13 +281,13 @@ public class Intake implements Subsystem {
         } else if (mRejecting) {
             state = "FULL: spitting an extra ball out";
         } else if (mBlocked) {
-            state = "STOPPED after a reject: let go of left bumper and left trigger";
+            state = "STOPPED after a reject: let go of cross";
         } else if (IsRunning() && !mIntakeRollerOn) {
             state = "transfer ON, intake roller off";
         } else if (IsRunning()) {
             state = "ON, full speed";
         }
-        mOp.mTelemetry.addData("Intake + transfer (gamepad 2: left bumper on/off, hold left trigger, hold square reverse)", state);
+        mOp.mTelemetry.addData("Intake + transfer (gamepad 2: cross on/off, hold square reverse)", state);
         mIntake.ShowStatus();
         mTransfer.ShowStatus();
     }

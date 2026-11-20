@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,6 +20,7 @@ import java.util.List;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.TagPosition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,15 +73,15 @@ class TestLogTest {
     void offDoesNothing() {
         log.Process();
         assertNull(log.GetFile());
-        verify(telemetry, never()).addData(eq("T launch"), any(Object.class));
+        verify(telemetry, never()).addData(eq("T launch_pollen"), any(Object.class));
     }
 
     @Test
     @DisplayName("testLog on: column names first, then one line per loop with the buttons and numbers")
     void writesLines() throws Exception {
         properties.testLog = true;
-        driver.right_trigger = 1;   // launch
-        driver.right_bumper = true; // aim
+        operator.left_trigger = 1;   // launch pollen
+        operator.right_bumper = true; // aim nectar
         when(vision.SeesTag()).thenReturn(true);
         when(vision.GetRange()).thenReturn(124.5);
         when(transfer.GetTargetRpm()).thenReturn(690.0);
@@ -92,8 +94,14 @@ class TestLogTest {
         List<String> names = Arrays.asList(lines.get(0).split(",", -1));
         List<String> row = Arrays.asList(lines.get(1).split(",", -1));
         assertEquals(names.size(), row.size());
-        assertEquals("1", row.get(names.indexOf("launch")));
-        assertEquals("1", row.get(names.indexOf("aim")));
+        assertEquals("1", row.get(names.indexOf("launch_pollen")));
+        assertEquals("0", row.get(names.indexOf("launch_nectar")));
+        assertEquals("0", row.get(names.indexOf("aim_pollen")));
+        assertEquals("1", row.get(names.indexOf("aim_nectar")));
+        // The old layout's columns are gone.
+        for (String old : new String[] {"launch", "aim", "intake_hold", "steady_button", "lock_override"}) {
+            assertFalse(names.contains(old), "old column still there: " + old);
+        }
         assertEquals("0", row.get(names.indexOf("slow")));
         assertEquals("124.500", row.get(names.indexOf("range_in")));
         assertEquals("690", row.get(names.indexOf("transfer_target_rpm")));
@@ -104,13 +112,19 @@ class TestLogTest {
     @DisplayName("testTelemetry on: one number per line, buttons 0 or 1, so the dashboard can graph them")
     void showsOnScreen() {
         properties.testTelemetry = true;
-        driver.right_trigger = 1;
+        operator.right_trigger = 1;
         operator.left_bumper = true;
+        operator.cross = true;
+        driver.right_trigger = 1;   // does nothing now: not logged
         when(transfer.GetPower()).thenReturn(0.6);
         log.Process();
-        verify(telemetry).addData("T launch", 1.0);
-        verify(telemetry).addData("T aim", 0.0);
+        verify(telemetry).addData("T launch_nectar", 1.0);
+        verify(telemetry).addData("T launch_pollen", 0.0);
+        verify(telemetry).addData("T aim_pollen", 1.0);
+        verify(telemetry).addData("T aim_nectar", 0.0);
         verify(telemetry).addData("T intake_toggle", 1.0);
+        verify(telemetry, never()).addData(eq("T launch"), any(Object.class));
+        verify(telemetry, never()).addData(eq("T aim"), any(Object.class));
         verify(telemetry).addData("T transfer_power", 0.6);
         // No tag: the tilt is unknown (NaN), which a graph can't draw, so it is left out.
         verify(telemetry, never()).addData(eq("T tag_tilt_deg"), any(Object.class));
@@ -124,15 +138,16 @@ class TestLogTest {
     }
 
     @Test
-    @DisplayName("a shot: the speed dips with the gates open, comes back; the driver marks it made")
+    @DisplayName("a shot: the pollen speed dips with the pollen gate open, comes back; the driver marks it made")
     void shotAndMark() {
         properties.testTelemetry = true;
         properties.tuningMarks = true;
         when(launcher.GetPollenTargetRpm()).thenReturn(3000.0);
         when(gates.IsOpen()).thenReturn(true);
+        when(gates.IsPollenOpen()).thenReturn(true);
         when(vision.SeesTag()).thenReturn(true);
         when(vision.GetGroupRange()).thenReturn(126.0);
-        when(vision.GetPosition()).thenReturn(new org.firstinspires.ftc.teamcode.objects.TagPosition(
+        when(vision.GetPosition()).thenReturn(new TagPosition(
                 -14, 120, 6, Double.NaN, Double.NaN, Double.NaN, 0));
         when(launcher.GetPollenMeasuredRpm()).thenReturn(2990.0);
         loop();

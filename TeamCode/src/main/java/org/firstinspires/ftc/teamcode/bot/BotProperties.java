@@ -264,7 +264,7 @@ public class BotProperties {
      */
     public double pollenLauncherRpm = 3100;
     /** Nectar launcher target speed. D-pad right / left on gamepad 2 changes it. */
-    public double nectarLauncherRpm = 0;
+    public double nectarLauncherRpm = 3100;
     /** How much one D-pad press changes a launcher's target speed (or its trim, below). */
     public double launcherRpmStep = 25;
 
@@ -278,7 +278,10 @@ public class BotProperties {
     // came down 100 to 3225 the same day. 2026-11-05: the whole curve up 50, 2800 to 3275.
     // Later: near shots overshot a little, so the near end came down 30 to 2770; the far end
     // stayed 3275 (about -21 at 120 in, -11 at 130 in, 0 at 140 in). Then the whole curve
-    // came down another 35: 2735 to 3240.
+    // came down another 35: 2735 to 3240. Then the whole curve back up 25: 2760 to 3265.
+    // Then from the robot: 120 in down 80, 130 in down 100, 140 in and past down 150. One
+    // curve could not bend that way, so the curve became four measured shots joined by
+    // straight lines (launchMid1 and launchMid2 added; launchCurve removed).
 
     /**
      * true: the pollen launcher's target follows the distance curve below whenever a tag of
@@ -286,32 +289,39 @@ public class BotProperties {
      * the D-pad and the dashboard set pollenLauncherRpm directly, as before.
      */
     public boolean launcherRangeTuning = true;
-    // The speed is a curve through two measured shots, stepped every launchBandIn inches.
-    // A ball flies in an arc, so each step out needs a little more than the one before:
+    // The speed comes from four measured shots, near to far, joined by straight lines and
+    // stepped every launchBandIn inches:
     //
-    //     rpm = near + (far - near) x ((band start - nearIn) / (farIn - nearIn)) ^ launchCurve
+    //     110 in 2760   120 in 2831   130 in 2983   140 in 3115
+    //     124 in = 2831 + (2983 - 2831) x 4/10 = 2892
     //
-    // launchCurve 1 is a straight line; higher bends harder toward the far end. 1.1, a gentle
-    // bend: 2735 at 110, 2886 at 120, 3058 at 130, 3240 at 140 (coach, 2026-11-04, up 50
-    // on 2026-11-05, near end down 30 later, then all down 35; it was 1.25 for a few hours
-    // while the far shot was still 3325).
-    // Nearer than nearIn uses the near speed; farther than farIn uses the far speed.
+    // Nearer than nearIn uses the near speed; farther than farIn uses the far speed. To tune
+    // one distance, change just its RPM: the lines on either side follow. Keep the inches in
+    // order, near to far.
     /** The near measured shot: distance, in inches. */
     public double launchNearIn = 110;
     /**
      * The near measured shot: RPM that scored from there (2900, less 150 for the inertia
-     * wheel, +50 on 2026-11-05, -30 for overshooting up close, -35 with the whole curve).
+     * wheel, +50 on 2026-11-05, -30 for overshooting up close, -35 with the whole curve,
+     * +25 with the whole curve).
      */
-    public double launchNearRpm = 2735;
-    /** The far measured shot: distance, in inches. */
+    public double launchNearRpm = 2760;
+    /** The first middle shot: distance, in inches. */
+    public double launchMid1In = 120;
+    /** The first middle shot: RPM (2911 on the old curve, down 80). */
+    public double launchMid1Rpm = 2831;
+    /** The second middle shot: distance, in inches. */
+    public double launchMid2In = 130;
+    /** The second middle shot: RPM (3083 on the old curve, down 100). */
+    public double launchMid2Rpm = 2983;
+    /** The far measured shot: distance, in inches. Every distance past it uses its speed. */
     public double launchFarIn = 140;
     /**
-     * The far measured shot: RPM that scored from there (3300 measured, +25 on 2026-11-03,
-     * -100 on 2026-11-04, +50 on 2026-11-05, -35 with the whole curve).
+     * The far measured shot: RPM that scored from there and past it (3300 measured, +25 on
+     * 2026-11-03, -100 on 2026-11-04, +50 on 2026-11-05, -35 with the whole curve, +25 with
+     * the whole curve, -150 from 145 in on the robot).
      */
-    public double launchFarRpm = 3240;
-    /** How bent the curve is. 1 = a straight line, 2 = a parabola. 1.1 since 2026-11-04. */
-    public double launchCurve = 1.1;
+    public double launchFarRpm = 3115;
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
     public double launchBandIn = 2;
     /**
@@ -365,8 +375,8 @@ public class BotProperties {
     // launchSettleHoldSeconds. If it never does, they open anyway after
     // launchSettleTimeoutSeconds. While driving, the distance still keeps the speed close.
     /**
-     * TeleOp: true (today) = the driver's launch trigger locks the speed and waits for it to
-     * settle before the gates open. false = the gates open as soon as the camera lock allows.
+     * TeleOp: true (today) = the operator's pollen launch trigger locks the pollen speed and
+     * waits for it to settle before the pollen gate opens. Nectar never waits. false = the gates open as soon as the camera lock allows.
      */
     public boolean teleopLaunchSettles = true;
     /**
@@ -380,10 +390,13 @@ public class BotProperties {
      * the turn to the hive has only just stopped, so the wheel needs a moment to get there.
      */
     public boolean autoTagLaunchSettles = true;
-    /** Settled means within this many RPM of the locked target, either way. 25 to 50 is sensible. */
-    public double launchSettleBandRpm = 40;
-    /** ...for this long without a break, in seconds. 0.15 = three speed readings (50 ms each). */
-    public double launchSettleHoldSeconds = 0.15;
+    /** Settled means within this many RPM of the locked target, either way. 80 since the robot (was 40). */
+    public double launchSettleBandRpm = 80;
+    /**
+     * ...for this long without a break, in seconds. 0.05 = one speed reading (50 ms each),
+     * so one reading in the band is enough (was 0.15, three readings).
+     */
+    public double launchSettleHoldSeconds = 0.05;
     /** The most a launch waits to settle before the gates open anyway, in seconds. */
     public double launchSettleTimeoutSeconds = 1.0;
     /**
@@ -423,7 +436,7 @@ public class BotProperties {
     // normal way (FORWARD). If the screen says a launcher spins the wrong way and stops it,
     // flip its setting.
     /** true: the nectar launcher runs REVERSE. It is mounted the other way on this bot (coach, 2026-10-31). */
-    public boolean nectarLauncherReversed = true;
+    public boolean nectarLauncherReversed = false;
     /** true: the pollen launcher runs REVERSE. false: the normal way, FORWARD. */
     public boolean pollenLauncherReversed = true;
     /** true: the intake spins the other way. CHECK on the robot: it should pull balls in. */
@@ -449,13 +462,13 @@ public class BotProperties {
     // While a launch is being fed (the gates fully open), each roller runs at a fraction of
     // its speed above, so balls go into the launcher one at a time at a steady rate.
     // Intaking on purpose is always 100%.
-    /** The intake's share while feeding a launch: 0.5 = half (coach, 2026-11-02). */
-    public double launchFeedIntakeScale = 0.7;
+    /** The intake's share while feeding a launch: 0.8 (was 0.5, then 0.7, then 1.0). */
+    public double launchFeedIntakeScale = 0.8;
     /**
-     * The transfer's share while feeding a launch: 0.3. At half the balls ran into each
-     * other at the launcher (coach, 2026-11-03).
+     * The transfer's share while feeding a launch: 0.8. Was 0.3 (at half the balls ran into
+     * each other at the launcher, coach, 2026-11-03), then 0.5, then 0.7.
      */
-    public double launchFeedTransferScale = 0.5;
+    public double launchFeedTransferScale = 0.8;
     // Reverse is SLOWER than forward on purpose: at full speed one tap of square emptied the
     // robot. About a third of forward lets the operator let out one ball at a time (coach,
     // 2026-11-02). Both are on the dashboard's Intake group: tune them there, then write the
@@ -470,9 +483,12 @@ public class BotProperties {
     // Auto-reject (docs/decisions/0040): the pollen switch sits where a ball only waits once
     // the robot is full. If the operator is intaking and pollen stays detected that long, the
     // intake spits the extra ball back out while the transfer keeps the rest moving up. Then
-    // the operator's intake and transfer stop until both their buttons are let go.
-    /** true: reject an extra ball by itself. false: the operator watches for it. */
-    public boolean pollenAutoReject = true;
+    // the operator's intake and transfer stop until cross is let go.
+    /**
+     * true: reject an extra ball by itself. false: never auto-reject; the operator watches
+     * for an extra ball and spits it out with square. Also on the dashboard's Intake group.
+     */
+    public boolean pollenAutoReject = false;
     /** Pollen must stay detected this long while intaking, in seconds, before a reject. */
     public double pollenRejectAfterSeconds = 0.75;
     /** How long the intake runs backward (transfer forward) to spit the ball out, in seconds. */
@@ -618,14 +634,16 @@ public class BotProperties {
     // The FLOWER step (docs/decisions/0042): from the spot it was recorded at, the robot backs
     // up, swings the extractor out, works the flower with short strokes forward and back,
     // and swings the extractor in, with the intake running the whole time. Every move is
-    // along the way the robot faces. Today: back 6, settle, out, forward 8, hold 1 s,
-    // back 8, in. The robot ends 6 inches behind the recorded spot, and is 2 inches PAST
+    // along the way the robot faces. Today: back 7, settle, out, forward 9, hold 1 s,
+    // back 9, in. The robot ends 7 inches behind the recorded spot, and is 2 inches PAST
     // it at the flower. History: back 9 (coach, 2026-11-03: 6 was too close for the long
     // arm, and it went out before the robot had stopped). Then the extractor was cut about
     // 3 inches shorter, so the whole step moved 3 inches forward: back 9 became back 6. The
     // short arm's tip ends up where the long arm's did, both at arm-out and at the flower.
+    // Then back 7 with strokes of 9: one more inch of clearance for the arm to swing out,
+    // and the same reach into the flower as back 6 with strokes of 8.
     /** How far the robot backs up from the recorded spot before the extractor goes out, in inches. */
-    public double autoFlowerBackIn = 6;
+    public double autoFlowerBackIn = 7;
     /**
      * After the back-up, the robot holds the backed-up spot this long, in seconds, so it has
      * stopped before the arm swings out.
@@ -633,9 +651,10 @@ public class BotProperties {
     public double autoFlowerSettleSeconds = 0.3;
     /**
      * How long one stroke forward or back is, in inches. 8: one inch further into the flower
-     * than the first 7 (coach, 2026-11-03).
+     * than the first 7 (coach, 2026-11-03). 9: matches the extra inch of back-up, so the
+     * robot still reaches 2 inches past the recorded spot and ends autoFlowerBackIn behind it.
      */
-    public double autoFlowerStrokeIn = 8;
+    public double autoFlowerStrokeIn = 9;
     /** At the end of each forward stroke the robot holds still this long, in seconds, to extract. */
     public double autoFlowerDwellSeconds = 1;
     /**
@@ -710,21 +729,59 @@ public class BotProperties {
     public double aimKP = 0.02;
     /** Aim assist never turns harder than this, either way. */
     public double aimMaxRotate = 0.6;
-    /** Within this many degrees of center, aim assist stops turning. Stops the wobble. */
-    public double aimDoneDegrees = 1.0;
     /**
-     * How many degrees off the hive's middle to aim, depending on which side of the hive the
-     * robot stands (docs/decisions/0044). Standing LEFT of the hive, the robot turns this much
-     * further RIGHT; standing RIGHT of it, this much further LEFT; near straight in front
-     * (within aimSideCenterDeg), no offset (coach, 2026-11-04). Was one fixed 1-degree turn
-     * right, for the pollen launcher sitting left of the camera (2026-11-03), until shots from
-     * the right side missed. Used by aim assist, the launch lock and the autos' aim.
+     * Within this many degrees of the aim spot, aim assist stops turning. Stops the wobble.
+     * 0.5 (was 1.0): the launcher offset below is only about 1 degree, so a 1-degree window
+     * could swallow it.
      */
-    public double aimHiveBearingDeg = 2.0;
+    public double aimDoneDegrees = 0.5;
+
+    // Where the hive's middle should sit in the camera once aimed is TWO parts added together
+    // (LaunchChoice.AimAtDeg):
+    //
+    //   1. Launcher offset: each launcher is launcherSideOffsetIn (2 in) to one side of the
+    //      camera, pointing the same way, so a shot lands 2 in to that side of where the
+    //      camera points. To fix that, the hive should sit toward the launcher's side by
+    //      atan(2 / range): 1.04 deg at 110 in, 0.79 deg at 145 in. Pollen one way, nectar the
+    //      other. It never flips with the side the robot stands on. The camera's 45-degree
+    //      tilt cancels out of this, and so do its height and how far back it sits.
+    //   2. Side offset (aimHiveBearingDeg): depends on which side of the hive the robot
+    //      stands, the same for both launchers. Probably the hive's opening sitting deeper than
+    //      its tags, so it looks shifted when seen from an angle. Tune on the field.
+    //
+    //     today, robot LEFT of the hive:  pollen +1.0 + 1.0 = +2.0   nectar -1.0 + 1.0 = 0.0
+    //     straight in front:              pollen +1.0               nectar -1.0
+    //     robot RIGHT of the hive:        pollen +1.0 - 1.0 =  0.0   nectar -1.0 - 1.0 = -2.0
+    //
+    // History: one fixed 1-degree turn right for pollen (2026-11-03); then 2 degrees flipping
+    // with the side (2026-11-04), which also flipped the launcher offset on the right side,
+    // the wrong way; split into the two parts above from the measured launcher spacing.
+
     /**
-     * true: the driver's launch trigger also turns the robot to face the middle of our hive's
-     * tags while it is held, the way an auto aims before LAUNCH_WHEN_TAG_SEEN (coach,
-     * 2026-11-02). false: the trigger only opens the gates; the right bumper still aims.
+     * Side offset, in degrees, the same for both launchers (docs/decisions/0044). Standing
+     * LEFT of the hive, the hive should sit this much further LEFT in the camera (the robot
+     * turns further right); standing RIGHT, further RIGHT; near straight in front (within
+     * aimSideCenterDeg), none. 1.0 is a starting point (was 2.0, when it also had to carry
+     * the launcher offset): TUNE from each side at one distance.
+     */
+    public double aimHiveBearingDeg = 1.0;
+    /**
+     * How far each launcher's center is to the side of the camera's center, in inches (both
+     * measured at about 2). The launcher offset is atan(this / range). 0 turns it off.
+     */
+    public double launcherSideOffsetIn = 2.0;
+    /** The launcher offset, in degrees, when the camera has no distance to the tag: about 120 in's worth. */
+    public double launcherOffsetNoRangeDeg = 0.9;
+    /**
+     * true: the POLLEN launcher is LEFT of the camera (as the robot faces forward) and nectar
+     * is right. CHECK ON THE ROBOT: if it is the other way round, set this false.
+     */
+    public boolean pollenLeftOfCamera = true;
+    /**
+     * true: each of the operator's launch triggers also turns the robot to face the middle of
+     * our hive's tags, offset for its launcher, while it is held, the way an auto aims before
+     * LAUNCH_WHEN_TAG_SEEN (coach, 2026-11-02). false: the triggers only open the gates; the
+     * bumpers still aim.
      */
     public boolean launchTriggerAims = true;
     /**
@@ -740,22 +797,34 @@ public class BotProperties {
      */
     public boolean aimSideReversed = false;
     /**
-     * true: the driver's launch trigger only opens the gates while the camera is LOCKED on
-     * our hive: a tag of ours in view and the hive's middle within aimDoneDegrees. Pulled
-     * with no tag, the gates stay shut and the driver's gamepad buzzes, so a wild launch is
-     * caught (coach, 2026-11-03). The operator's right trigger, held, overrides the lock for
-     * a camera that has died. false: the trigger launches whatever the camera sees.
+     * true: a launch trigger only opens its gate while the camera is LOCKED on our hive for
+     * that launcher: a tag of ours in view and the hive's middle within aimDoneDegrees of its
+     * aim. Pulled with no tag, the gate stays shut and the operator's gamepad buzzes, so a
+     * wild launch is caught (coach, 2026-11-03). There is no override button: turn this off
+     * if the camera has died. false: the triggers launch whatever the camera sees.
      * OFF since 2026-11-03 at the coach's request; tick it on the dashboard's Launcher group
      * to try it again.
      */
     public boolean launchNeedsLock = false;
-    /** How long the driver's gamepad buzzes when the trigger is pulled with no lock, in milliseconds. */
+    /**
+     * true: at INIT the pollen and nectar launch gates are sent to closed once, so a gate left
+     * open by the last OpMode or by hand is reset before the match. false: they don't move
+     * until START (docs/decisions/0020, as before), so close them by hand.
+     */
+    public boolean launchGatesCloseAtInit = true;
+    /** How long the operator's gamepad buzzes when a trigger is pulled with no lock, in milliseconds. */
     public int launchNoLockRumbleMs = 300;
 
     // Arc around the hive (docs/decisions/0039): while aiming, D-pad left / right slide the
     // robot sideways. Aim keeps the nose on the hive, and a little drive keeps the distance
     // the arc started at, so the robot circles the hive instead of sliding away from it.
     // Without the aim button the D-pad does nothing.
+    /**
+     * true: D-pad left / right while aiming arcs around the hive. false: the D-pad does
+     * nothing while aiming; aim still turns the nose to the hive. Tick it on the dashboard's
+     * Drive group to try it again.
+     */
+    public boolean aimArc = false;
     /** How hard the robot strafes while arcing. 0.4 is a brisk walk. */
     public double arcStrafePower = 0.4;
     /**
@@ -766,16 +835,37 @@ public class BotProperties {
     /** The distance correction never drives harder than this, either way. */
     public double arcMaxDrive = 0.4;
 
+    // Hold position while launching: while the driver holds the launch trigger, the robot
+    // remembers where it is and pushes back to that spot if it gets bumped. Aim (and the
+    // wiggle) still own the heading; this only holds x and y. Needs the Pinpoint: with the
+    // Control Hub IMU there is no position, and nothing is held. An experiment: CHECK every
+    // number with the wheels off the ground first, then on the field with a gentle shove.
+    /** true: the launch trigger holds the robot on its spot. Tick it on the dashboard's Drive group. */
+    public boolean launchHoldsPosition = true;
+    /** Push power per inch off the spot. 0.05 x 4 inches = 0.2 power. */
+    public double launchHoldKP = 0.05;
+    /** The push never goes harder than this, either way. */
+    public double launchHoldMaxPower = 0.4;
+    /** This close to the spot counts as on it, so the robot doesn't buzz back and forth. Inches. */
+    public double launchHoldDoneIn = 0.5;
+    /**
+     * Pushed farther than this, the hold gives up until the trigger is let go. A safety net:
+     * a pod plugged in backward would make the hold push the wrong way. Inches.
+     */
+    public double launchHoldGiveUpIn = 18;
+    /** A drive or strafe stick past this means the driver is moving on purpose: no hold, and a new spot once let go. */
+    public double launchHoldStickDeadband = 0.1;
+
     // Launch wiggle (docs/decisions/0045): while launchWiggle is on and the driver holds the
     // launch trigger, the robot swings wiggleDeg left, then right, a side per ball, so balls
     // that leave one after another don't run into each other. It starts once aim has settled
     // (or no tag is in view). The heading comes from the IMU (Pinpoint), not the camera. An
     // experiment (coach, 2026-11-04): CHECK every number.
     /**
-     * true (since 2026-11-05): every launch wiggles. Square on gamepad 1 turns it off and on
-     * again during a match (one rumble on, two off). Was: hold square with the trigger.
+     * false: launches don't wiggle at START. Square on gamepad 1 turns it on and off during
+     * a match (one rumble on, two off). It was on at START from 2026-11-05 until turned off.
      */
-    public boolean launchWiggle = true;
+    public boolean launchWiggle = false;
     /** How far either side of where the wiggle started, in degrees. */
     public double wiggleDeg = 1.5;
     /**
@@ -869,13 +959,27 @@ public class BotProperties {
     public int underglowFirstLed = 0;
     public int underglowLastLed = 35;
     /**
-     * How the Prism counts the end of a run. true: it wants one past the last LED, so
-     * "0 to 35" is sent as start 0, stop 36 (the guide's example: start 0, stop 10 for ten
-     * LEDs). CHECK on the strip: if every run lights one LED too few, set this false.
+     * How the Prism counts the end of a run. false (since the INIT snake): the stop IS the
+     * last LED, both lit, so "0 to 35" is sent as start 0, stop 35. true: one past the last,
+     * stop 36 (our first reading of the guide). With true the snake's one pollen LED lit two
+     * LEDs on the robot, so the Prism counts the stop LED as lit; the whole-strip runs hid it,
+     * since LED 36 isn't there. CHECK with Test: Light Strip: each color should cover 6 LEDs.
+     * 5 there = set this back to true.
      */
-    public boolean prismStopIsOnePastLast = true;
+    public boolean prismStopIsOnePastLast = false;
     /** Strip brightness, 0 to 100. Start low; 100 is very bright and warm. */
     public int stripBrightness = 50;
+    // Snake during INIT: just for fun, nobody plays it. The snake is the alliance color, so
+    // the drive team can still check the alliance before START. It slides along the
+    // underglow LEDs; a yellow pollen LED appears somewhere, and each time the snake eats it
+    // the snake grows one LED longer. Once it fills the strip it starts over short. At START
+    // every layer is cleared and the strip goes back to the normal underglow and pollen.
+    /** true: play snake on the strip during INIT. false: the plain alliance underglow. */
+    public boolean stripInitSnake = true;
+    /** How long between snake steps, in seconds. Smaller is faster. */
+    public double snakeStepSeconds = 0.15;
+    /** How many LEDs long the snake is at the start, and after it fills the strip. */
+    public int snakeStartLength = 3;
 
     // ---- Pollen sensor (docs/decisions/0026, changed by 0033, 0034, 0035) ------------------
     // While pollen is detected, every layer of the strip is cleared and the LEDs below turn

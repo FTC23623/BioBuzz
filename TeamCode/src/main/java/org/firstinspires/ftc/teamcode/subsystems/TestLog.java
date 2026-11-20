@@ -155,7 +155,8 @@ public class TestLog implements Subsystem {
             return;
         }
         boolean wasInShot = mShots.InShot();
-        boolean open = mLaunchGates != null && mLaunchGates.IsOpen();
+        // Only the pollen gate: this watches the pollen wheel, and a nectar launch doesn't dip it.
+        boolean open = mLaunchGates != null && mLaunchGates.IsPollenOpen();
         ShotTracker.Shot shot = mShots.Update(System.nanoTime() / 1e9, open,
                 mLauncher.GetPollenTargetRpm(), mLauncher.GetPollenMeasuredRpm());
         if (!wasInShot && mShots.InShot()) {
@@ -204,8 +205,6 @@ public class TestLog implements Subsystem {
 
         // Gamepad 1, the driver.
         Gamepad driver = mOp.mDriverGamepad;
-        Add("aim", driver.right_bumper);
-        Add("launch", driver.right_trigger > mProperties.trgBtnThresh);
         Add("slow", driver.left_bumper);
         Add("drift", driver.left_trigger > mProperties.trgBtnThresh);
         Add("arc_left", driver.dpad_left);
@@ -214,15 +213,16 @@ public class TestLog implements Subsystem {
         Add("reset_forward", driver.circle);
         // Gamepad 2, the operator.
         Gamepad operator = mOp.mOperatorGamepad;
-        Add("intake_toggle", operator.left_bumper);
-        Add("intake_hold", operator.left_trigger > mProperties.trgBtnThresh);
+        Add("aim_pollen", operator.left_bumper);
+        Add("launch_pollen", operator.left_trigger > mProperties.trgBtnThresh);
+        Add("aim_nectar", operator.right_bumper);
+        Add("launch_nectar", operator.right_trigger > mProperties.trgBtnThresh);
+        Add("intake_toggle", operator.cross);
         Add("reverse", operator.square);
         Add("extractor", operator.triangle);
         Add("trim_up", operator.dpad_up);
         Add("trim_down", operator.dpad_down);
-        Add("steady_button", operator.cross);
         Add("always_track_button", operator.circle);
-        Add("lock_override", operator.right_trigger > mProperties.trgBtnThresh);
         // What those buttons switch.
         Add("wiggle_on", mProperties.launchWiggle);
         Add("steady_on", mProperties.steadyRange);

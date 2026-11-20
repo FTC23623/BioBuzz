@@ -1,8 +1,14 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Random;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.drivers.PrismLedDriver;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
+import org.firstinspires.ftc.teamcode.objects.StripSnake;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 import org.firstinspires.ftc.teamcode.types.Alliance;
 
@@ -34,6 +40,12 @@ import org.firstinspires.ftc.teamcode.types.Alliance;
  * flicker. Half a second after the last ball leaves, every layer is cleared again and the
  * alliance underglow is drawn back.
  *
+ * <p><b>Snake during INIT</b> ({@code stripInitSnake}): instead of the plain underglow, an
+ * alliance-colored snake slides along the underglow LEDs by itself and grows each time it
+ * eats a yellow pollen LED ({@link StripSnake}). It is still the alliance color, so the
+ * drive team can check it. The moment START is pressed, every layer is cleared and the
+ * snake is gone for good: the normal underglow and pollen take over.
+ *
  * <p><b>No gamepad.</b> The strip reads nothing from the drivers: the underglow and the
  * pollen yellow run by themselves. Gamepad 1's D-pad used to paint demo colors here; since
  * docs/decisions/0039 the drive uses it to arc around the hive. {@code Test: Light Strip}
@@ -50,6 +62,12 @@ public class LightStrip implements Subsystem {
     static final int ALLIANCE_LAYER = 1;
     /** The pollen LEDs' layer: yellow over the whole strip while the pollen sensor is pressed. */
     static final int POLLEN_LAYER = 2;
+    /** INIT snake: its body, or the part from the tail to the end of the strip when it wraps. */
+    static final int SNAKE_LAYER = 3;
+    /** INIT snake: the part from the start of the strip to the head, only while it wraps. */
+    static final int SNAKE_WRAP_LAYER = 4;
+    /** INIT snake: the one yellow pollen LED it is chasing. */
+    static final int SNAKE_POLLEN_LAYER = 5;
 
     private final HydraOpMode mOp;
     private final BotProperties mProperties;
@@ -70,6 +88,20 @@ public class LightStrip implements Subsystem {
      * drive team to check. true from the first loop after START.
      */
     private boolean mMatchStarted = false;
+    /**
+     * What each layer is lit with now (color and brightness packed in one number), or -1 for
+     * cleared. A run in the same color only moves its LEDs, so nothing blinks.
+     */
+    private final int[] mLayerLit = NewLayerLit();
+    /** The first LED each lit layer's run starts on, so a move can shrink before it grows. */
+    private final int[] mLayerFirst = new int[PrismLedDriver.LAYERS];
+    /** The INIT snake. null when it isn't playing. */
+    private StripSnake mSnake = null;
+    private final ElapsedTime mSnakeTimer = new ElapsedTime();
+    /** true while the snake's second run (SNAKE_WRAP_LAYER) is lit, so it is cleared once. */
+    private boolean mSnakeWrapDrawn = false;
+    /** The LED the pollen was last drawn on, so it is sent only when it moves. -1 = none. */
+    private int mSnakePollenDrawn = -1;
 
     public LightStrip(HydraOpMode op, BotProperties properties, PollenSensor pollenSensor) {
         mOp = op;
@@ -115,16 +147,44 @@ public class LightStrip implements Subsystem {
      */
     void ClearEverything() {
         for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
-            mStrip.ClearLayer(layer);
+            ClearLayer(layer);
         }
         mAllianceShown = null;
         mPollenShown = false;
         mShowing = "cleared";
     }
 
-    /** One color on LEDs first to last (both lit, counted from 0), on one layer. */
+    /**
+     * One color on LEDs first to last (both lit, counted from 0), on one layer. If the layer
+     * already shows this color, only its LEDs move: no new color, so no flash.
+     */
     private void Run(int layer, int first, int last, int red, int green, int blue) {
+        int lit = (mProperties.stripBrightness << 24) | (red << 16) | (green << 8) | blue;
+        if (mLayerLit[layer] == lit) {
+            // Moving: send the end that shrinks the run first. The Prism draws between the two
+            // messages, so the other order stretched it for a moment across every LED between
+            // the old spot and the new one (a long yellow streak when the snake's pollen jumped).
+            boolean startFirst = first > mLayerFirst[layer];
+            mStrip.MoveRun(layer, first, PrismStop(last), startFirst);
+            mLayerFirst[layer] = first;
+            return;
+        }
         mStrip.SolidColor(layer, first, PrismStop(last), mProperties.stripBrightness, red, green, blue);
+        mLayerLit[layer] = lit;
+        mLayerFirst[layer] = first;
+    }
+
+    /** A layer dark, and remembered as dark, so the next Run sends its color fresh. */
+    private void ClearLayer(int layer) {
+        mStrip.ClearLayer(layer);
+        mLayerLit[layer] = -1;
+    }
+
+    /** Every layer remembered as cleared. */
+    private static int[] NewLayerLit() {
+        int[] lit = new int[PrismLedDriver.LAYERS];
+        Arrays.fill(lit, -1);
+        return lit;
     }
 
     /** The "stop" number the Prism wants for a run that ends on this LED. */
@@ -150,7 +210,7 @@ public class LightStrip implements Subsystem {
             Run(ALLIANCE_LAYER, first, last, 0, 0, 255);
             mShowing = "underglow BLUE on LEDs " + first + " to " + last;
         } else {
-            mStrip.ClearLayer(ALLIANCE_LAYER);
+            ClearLayer(ALLIANCE_LAYER);
             mShowing = "no underglow: alliance UNKNOWN";
         }
     }
@@ -196,6 +256,8 @@ public class LightStrip implements Subsystem {
             return;
         }
         mStrip.WriteLayer(LAYER, subRegister, data);
+        // Not a plain run any more: the next Run on this layer sends everything fresh.
+        mLayerLit[LAYER] = -1;
     }
 
     /**
@@ -216,7 +278,82 @@ public class LightStrip implements Subsystem {
         return b & 0xFF;
     }
 
+    /** true while the INIT snake should play: before START, switched on, and a strip to play on. */
+    private boolean SnakeTime() {
+        return !mMatchStarted && mProperties.stripInitSnake && mStrip != null;
+    }
+
+    /** One loop of the INIT snake: start it, or step it when its time is up. */
+    private void SnakeLoop() {
+        if (mSnake == null) {
+            int leds = mProperties.underglowLastLed - mProperties.underglowFirstLed + 1;
+            mSnake = new StripSnake(leds, mProperties.snakeStartLength, new Random());
+            mSnakeTimer.reset();
+            DrawSnake();
+            return;
+        }
+        if (mSnakeTimer.seconds() >= mProperties.snakeStepSeconds) {
+            mSnakeTimer.reset();
+            mSnake.Step();
+            DrawSnake();
+        }
+    }
+
+    /**
+     * The snake in the alliance color (white if not known yet), one run or two when it wraps,
+     * and its pollen LED in yellow. The pollen is sent only when it moves.
+     */
+    private void DrawSnake() {
+        int first = mProperties.underglowFirstLed;
+        int red = 255;
+        int green = 255;
+        int blue = 255;
+        if (mOp.mAlliance == Alliance.RED) {
+            green = 0;
+            blue = 0;
+        } else if (mOp.mAlliance == Alliance.BLUE) {
+            red = 0;
+            green = 0;
+        }
+        int head = first + mSnake.Head();
+        int tail = first + mSnake.Tail();
+        if (mSnake.Wraps()) {
+            Run(SNAKE_LAYER, tail, first + mSnake.Leds() - 1, red, green, blue);
+            Run(SNAKE_WRAP_LAYER, first, head, red, green, blue);
+            mSnakeWrapDrawn = true;
+        } else {
+            Run(SNAKE_LAYER, tail, head, red, green, blue);
+            if (mSnakeWrapDrawn) {
+                ClearLayer(SNAKE_WRAP_LAYER);
+                mSnakeWrapDrawn = false;
+            }
+        }
+        int pollen = first + mSnake.Food();
+        if (pollen != mSnakePollenDrawn) {
+            Run(SNAKE_POLLEN_LAYER, pollen, pollen, 255, 200, 0);
+            mSnakePollenDrawn = pollen;
+        }
+        mShowing = String.format(Locale.US, "INIT snake: %d long, pollen on LED %d (stops at START)",
+                mSnake.Length(), pollen);
+    }
+
+    /** START: the snake is gone for good. Every layer cleared; the underglow is drawn fresh. */
+    private void StopSnake() {
+        mSnake = null;
+        mSnakeWrapDrawn = false;
+        mSnakePollenDrawn = -1;
+        ClearEverything();
+    }
+
     public void ShowStatus() {
+        if (SnakeTime()) {
+            SnakeLoop();
+            ShowTelemetry(false);
+            return;
+        }
+        if (mSnake != null) {
+            StopSnake();
+        }
         // Each is sent only when it changes. Each message to the strip takes loop time.
         boolean pollenSensed = mPollenSensor != null && mPollenSensor.IsDetected();
         // During INIT the alliance color wins, so the drive team sees the right color.
@@ -229,6 +366,11 @@ public class LightStrip implements Subsystem {
         if (!mPollenShown && mOp.mAlliance != mAllianceShown) {
             ShowAlliance();
         }
+        ShowTelemetry(pollenSensed);
+    }
+
+    /** What the strip is showing, and what it said about itself at INIT. */
+    private void ShowTelemetry(boolean pollenSensed) {
         if (mStrip == null || mOp.mQuiet) {
             return;
         }

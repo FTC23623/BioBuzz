@@ -48,8 +48,9 @@ Pinpoint calibrates. Then read the Driver Station top to bottom.
 | `Light strip: showing underglow` and the strip | alliance color | yellow with no ball = `pollenSensorInverted` is wrong. Dark = strip missing from the configuration, or INIT again to clear and redraw it. |
 | Autos: `Paths to drive N` and no `SLOW AUTO` line | N as the auto says | `SLOW AUTO` = the `autoSpeedScale` line is still in that auto. |
 
-By hand, before INIT: launch gates closed and flower extractor stored (servos do not move
-until START, so they stay where they were left), magnet on for red, Safe Mode key out,
+By hand, before INIT: flower extractor stored (it does not move until START, so it stays
+where it was left). The launch gates close by themselves at INIT (`launchGatesCloseAtInit`):
+hands clear of them when INIT is pressed. Magnet on for red, Safe Mode key out,
 fresh battery (the `Battery volts` line after START reads about 13 or more on a full one).
 
 ## 3. Robot configuration names

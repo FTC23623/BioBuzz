@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchChoice;
 
 /**
  * Everything the Pedro autos share. An auto only has to say which paths to drive, in its
@@ -42,7 +43,7 @@ import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
  * from START to the end. The intake roller stays off except during a FLOWER step
  * ({@code autoIntakeRoller}, docs/decisions/0043), or between an INTAKE_ON and an INTAKE_OFF
  * step (docs/decisions/0047). A LAUNCH step opens both launch gates,
- * and the transfer feeds the launch at {@code launchFeedTransferScale} (30%).
+ * and the transfer feeds the launch at {@code launchFeedTransferScale} (80%).
  */
 public abstract class PedroAuto extends LinearOpMode {
 
@@ -90,11 +91,11 @@ public abstract class PedroAuto extends LinearOpMode {
      * Put this in the list after the path to a flower to work it there (docs/decisions/0042).
      * The intake runs, and from where the last path ended the robot:
      * <ol>
-     *   <li>backs up {@code autoFlowerBackIn} (6 in), and holds that spot
+     *   <li>backs up {@code autoFlowerBackIn} (7 in), and holds that spot
      *       {@code autoFlowerSettleSeconds} (0.3 s) so the robot has stopped,
      *   <li>swings the extractor out, and holds still {@code autoExtractorSeconds} (0.5 s)
      *       before the first stroke,
-     *   <li>strokes forward {@code autoFlowerStrokeIn} (8 in), holds there
+     *   <li>strokes forward {@code autoFlowerStrokeIn} (9 in), holds there
      *       {@code autoFlowerDwellSeconds} (1 s), strokes back, {@code autoFlowerPasses} times (1),
      *   <li>swings the extractor in.
      * </ol>
@@ -294,10 +295,10 @@ public abstract class PedroAuto extends LinearOpMode {
                 waitingForTag = false;
                 aiming = true;
                 Pose here = follower.pose();
-                // Aim a little off the hive's middle, by the side the robot stands on
-                // (aimHiveBearingDeg, docs/decisions/0044).
+                // Aim a little off the hive's middle: the side offset for where the robot
+                // stands (docs/decisions/0044) plus the pollen launcher's offset.
                 aimHeading = AimHeading(here.heading(), bot.GetTagGroupBearing(),
-                        bot.GetHiveSideDegrees(), botProperties);
+                        bot.GetHiveSideDegrees(), bot.GetTagRange(), botProperties);
                 follower.hold(new Pose(here.x(), here.y(), aimHeading));
                 stepTimer.reset();
             }
@@ -468,12 +469,13 @@ public abstract class PedroAuto extends LinearOpMode {
     /**
      * The heading that aims the pollen launcher at the hive, from the heading now and the
      * hive's bearing in the camera: turn by the bearing, less where the hive should sit once
-     * aimed for the side the robot stands on ({@link AimAssist#SideOffset}). Radians in and
-     * out, the bearing and side in degrees.
+     * aimed for pollen ({@link LaunchChoice#AimAtDeg}: the side offset plus the pollen
+     * launcher's offset from the camera). Radians in and out, the bearing and side in
+     * degrees, the range in inches (0 = not known).
      */
     static double AimHeading(double headingNow, double hiveBearingDeg, double sideDeg,
-                             BotProperties properties) {
-        double aimAt = AimAssist.SideOffset(sideDeg, properties.aimHiveBearingDeg, properties.aimSideCenterDeg);
+                             double rangeIn, BotProperties properties) {
+        double aimAt = LaunchChoice.POLLEN.AimAtDeg(sideDeg, rangeIn, properties);
         double turnDeg = AimAssist.AimError(hiveBearingDeg, aimAt);
         return headingNow + Math.toRadians(turnDeg);
     }
@@ -586,12 +588,12 @@ public abstract class PedroAuto extends LinearOpMode {
      * The FLOWER step in order, from the recorded spot:
      *
      * <pre>
-     *     move: back up                 autoFlowerBackIn (6)
+     *     move: back up                 autoFlowerBackIn (7)
      *     hold: settle                  autoFlowerSettleSeconds (0.3)
      *     arm out                       autoExtractorSeconds (0.5)
-     *     move: stroke forward          autoFlowerStrokeIn (8)
+     *     move: stroke forward          autoFlowerStrokeIn (9)
      *     hold: at the flower           autoFlowerDwellSeconds (1)
-     *     move: stroke back             autoFlowerStrokeIn (8)
+     *     move: stroke back             autoFlowerStrokeIn (9)
      *     ... again, if autoFlowerPasses (1) is more than 1 ...
      *     arm in                        autoExtractorSeconds (0.5)
      * </pre>

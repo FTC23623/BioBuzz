@@ -3,10 +3,10 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
 /**
- * Something that knows which way the robot is facing.
+ * Something that knows which way the robot is facing, and maybe where it is.
  *
- * <p>The drive only needs a heading. Position on the field (x, y) arrives later with
- * odometry and pathing (PORT-PLAN piece P5), which will add to this interface.
+ * <p>The drive always needs a heading. A position (x, y) is only there when the hardware can
+ * measure one: the Pinpoint can, the Control Hub's IMU can't ({@link #HasPosition()}).
  */
 public interface Imu extends Subsystem {
     /** @return true once the heading can be trusted */
@@ -26,4 +26,25 @@ public interface Imu extends Subsystem {
      * to keep the heading the auto left (docs/decisions/0046). Call it once {@link #Ready()}.
      */
     void SetYaw(double yawDeg);
+
+    /** @return true when {@link #GetXIn()} and {@link #GetYIn()} mean something */
+    default boolean HasPosition() {
+        return false;
+    }
+
+    /**
+     * @return inches along the direction {@link #GetYaw()} calls 0, from where the robot
+     *     started. 0 with no position.
+     */
+    default double GetXIn() {
+        return 0;
+    }
+
+    /**
+     * @return inches to the left of the direction {@link #GetYaw()} calls 0, from where the
+     *     robot started. 0 with no position.
+     */
+    default double GetYIn() {
+        return 0;
+    }
 }

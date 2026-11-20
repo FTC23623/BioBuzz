@@ -11,32 +11,33 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
 /**
  * The pollen and nectar launch servos. A ball launches when its servo opens.
  *
- * <p>Controls:
+ * <p>Controls (operator, gamepad 2, {@link LaunchChoice}):
  * <ul>
- *   <li><b>Driver, right trigger (hold)</b>: BOTH servos open. Let go: both close.
- *   <li><b>Operator, right trigger (hold)</b>: override the camera lock below, for a camera
- *       that has died.
+ *   <li><b>Left trigger (hold)</b>: the POLLEN servo opens. Let go: it closes.
+ *   <li><b>Right trigger (hold)</b>: the NECTAR servo opens. Let go: it closes.
+ *   <li>Both triggers: pollen wins; only the pollen servo opens.
  * </ul>
  *
- * <p>Hold to open, never a toggle: the moment the driver lets go, the gates close. Both
- * open together for now; nectar is not part of the first competition (docs/decisions/0023).
- * The closed and open spots come from Test: Launch Servo Tuning (docs/decisions/0020).
+ * <p>Hold to open, never a toggle: the moment the operator lets go, the gate closes. The
+ * closed and open spots come from Test: Launch Servo Tuning (docs/decisions/0020). An
+ * auto's LAUNCH ({@link #SetOpen}) opens both.
  *
- * <p><b>Camera lock</b> (docs/decisions/0040). The trigger only opens the gates while the
- * camera is locked on our hive: a tag of ours in view, and the hive's middle within
- * {@code aimDoneDegrees} of straight ahead. The trigger also aims (0036), so pulling it with
- * the hive off to one side turns the robot first and opens the gates once it is facing the
- * hive. Pulling it with NO tag in view is a driver error: the gates stay shut and the
- * driver's gamepad buzzes once. If the camera has really died, the operator holds their
- * right trigger and the gates open anyway. {@code launchNeedsLock = false} turns the lock
- * off. An auto's LAUNCH ({@link #SetOpen}) is not checked here; the auto decides.
+ * <p><b>Camera lock</b> (docs/decisions/0040, {@code launchNeedsLock}, OFF today: a
+ * dashboard setting). On, a trigger only opens its gate while the camera is locked on our
+ * hive for that launcher: a tag of ours in view, and the hive's middle within
+ * {@code aimDoneDegrees} of that launcher's aim (nectar aims the opposite side of the middle
+ * from pollen). The trigger also aims (0036), so the robot turns first and the gate opens
+ * once it faces the hive. With NO tag in view the gate stays shut and the operator's
+ * gamepad buzzes once. There is no override button any more: turn the lock off on the
+ * dashboard if the camera has died. An auto's LAUNCH is not checked here; the auto decides.
  *
- * <p><b>Settle first</b> (docs/decisions/0056, {@code teleopLaunchSettles}, on today). Once
- * the trigger passes the camera lock above, the pollen speed is LOCKED and the gates wait
- * for the wheel to settle on it ({@link Launcher#BeginSettle}), at most
- * {@code launchSettleTimeoutSeconds}. Settled once per pull: the gates then stay open while
- * the trigger is held, as before. Letting go, or losing the lock while still settling,
- * unlocks the speed so the distance moves it again.
+ * <p><b>Settle first</b> (docs/decisions/0056, {@code teleopLaunchSettles}, on today), POLLEN
+ * only: once the left trigger passes the camera lock above, the pollen speed is LOCKED and
+ * the gate waits for the wheel to settle on it ({@link Launcher#BeginSettle}), at most
+ * {@code launchSettleTimeoutSeconds}. Settled once per pull: the gate then stays open while
+ * the trigger is held. Letting go, or losing the lock while still settling, unlocks the
+ * speed so the distance moves it again. Nectar's speed doesn't follow the distance, so its
+ * gate opens without waiting.
  *
  * <p><b>Out of the way first.</b> A servo can't say when it got there, so the time it needs
  * is worked out from its speed and how far it turns ({@link #OpenSeconds}). Until then
@@ -48,8 +49,10 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * remembered and shown as "Last launch (camera)", and the distance is graphed on the
  * dashboard. That is how the launcher speed gets matched to distance.
  *
- * <p>A servo can't report where it is, it goes where it was last told. So nothing moves
- * during INIT. At START both go to closed.
+ * <p>A servo can't report where it is, it goes where it was last told. With
+ * {@code launchGatesCloseAtInit} on (today), both are sent to closed once, at INIT, so a
+ * gate left open by the last OpMode or by hand is reset before the match. Off: nothing moves
+ * during INIT, and both go to closed at START.
  */
 public class LaunchGates implements Subsystem {
     private final HydraOpMode mOp;
@@ -64,6 +67,11 @@ public class LaunchGates implements Subsystem {
     private final Servo mNectarServo;
 
     private boolean mOpen = false;
+    /** true once INIT has sent both gates to closed, so it is sent only once. */
+    private boolean mClosedAtInit = false;
+    /** Which gates mOpen opens: both for an auto, one for a TeleOp pull. */
+    private boolean mPollenOpens = true;
+    private boolean mNectarOpens = true;
     /** true once the open position has been sent, so the timer starts only once per launch. */
     private boolean mOpenSent = false;
     private final ElapsedTime mSinceOpened = new ElapsedTime();
@@ -78,7 +86,8 @@ public class LaunchGates implements Subsystem {
     // HandleUserInput, so mFromGamepad stays false there and SetOpen() decides alone.
     private boolean mFromGamepad = false;
     private boolean mTriggerHeld = false;
-    private boolean mOverrideHeld = false;
+    /** Which launch trigger is held this loop (pollen wins). */
+    private LaunchChoice mChoice = LaunchChoice.NONE;
     /** true once this pull has buzzed the driver, so one pull is one buzz. */
     private boolean mBuzzedThisPull = false;
     /** true once this pull has settled (or timed out), so a pull settles only once. */
@@ -87,8 +96,9 @@ public class LaunchGates implements Subsystem {
     private String mLockStatus = "";
 
     /**
-     * @param vision the camera, for the lock and so each launch can note how far the tag
-     *               was. null for none: then nothing ever locks, and only the override opens.
+     * @param gamepad the operator's gamepad: the launch triggers, and the no-lock buzz
+     * @param vision  the camera, for the lock and so each launch can note how far the tag
+     *                was. null for none: then nothing ever locks.
      */
     public LaunchGates(HydraOpMode op, BotProperties properties, Gamepad gamepad, Vision vision) {
         mOp = op;
@@ -101,7 +111,12 @@ public class LaunchGates implements Subsystem {
 
     @Override
     public boolean Init() {
-        // No setPosition here: the servos must not move during INIT.
+        // Once: both gates to closed, so INIT resets them (launchGatesCloseAtInit).
+        if (!mClosedAtInit && mProperties.launchGatesCloseAtInit) {
+            mClosedAtInit = true;
+            SetPosition(mPollenServo, mProperties.pollenServoClosed);
+            SetPosition(mNectarServo, mProperties.nectarServoClosed);
+        }
         if (mPollenServo == null) {
             mOp.mTelemetry.addLine("Pollen launch servo: MISSING. Nothing named '"
                     + mProperties.cfgPollenServo + "' in the robot configuration.");
@@ -116,8 +131,21 @@ public class LaunchGates implements Subsystem {
     @Override
     public void HandleUserInput() {
         mFromGamepad = true;
-        mTriggerHeld = mGamepad.right_trigger > mProperties.trgBtnThresh;
-        mOverrideHeld = mOp.mOperatorGamepad.right_trigger > mProperties.trgBtnThresh;
+        LaunchChoice choice = LaunchChoice.Launching(mGamepad, mProperties);
+        if (choice != mChoice && mChoice != LaunchChoice.NONE) {
+            // Switched launchers mid-pull: a new pull. Settle again, and time the new gate
+            // opening from now, so the transfer waits for it.
+            mSettledThisPull = false;
+            mBuzzedThisPull = false;
+            mOpenSent = false;
+            if (mLauncher != null) {
+                mLauncher.CancelSettle();
+            }
+        }
+        mChoice = choice;
+        mTriggerHeld = choice != LaunchChoice.NONE;
+        mPollenOpens = choice == LaunchChoice.POLLEN;
+        mNectarOpens = choice == LaunchChoice.NECTAR;
         if (!mTriggerHeld) {
             // Let go: the next pull may buzz again, and settles again.
             mBuzzedThisPull = false;
@@ -137,25 +165,29 @@ public class LaunchGates implements Subsystem {
             RememberLaunch();
         }
         mOpenSent = mOpen;
-        if (mOpen) {
+        if (IsPollenOpen()) {
             SetPosition(mPollenServo, mProperties.pollenServoOpen);
-            SetPosition(mNectarServo, mProperties.nectarServoOpen);
         } else {
             SetPosition(mPollenServo, mProperties.pollenServoClosed);
+        }
+        if (IsNectarOpen()) {
+            SetPosition(mNectarServo, mProperties.nectarServoOpen);
+        } else {
             SetPosition(mNectarServo, mProperties.nectarServoClosed);
         }
         if (mOp.mQuiet) {
             return;
         }
         String state = "closed";
+        String which = WhichOpen();
         if (IsFullyOpen()) {
-            state = "OPEN (launching)";
+            state = which + " OPEN (launching)";
         } else if (mOpen) {
-            state = String.format("opening, %.2f of %.2f s", mSinceOpened.seconds(), OpenSeconds(mProperties));
+            state = String.format("%s opening, %.2f of %.2f s", which, mSinceOpened.seconds(), OpenSeconds(mProperties));
         } else if (mTriggerHeld) {
             state = mLockStatus;
         }
-        mOp.mTelemetry.addData("Launch gates (gamepad 1: hold right trigger)", state);
+        mOp.mTelemetry.addData("Launch gates (gamepad 2: hold left trigger pollen, right trigger nectar)", state);
         mOp.mTelemetry.addData("Last launch (camera)", mLastLaunch);
         mOp.mTelemetry.addData("Last launch range (in)", "%.0f", mLastLaunchRangeIn);
     }
@@ -188,7 +220,9 @@ public class LaunchGates implements Subsystem {
      * teleopLaunchSettles off, or no launcher, there is nothing to wait for.
      */
     private boolean SettledThisPull() {
-        if (mSettledThisPull || mLauncher == null || !mProperties.teleopLaunchSettles) {
+        // Only pollen's speed follows the distance, so only pollen waits for it to settle.
+        if (mSettledThisPull || mLauncher == null || !mProperties.teleopLaunchSettles
+                || mChoice != LaunchChoice.POLLEN) {
             mSettledThisPull = true;
             return true;
         }
@@ -206,8 +240,8 @@ public class LaunchGates implements Subsystem {
     }
 
     /**
-     * The trigger must be held, and the camera locked on our hive, unless the operator
-     * overrides or the lock is switched off.
+     * A trigger must be held, and the camera locked on our hive for that launcher, unless the
+     * lock is switched off.
      */
     private boolean TriggerAllows() {
         if (!mTriggerHeld) {
@@ -216,13 +250,9 @@ public class LaunchGates implements Subsystem {
         if (!mProperties.launchNeedsLock) {
             return true;
         }
-        if (mOverrideHeld) {
-            mLockStatus = "OVERRIDE: operator's right trigger, camera not checked";
-            return true;
-        }
         if (mVision == null || !mVision.SeesTag()) {
-            // A driver error: the hive is not in view. Shut, and say so through the gamepad.
-            mLockStatus = "NO LOCK: no tag of ours in view. Face the hive, or operator holds right trigger";
+            // The hive is not in view. Shut, and say so through the gamepad.
+            mLockStatus = "NO LOCK: no tag of ours in view. Face the hive, or turn launchNeedsLock off";
             if (!mBuzzedThisPull) {
                 mBuzzedThisPull = true;
                 mGamepad.rumble(mProperties.launchNoLockRumbleMs);
@@ -247,10 +277,12 @@ public class LaunchGates implements Subsystem {
         return Math.abs(AimErrorNow()) <= mProperties.aimDoneDegrees;
     }
 
-    /** Degrees still to turn to the hive, with the offset for the side the robot is on. */
+    /**
+     * Degrees still to turn to the hive for the launcher being pulled, with the offset for the
+     * side the robot is on. Nectar aims the opposite side of the middle from pollen.
+     */
     private double AimErrorNow() {
-        double aimAt = AimAssist.SideOffset(mVision.GetSideDegrees(),
-                mProperties.aimHiveBearingDeg, mProperties.aimSideCenterDeg);
+        double aimAt = mChoice.AimAtDeg(mVision.GetSideDegrees(), mVision.GetRange(), mProperties);
         return AimAssist.AimError(mVision.GetGroupBearing(), aimAt);
     }
 
@@ -288,10 +320,31 @@ public class LaunchGates implements Subsystem {
      */
     public void SetOpen(boolean open) {
         mOpen = open;
+        mPollenOpens = true;
+        mNectarOpens = true;
     }
 
+    /** true while either gate has been told to open. */
     public boolean IsOpen() {
         return mOpen;
+    }
+
+    /** true while the pollen gate has been told to open. */
+    public boolean IsPollenOpen() {
+        return mOpen && mPollenOpens;
+    }
+
+    /** true while the nectar gate has been told to open. */
+    public boolean IsNectarOpen() {
+        return mOpen && mNectarOpens;
+    }
+
+    /** "pollen", "nectar" or "both", for the Driver Station. */
+    private String WhichOpen() {
+        if (mPollenOpens && mNectarOpens) {
+            return "both";
+        }
+        return mPollenOpens ? "pollen" : "nectar";
     }
 
     /** true once the gates have had time to swing all the way open: balls can go through. */

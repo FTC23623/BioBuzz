@@ -10,8 +10,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * The FLOWER step's moves, without a robot (docs/decisions/0042): back 9, then forward 8 and
- * back 7 twice, all along the way the robot faces.
+ * The FLOWER step's moves, without a robot (docs/decisions/0042): back 7, then forward 9 and
+ * back 9, all along the way the robot faces.
  */
 @DisplayName("FLOWER step")
 class FlowerStepTest {
@@ -24,17 +24,17 @@ class FlowerStepTest {
     }
 
     @Test
-    @DisplayName("facing forward from (0, 0): back to -6, then 2, -6, 2, -6")
+    @DisplayName("facing forward from (0, 0): back to -7, then 2, -7, 2, -7")
     void facingForward() {
         BotProperties p = new BotProperties();
         p.autoFlowerPasses = 2;
         List<Pose> moves = PedroAuto.FlowerMoves(new Pose(0, 0, 0), p);
         assertEquals(5, moves.size());
-        assertPose(-6, 0, 0, moves.get(0));
+        assertPose(-7, 0, 0, moves.get(0));
         assertPose(2, 0, 0, moves.get(1));
-        assertPose(-6, 0, 0, moves.get(2));
+        assertPose(-7, 0, 0, moves.get(2));
         assertPose(2, 0, 0, moves.get(3));
-        assertPose(-6, 0, 0, moves.get(4));
+        assertPose(-7, 0, 0, moves.get(4));
     }
 
     @Test
@@ -44,9 +44,9 @@ class FlowerStepTest {
         BotProperties p = new BotProperties();
         p.autoFlowerPasses = 2;
         List<Pose> moves = PedroAuto.FlowerMoves(new Pose(10, 20, left), p);
-        assertPose(10, 14, left, moves.get(0));
+        assertPose(10, 13, left, moves.get(0));
         assertPose(10, 22, left, moves.get(1));
-        assertPose(10, 14, left, moves.get(4));
+        assertPose(10, 13, left, moves.get(4));
     }
 
     @Test
@@ -72,12 +72,12 @@ class FlowerStepTest {
     }
 
     @Test
-    @DisplayName("the starting numbers are the coach's: back 6 (short extractor), settle 0.3 s, strokes of 8, a 1 s hold at the flower, 1 pass, half a second for the arm")
+    @DisplayName("the starting numbers are the coach's: back 7 (arm clearance), settle 0.3 s, strokes of 9, a 1 s hold at the flower, 1 pass, half a second for the arm")
     void startingNumbers() {
         BotProperties p = new BotProperties();
-        assertEquals(6, p.autoFlowerBackIn, closeEnough);
+        assertEquals(7, p.autoFlowerBackIn, closeEnough);
         assertEquals(0.3, p.autoFlowerSettleSeconds, closeEnough);
-        assertEquals(8, p.autoFlowerStrokeIn, closeEnough);
+        assertEquals(9, p.autoFlowerStrokeIn, closeEnough);
         assertEquals(1, p.autoFlowerDwellSeconds, closeEnough);
         assertEquals(1, p.autoFlowerPasses);
         assertEquals(0.5, p.autoExtractorSeconds, closeEnough);
@@ -97,7 +97,7 @@ class FlowerStepTest {
             assertEquals(expected[i], actions.get(i).name, "action " + (i + 1));
         }
         // The arm goes out at the backed-up spot, and the hold at the flower is a full second.
-        assertPose(-6, 0, 0, actions.get(2).spot);
+        assertPose(-7, 0, 0, actions.get(2).spot);
         assertEquals(1, actions.get(4).seconds, closeEnough);
         assertPose(2, 0, 0, actions.get(4).spot);
     }

@@ -24,7 +24,8 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *   <li><b>D-pad up / down</b>: pollen launcher 50 RPM faster / slower. With range tuning
  *       on (below) this trims the distance table instead, by the same 50.
  *   <li><b>D-pad right / left</b>: nectar launcher target up / down 50 RPM.
- *   <li><b>Cross / A</b>: steady range on / off (docs/decisions/0048). One rumble on, two off.
+ *   <li>Steady range (docs/decisions/0048) is a dashboard setting only: cross runs the
+ *       intake now.
  *   <li><b>Circle / B</b>: always-track range on / off (docs/decisions/0049): the speed
  *       follows the distance whenever a tipped-up tag of ours is seen, not only while aiming.
  * </ul>
@@ -35,10 +36,10 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * {@code launchBandHoldIn} past that step's edge, so a reading that wobbles on an edge does
  * not flip the speed every loop.
  *
- * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the driver holds aim
- * (right bumper) or launch (right trigger) and the camera sees our hive, the
- * pollen launcher's target follows a curve of inches to RPM in 2-inch
- * steps (2735 at 110 in, 3240 from 140 in, bending upward between), plus {@code launcherRangeTrimRpm}. The
+ * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the operator holds an
+ * aim bumper or a launch trigger ({@link LaunchChoice}) and the camera sees our hive, the
+ * pollen launcher's target follows four measured shots joined by straight lines, in 2-inch
+ * steps (2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 in), plus {@code launcherRangeTrimRpm}. The
  * wheel is then already at the right speed when the trigger is pulled. With no tag in view
  * the target stays where it was. {@code launcherRangeTuning = false} turns this off.
  *
@@ -54,7 +55,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * {@code launchSettleHoldSeconds}, or at most {@code launchSettleTimeoutSeconds}. The gates
  * (TeleOp) or the auto ask {@link #SettleDone} before they open.
  *
- * <p>The balls are let go by {@link LaunchGates}, on the driver's right trigger.
+ * <p>The balls are let go by {@link LaunchGates}, on the operator's launch triggers.
  */
 public class Launcher implements Subsystem {
     private final HydraOpMode mOp;
@@ -70,15 +71,14 @@ public class Launcher implements Subsystem {
     private final Debouncer mPollenSlowerButton;
     private final Debouncer mNectarFasterButton;
     private final Debouncer mNectarSlowerButton;
-    private final Debouncer mSteadyRangeButton;
     private final Debouncer mAlwaysTrackButton;
     private final ElapsedTime mTimeSinceUpdate;
 
     private boolean mSpinning = false;
-    // TeleOp only: the camera sets the speed only while the driver holds aim or launch
+    // TeleOp only: the camera sets the speed only while the operator holds aim or launch
     // (coach, 2026-11-03). An auto never calls HandleUserInput, so it keeps following.
     private boolean mFromGamepad = false;
-    private boolean mDriverAiming = false;
+    private boolean mOperatorAiming = false;
     /** What the distance table last said, for the Driver Station. */
     private String mRangeStatus = "no tag seen yet";
     /** Steady range: the step start, in inches, the speed is held on. NaN = none yet. */
@@ -110,7 +110,6 @@ public class Launcher implements Subsystem {
         mPollenSlowerButton = new Debouncer(properties.debounce);
         mNectarFasterButton = new Debouncer(properties.debounce);
         mNectarSlowerButton = new Debouncer(properties.debounce);
-        mSteadyRangeButton = new Debouncer(properties.debounce);
         mAlwaysTrackButton = new Debouncer(properties.debounce);
         mTimeSinceUpdate = new ElapsedTime();
     }
@@ -132,8 +131,9 @@ public class Launcher implements Subsystem {
     @Override
     public void HandleUserInput() {
         mFromGamepad = true;
-        Gamepad driver = mOp.mDriverGamepad;
-        mDriverAiming = driver.right_bumper || driver.right_trigger > mProperties.trgBtnThresh;
+        // Either launcher's aim bumper or launch trigger: the pollen speed tracks the distance.
+        mOperatorAiming = LaunchChoice.Aiming(mGamepad, mProperties) != LaunchChoice.NONE
+                || LaunchChoice.Launching(mGamepad, mProperties) != LaunchChoice.NONE;
         // Each press counts once, however long it is held. With range tuning on, up / down
         // nudge the whole distance table; the table then sets the target. Off, they set the
         // target itself.
@@ -156,15 +156,6 @@ public class Launcher implements Subsystem {
         }
         if (Pressed(mNectarSlowerButton, mGamepad.dpad_left)) {
             ChangeNectarRpm(-mProperties.launcherRpmStep);
-        }
-        // Cross: steady range on / off, to compare the two on the field. Rumble 1 on, 2 off.
-        if (Pressed(mSteadyRangeButton, mGamepad.cross)) {
-            mProperties.steadyRange = !mProperties.steadyRange;
-            if (mProperties.steadyRange) {
-                mGamepad.rumbleBlips(1);
-            } else {
-                mGamepad.rumbleBlips(2);
-            }
         }
         // Circle: always-track range on / off. Rumble 1 on, 2 off.
         if (Pressed(mAlwaysTrackButton, mGamepad.circle)) {
@@ -224,13 +215,13 @@ public class Launcher implements Subsystem {
                     mProperties.pollenLauncherRpm);
             return;
         }
-        if (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsOpen()) {
+        if (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsPollenOpen()) {
             // Launching: hold the speed the gates opened at, so it doesn't jump mid-launch.
             mRangeStatus = String.format(Locale.US, "LOCKED for the launch, holding %.0f",
                     mProperties.pollenLauncherRpm);
             return;
         }
-        if (mFromGamepad && !mDriverAiming) {
+        if (mFromGamepad && !mOperatorAiming) {
             // TeleOp, no aim button down: the speed holds, unless always-track is on and a
             // tag of ours is seen, tipped up (docs/decisions/0049).
             String why = AlwaysTrackBlocked();
@@ -273,7 +264,7 @@ public class Launcher implements Subsystem {
                 mode = "raw ";
             }
         }
-        if (mFromGamepad && !mDriverAiming) {
+        if (mFromGamepad && !mOperatorAiming) {
             // Following with no aim button down: always-track did it.
             mode = "ALWAYS " + mode;
         }
@@ -354,15 +345,15 @@ public class Launcher implements Subsystem {
     }
 
     /**
-     * The RPM for a distance, from the curve through the two measured shots in BotProperties,
-     * in steps of launchBandIn inches:
+     * The RPM for a distance, from the four measured shots in BotProperties joined by
+     * straight lines, in steps of launchBandIn inches:
      *
      * <pre>
      *     step start = nearIn + whole steps past nearIn
-     *     rpm = near + (far - near) x ((step start - nearIn) / (farIn - nearIn)) ^ curve
+     *     rpm = the line between the measured shots on either side of the step start
      *
-     *     near 110 in 2735, far 140 in 3240, curve 1.1, steps of 2 in:
-     *     110: 2735   112: 2761   120: 2886   130: 3058   139: 3203   140 and up: 3240
+     *     110 in 2760, 120 in 2831, 130 in 2983, 140 in 3115, steps of 2 in:
+     *     110: 2760   112: 2774   120: 2831   125: 2892   130: 2983   139: 3089   140 and up: 3115
      * </pre>
      *
      * Nearer than nearIn: the near speed. Farther than farIn: the far speed.
@@ -374,14 +365,13 @@ public class Launcher implements Subsystem {
     }
 
     /**
-     * The RPM on the curve for a step that starts at stepStartIn inches, worked out. The
+     * The RPM on the lines for a step that starts at stepStartIn inches, worked out. The
      * launcher itself looks it up in an {@link RpmTable}; this is for tests and tools.
      *
      * @return whole RPM
      */
     static double RpmForStep(double stepStartIn, BotProperties p) {
-        return RpmTable.CurveRpm(stepStartIn, p.launchNearIn, p.launchNearRpm,
-                p.launchFarIn, p.launchFarRpm, p.launchCurve);
+        return RpmTable.LineRpm(stepStartIn, RpmTable.PointsIn(p), RpmTable.PointsRpm(p));
     }
 
     /** Measure both speeds and set both powers. Process() calls this every 50 ms. */

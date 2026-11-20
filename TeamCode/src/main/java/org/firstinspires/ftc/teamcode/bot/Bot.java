@@ -70,21 +70,23 @@ import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
  * <p>To leave a part of the robot out of one OpMode, switch it off in
  * {@link BotProperties} before building the Bot. See docs/decisions/0010.
  *
- * <p>Hold the right bumper in TeleOp and the drive turns to face the middle of our hive's
- * AprilTags. Which camera is decided from the robot configuration, like the heading.
+ * <p>The operator holds a bumper in TeleOp and the drive turns to face the middle of our
+ * hive's AprilTags, offset for that launcher. Which camera is decided from the robot
+ * configuration, like the heading.
  *
  * <p><b>Who drives what in TeleOp</b> (docs/decisions/0023):
  * <ul>
- *   <li><b>Gamepad 1, driver</b>: sticks drive (field-centric), left bumper slow, right
- *       bumper aim, D-pad left / right while aiming arcs around the hive, RIGHT TRIGGER
- *       (hold) opens the launch gates once the camera is locked on our hive, then runs the
- *       intake and transfer to push balls in. Left trigger (hold) is drift assist.
- *   <li><b>Gamepad 2, operator</b>: the launchers spin from START to the end with no
- *       button, D-pad trims their speeds (pollen follows the tag's distance), left bumper
- *       runs the intake and transfer (on / off),
- *       left trigger (hold) runs them while held, square (hold) runs them backward, slowly,
- *       triangle (hold) deploys the flower extractor, right trigger (hold) lets a launch
- *       through without the camera lock.
+ *   <li><b>Gamepad 1, driver</b>: sticks drive (field-centric), left bumper slow, left
+ *       trigger (hold) drift assist, circle resets forward, square wiggle on / off, D-pad
+ *       left / right while the operator aims arcs around the hive (aimArc, off).
+ *   <li><b>Gamepad 2, operator</b>: LEFT bumper (hold) aims pollen, LEFT trigger (hold)
+ *       launches pollen; RIGHT bumper (hold) aims nectar, RIGHT trigger (hold) launches
+ *       nectar; both sides at once, pollen wins. A launch trigger aims too, and the
+ *       intake and transfer push balls in once the gate is open. Cross (press) runs the
+ *       intake and transfer on / off, square (hold) runs them backward, slowly, triangle
+ *       (hold) deploys the flower extractor, D-pad trims the launcher speeds (pollen
+ *       follows the tag's distance), circle flips always-track. The launchers spin from
+ *       START to the end with no button.
  * </ul>
  *
  * <p><b>Adding a new part</b> (an intake, say): write its {@link Subsystem} class, give it
@@ -129,13 +131,15 @@ public class Bot {
     static final String[] LiveTuningDrive = {
             "driveNormal", "driveSlow", "driveStrafeGain", "driveMotorSlewRate",
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
-            "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "aimSideCenterDeg", "aimSideReversed",
-            "arcStrafePower", "arcRangeKP", "arcMaxDrive",
+            "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "launcherSideOffsetIn", "launcherOffsetNoRangeDeg", "pollenLeftOfCamera", "aimSideCenterDeg", "aimSideReversed",
+            "aimArc", "arcStrafePower", "arcRangeKP", "arcMaxDrive",
+            "launchHoldsPosition", "launchHoldKP", "launchHoldMaxPower", "launchHoldDoneIn",
+            "launchHoldGiveUpIn", "launchHoldStickDeadband",
             "testLog", "testTelemetry", "tuningMarks", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
             "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
-            "launchNearRpm", "launchFarRpm", "launchCurve", "launchBandIn",
+            "launchNearRpm", "launchMid1Rpm", "launchMid2Rpm", "launchFarRpm", "launchBandIn",
             "steadyRange", "steadyRangeAverage", "launchBandHoldIn",
             "launchLocksRpm", "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
@@ -144,7 +148,7 @@ public class Bot {
             "launchSettleTimeoutSeconds"};
     static final String[] LiveTuningIntake = {
             "intakeRpm", "transferRpm", "launchFeedIntakeScale", "launchFeedTransferScale",
-            "intakeReverseRpm", "transferReverseRpm", "rollerUsePower",
+            "intakeReverseRpm", "transferReverseRpm", "pollenAutoReject", "rollerUsePower",
             "rollerKP", "rollerKI", "rollerKD", "rollerKF"};
 
     /**
@@ -196,8 +200,8 @@ public class Bot {
             mSystems.add(new Drive_Manual(mOp, mProperties, mImu, mVision));
         }
 
-        // The operator (gamepad 2) runs the launchers and the intake. The driver (gamepad 1)
-        // opens the launch gates, so the one who aims is the one who shoots (0023).
+        // The operator (gamepad 2) runs the launchers, the intake, and aims and launches each
+        // launcher: the one who aims is the one who shoots. The driver (gamepad 1) only drives.
         if (mProperties.launcherDisabled) {
             mLauncher = null;
         } else {
@@ -209,7 +213,7 @@ public class Bot {
             mLaunchGates = null;
         } else {
             // The gates get the camera, so each launch notes how far the tag was.
-            mLaunchGates = new LaunchGates(mOp, mProperties, mOp.mDriverGamepad, mVision);
+            mLaunchGates = new LaunchGates(mOp, mProperties, mOp.mOperatorGamepad, mVision);
             mSystems.add(mLaunchGates);
             // The launcher holds its speed while the gates are open (launchLocksRpm, 0050).
             if (mLauncher != null) {
@@ -664,6 +668,11 @@ public class Bot {
     /** Which side of the hive the robot stands, in degrees, left positive. 0 = not known. */
     public double GetHiveSideDegrees() {
         return mVision.GetSideDegrees();
+    }
+
+    /** Inches from the camera to the nearest tag of ours. 0 = no tag, or no distance. */
+    public double GetTagRange() {
+        return mVision.GetRange();
     }
 
     /**

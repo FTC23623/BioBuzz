@@ -14,8 +14,8 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * <p>Gamepad 2 (operator):
  * <ul>
  *   <li><b>D-pad up / down</b>: pollen target up / down 50 RPM. <b>Right / left</b>: nectar.
+ *   <li><b>Hold left trigger</b>: open the pollen gate. <b>Hold right trigger</b>: the nectar gate.
  * </ul>
- * <p>Gamepad 1: <b>hold right trigger</b> to open the launch gates.
  *
  * <p>Only the launchers and gates run. The drive is switched off, so the wheels never move.
  *
@@ -48,7 +48,7 @@ public class LauncherMotorTest extends LinearOpMode {
             bot.ShowStatus();
             telemetry.addLine("START spins both launchers up. STOP stops them.");
             telemetry.addLine("Gamepad 2: D-pad up/down pollen, right/left nectar.");
-            telemetry.addLine("Gamepad 1: hold right trigger to open the launch gates.");
+            telemetry.addLine("Gamepad 2: hold left trigger for the pollen gate, right trigger for nectar.");
             bot.EndLoop();
         }
 

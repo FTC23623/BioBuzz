@@ -60,11 +60,22 @@ class LaunchSpinUpTest {
     }
 
     @Test
-    @DisplayName("auto aim, hive dead ahead: left of it turns 1 deg right, right of it 1 deg left, in front none")
+    @DisplayName("auto aim, side offset only: left of the hive turns 1 deg right, right of it 1 deg left, in front none")
     void autoAimHeading() {
         properties.aimHiveBearingDeg = 1;
-        Assertions.assertEquals(Math.toRadians(-1), PedroAuto.AimHeading(0, 0, 20, properties), 1e-9);
-        Assertions.assertEquals(Math.toRadians(1), PedroAuto.AimHeading(0, 0, -20, properties), 1e-9);
-        Assertions.assertEquals(0, PedroAuto.AimHeading(0, 0, 0, properties), 1e-9);
+        properties.launcherSideOffsetIn = 0;   // no launcher offset: the side part alone
+        Assertions.assertEquals(Math.toRadians(-1), PedroAuto.AimHeading(0, 0, 20, 120, properties), 1e-9);
+        Assertions.assertEquals(Math.toRadians(1), PedroAuto.AimHeading(0, 0, -20, 120, properties), 1e-9);
+        Assertions.assertEquals(0, PedroAuto.AimHeading(0, 0, 0, 120, properties), 1e-9);
+    }
+
+    @Test
+    @DisplayName("auto aim adds the pollen launcher's offset: in front of the hive at 110 in, turn atan(2/110) right")
+    void autoAimHeadingPollenOffset() {
+        properties.aimHiveBearingDeg = 1;
+        double launcherDeg = Math.toDegrees(Math.atan(2.0 / 110));
+        Assertions.assertEquals(Math.toRadians(-launcherDeg), PedroAuto.AimHeading(0, 0, 0, 110, properties), 1e-9);
+        // Left of the hive: the side part and the launcher part add up.
+        Assertions.assertEquals(Math.toRadians(-1 - launcherDeg), PedroAuto.AimHeading(0, 0, 20, 110, properties), 1e-9);
     }
 }

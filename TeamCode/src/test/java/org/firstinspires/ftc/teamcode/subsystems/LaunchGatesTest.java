@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,8 +29,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The launch gates with pretend servos, a pretend driver gamepad and a pretend operator
- * gamepad. Unless a test says otherwise, the pretend camera is locked on the hive: a tag in
- * view, dead ahead.
+ * gamepad. The operator's triggers launch: left pollen, right nectar. Unless a test says
+ * otherwise, the pretend camera is locked on the hive: a tag in view, dead ahead.
  */
 @DisplayName("LaunchGates")
 class LaunchGatesTest {
@@ -56,10 +57,13 @@ class LaunchGatesTest {
         lockedOnTheHive();
         // The lock is off by default; these tests check it working, so switch it on.
         properties.launchNeedsLock = true;
-        // Dead-center locks here; the pollen offset has its own test.
+        // Dead-center locks here; the side and launcher offsets have their own tests.
         properties.aimHiveBearingDeg = 0;
+        properties.launcherSideOffsetIn = 0;
+        properties.launcherOffsetNoRangeDeg = 0;
         HydraOpMode op = new HydraOpMode(telemetry, hardwareMap, gamepad, operator);
-        gates = new LaunchGates(op, properties, gamepad, vision);
+        // The Bot builds the gates with the operator's gamepad.
+        gates = new LaunchGates(op, properties, operator, vision);
     }
 
     /** The camera sees one of our tags, with the hive's middle dead ahead. */
@@ -78,8 +82,21 @@ class LaunchGatesTest {
     }
 
     @Test
-    @DisplayName("nothing moves during INIT")
-    void stillAtInit() {
+    @DisplayName("INIT resets both gates to closed, once, however many INIT loops run")
+    void closedAtInit() {
+        gates.Init();
+        gates.Init();
+        gates.Init();
+        verify(pollen, times(1)).setPosition(properties.pollenServoClosed);
+        verify(nectar, times(1)).setPosition(properties.nectarServoClosed);
+        verify(pollen, never()).setPosition(properties.pollenServoOpen);
+        verify(nectar, never()).setPosition(properties.nectarServoOpen);
+    }
+
+    @Test
+    @DisplayName("launchGatesCloseAtInit off: nothing moves during INIT, as before")
+    void stillAtInitWhenOff() {
+        properties.launchGatesCloseAtInit = false;
         gates.Init();
         verify(pollen, never()).setPosition(anyDouble());
         verify(nectar, never()).setPosition(anyDouble());
@@ -94,21 +111,60 @@ class LaunchGatesTest {
     }
 
     @Test
-    @DisplayName("right trigger held: BOTH open at once")
-    void triggerOpensBoth() {
-        gamepad.right_trigger = 1;
+    @DisplayName("operator's left trigger: ONLY the pollen gate opens, nectar stays closed")
+    void leftTriggerOpensPollen() {
+        operator.left_trigger = 1;
         loop();
         assertTrue(gates.IsOpen());
+        assertTrue(gates.IsPollenOpen());
+        assertFalse(gates.IsNectarOpen());
         verify(pollen).setPosition(properties.pollenServoOpen);
-        verify(nectar).setPosition(properties.nectarServoOpen);
+        verify(nectar).setPosition(properties.nectarServoClosed);
+        verify(nectar, never()).setPosition(properties.nectarServoOpen);
     }
 
     @Test
-    @DisplayName("hold to open: letting go closes them right away, no second press")
-    void releaseCloses() {
+    @DisplayName("operator's right trigger: ONLY the nectar gate opens, pollen stays closed")
+    void rightTriggerOpensNectar() {
+        operator.right_trigger = 1;
+        loop();
+        assertTrue(gates.IsOpen());
+        assertTrue(gates.IsNectarOpen());
+        assertFalse(gates.IsPollenOpen());
+        verify(nectar).setPosition(properties.nectarServoOpen);
+        verify(pollen).setPosition(properties.pollenServoClosed);
+        verify(pollen, never()).setPosition(properties.pollenServoOpen);
+    }
+
+    @Test
+    @DisplayName("both triggers: pollen wins, only the pollen gate opens")
+    void bothTriggersOnlyPollen() {
+        operator.left_trigger = 1;
+        operator.right_trigger = 1;
+        loop();
+        assertTrue(gates.IsPollenOpen());
+        assertFalse(gates.IsNectarOpen());
+        verify(pollen).setPosition(properties.pollenServoOpen);
+        verify(nectar, never()).setPosition(properties.nectarServoOpen);
+    }
+
+    @Test
+    @DisplayName("the driver's triggers do nothing to the gates now")
+    void driverTriggersDoNothing() {
+        gamepad.left_trigger = 1;
         gamepad.right_trigger = 1;
         loop();
-        gamepad.right_trigger = 0;
+        assertFalse(gates.IsOpen());
+        verify(pollen, never()).setPosition(properties.pollenServoOpen);
+        verify(nectar, never()).setPosition(properties.nectarServoOpen);
+    }
+
+    @Test
+    @DisplayName("hold to open: letting go closes it right away, no second press")
+    void releaseCloses() {
+        operator.left_trigger = 1;
+        loop();
+        operator.left_trigger = 0;
         loop();
         assertFalse(gates.IsOpen());
         verify(pollen).setPosition(properties.pollenServoClosed);
@@ -117,17 +173,21 @@ class LaunchGatesTest {
     @Test
     @DisplayName("a trigger barely touched does not launch")
     void deadband() {
-        gamepad.right_trigger = (float) (properties.trgBtnThresh / 2);
+        operator.left_trigger = (float) (properties.trgBtnThresh / 2);
+        operator.right_trigger = (float) (properties.trgBtnThresh / 2);
         loop();
         assertFalse(gates.IsOpen());
     }
 
     @Test
-    @DisplayName("an auto opens them with SetOpen")
+    @DisplayName("an auto opens BOTH with SetOpen")
     void autoOpens() {
         gates.SetOpen(true);
         gates.Process();
+        assertTrue(gates.IsPollenOpen());
+        assertTrue(gates.IsNectarOpen());
         verify(pollen).setPosition(properties.pollenServoOpen);
+        verify(nectar).setPosition(properties.nectarServoOpen);
     }
 
     @Test
@@ -148,7 +208,7 @@ class LaunchGatesTest {
     @Test
     @DisplayName("just opened: not fully open yet, so nothing is pushed into it")
     void notFullyOpenAtFirst() {
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
         assertTrue(gates.IsOpen());
         assertFalse(gates.IsFullyOpen());
@@ -159,7 +219,7 @@ class LaunchGatesTest {
     void fullyOpenAfterTheWait() {
         properties.launchServoSecondsPer60Deg = 0;
         properties.launchServoExtraSeconds = 0;
-        gamepad.right_trigger = 1;
+        operator.right_trigger = 1;
         loop();
         assertTrue(gates.IsFullyOpen());
     }
@@ -171,7 +231,7 @@ class LaunchGatesTest {
         when(vision.GetRange()).thenReturn(62.0);
         when(vision.GetTagId()).thenReturn(31);
         when(vision.GetGroupBearing()).thenReturn(-0.5);   // within aimDoneDegrees, so locked
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
         // The camera moves on; the launch keeps the number it had.
         when(vision.GetRange()).thenReturn(99.0);
@@ -184,17 +244,18 @@ class LaunchGatesTest {
     // ---- The camera lock (0040) ----
 
     @Test
-    @DisplayName("no tag in view: the trigger does nothing, no launch is counted, the driver's gamepad buzzes once")
+    @DisplayName("no tag in view: the trigger does nothing, no launch is counted, the operator's gamepad buzzes once")
     void noLockKeepsThemShut() {
         noTag();
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
         loop();
         loop();
         assertFalse(gates.IsOpen());
         assertEquals(0, gates.LaunchCount());
         verify(pollen, never()).setPosition(properties.pollenServoOpen);
-        verify(gamepad, times(1)).rumble(properties.launchNoLockRumbleMs);
+        verify(operator, times(1)).rumble(properties.launchNoLockRumbleMs);
+        verify(gamepad, never()).rumble(anyInt());
         verify(telemetry, atLeast(1)).addData(contains("Launch gates"), contains("NO LOCK"));
     }
 
@@ -202,20 +263,20 @@ class LaunchGatesTest {
     @DisplayName("let go and pull again with no tag: it buzzes again")
     void buzzesOncePerPull() {
         noTag();
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
-        gamepad.right_trigger = 0;
+        operator.left_trigger = 0;
         loop();
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
-        verify(gamepad, times(2)).rumble(properties.launchNoLockRumbleMs);
+        verify(operator, times(2)).rumble(properties.launchNoLockRumbleMs);
     }
 
     @Test
-    @DisplayName("the tag shows up while the trigger is held: the gates open then, no second pull needed")
+    @DisplayName("the tag shows up while the trigger is held: the gate opens then, no second pull needed")
     void lockArrivingOpens() {
         noTag();
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
         assertFalse(gates.IsOpen());
         lockedOnTheHive();
@@ -228,10 +289,10 @@ class LaunchGatesTest {
     @DisplayName("hive in view but off to one side: shut while the trigger turns the robot, no buzz; open once centered")
     void offCenterWaitsForTheAim() {
         when(vision.GetGroupBearing()).thenReturn(5.0);
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
         assertFalse(gates.IsOpen());
-        verify(gamepad, never()).rumble(anyInt());
+        verify(operator, never()).rumble(anyInt());
         verify(telemetry, atLeast(1)).addData(contains("Launch gates"), contains("turning to the hive"));
         when(vision.GetGroupBearing()).thenReturn(0.5);   // within aimDoneDegrees (1)
         loop();
@@ -239,49 +300,56 @@ class LaunchGatesTest {
     }
 
     @Test
-    @DisplayName("operator holds their right trigger: the camera is not checked, the gates open")
-    void operatorOverride() {
+    @DisplayName("no override any more: lock on and no tag, both triggers held, the gates stay shut")
+    void noOverrideStaysShut() {
         noTag();
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
+        operator.right_trigger = 1;
+        gamepad.right_trigger = 1;   // the old driver + operator override combination
+        loop();
+        loop();
+        assertFalse(gates.IsOpen());
+        assertEquals(0, gates.LaunchCount());
+        verify(pollen, never()).setPosition(properties.pollenServoOpen);
+        verify(nectar, never()).setPosition(properties.nectarServoOpen);
+        verify(operator, times(1)).rumble(properties.launchNoLockRumbleMs);
+    }
+
+    @Test
+    @DisplayName("no override any more: lock on and no tag, the nectar trigger stays shut too")
+    void noOverrideNectarStaysShut() {
+        noTag();
         operator.right_trigger = 1;
         loop();
+        assertFalse(gates.IsNectarOpen());
+        verify(nectar, never()).setPosition(properties.nectarServoOpen);
+        verify(operator, times(1)).rumble(properties.launchNoLockRumbleMs);
+    }
+
+    @Test
+    @DisplayName("launchNeedsLock off: the trigger opens the gate whatever the camera sees, as before")
+    void lockSwitchedOff() {
+        properties.launchNeedsLock = false;
+        noTag();
+        operator.left_trigger = 1;
+        loop();
         assertTrue(gates.IsOpen());
-        assertEquals(1, gates.LaunchCount());
-        verify(gamepad, never()).rumble(anyInt());
+        verify(operator, never()).rumble(anyInt());
         verify(telemetry, atLeast(1)).addData(eq("Last launch (camera)"), contains("#1: no tag in view"));
     }
 
     @Test
-    @DisplayName("the override alone does nothing: the driver still has to pull")
-    void overrideAloneDoesNothing() {
-        operator.right_trigger = 1;
-        loop();
-        assertFalse(gates.IsOpen());
-    }
-
-    @Test
-    @DisplayName("launchNeedsLock off: the trigger opens the gates whatever the camera sees, as before")
-    void lockSwitchedOff() {
-        properties.launchNeedsLock = false;
-        noTag();
-        gamepad.right_trigger = 1;
-        loop();
-        assertTrue(gates.IsOpen());
-        verify(gamepad, never()).rumble(anyInt());
-    }
-
-    @Test
-    @DisplayName("no camera at all (null): only the override opens the gates")
-    void noCameraOnlyOverride() {
+    @DisplayName("no camera at all (null): with the lock on nothing opens; with it off the trigger opens")
+    void noCameraNeedsTheLockOff() {
         HardwareMap hardwareMap = mock(HardwareMap.class);
         when(hardwareMap.tryGet(Servo.class, properties.cfgPollenServo)).thenReturn(pollen);
         LaunchGates blind = new LaunchGates(new HydraOpMode(telemetry, hardwareMap, gamepad, operator),
-                properties, gamepad, null);
-        gamepad.right_trigger = 1;
+                properties, operator, null);
+        operator.left_trigger = 1;
         blind.HandleUserInput();
         blind.Process();
         assertFalse(blind.IsOpen());
-        operator.right_trigger = 1;
+        properties.launchNeedsLock = false;
         blind.HandleUserInput();
         blind.Process();
         assertTrue(blind.IsOpen());
@@ -295,33 +363,48 @@ class LaunchGatesTest {
         gates.Process();
         assertTrue(gates.IsOpen());
         verify(pollen).setPosition(properties.pollenServoOpen);
-        verify(gamepad, never()).rumble(anyInt());
+        verify(operator, never()).rumble(anyInt());
     }
 
     @Test
     @DisplayName("holding the trigger is one launch; pull again for the next")
     void oneLaunchPerPull() {
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
         loop();
         loop();
         assertEquals(1, gates.LaunchCount());
-        gamepad.right_trigger = 0;
+        operator.left_trigger = 0;
         loop();
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
+        assertEquals(2, gates.LaunchCount());
+    }
+
+    @Test
+    @DisplayName("switching from pollen to nectar mid-pull is a new opening: the timer restarts, counted again")
+    void switchingLaunchersRestarts() {
+        operator.left_trigger = 1;
+        loop();
+        assertEquals(1, gates.LaunchCount());
+        operator.left_trigger = 0;
+        operator.right_trigger = 1;
+        loop();
+        assertTrue(gates.IsNectarOpen());
+        assertFalse(gates.IsPollenOpen());
+        assertFalse(gates.IsFullyOpen());
         assertEquals(2, gates.LaunchCount());
     }
 
     @Test
     @DisplayName("let go and pull again: the wait starts over")
     void waitStartsOver() {
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
-        gamepad.right_trigger = 0;
+        operator.left_trigger = 0;
         loop();
         assertFalse(gates.IsFullyOpen());
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         loop();
         assertFalse(gates.IsFullyOpen());
     }
@@ -334,8 +417,8 @@ class LaunchGatesTest {
         Telemetry quietScreen = mock(Telemetry.class);
         HydraOpMode quiet = new HydraOpMode(quietScreen, hardwareMap, gamepad, operator);
         quiet.mQuiet = true;
-        LaunchGates g = new LaunchGates(quiet, properties, gamepad, vision);
-        gamepad.right_trigger = 1;
+        LaunchGates g = new LaunchGates(quiet, properties, operator, vision);
+        operator.left_trigger = 1;
         g.HandleUserInput();
         g.Process();
         assertTrue(g.IsOpen());
@@ -355,7 +438,7 @@ class LaunchGatesTest {
         properties.aimDoneDegrees = 0.5;
         when(vision.GetSideDegrees()).thenReturn(20.0);
         when(vision.GetGroupBearing()).thenReturn(1.2);
-        org.junit.jupiter.api.Assertions.assertTrue(gates.CameraLocked());
+        assertTrue(gates.CameraLocked());
         when(vision.GetGroupBearing()).thenReturn(-1.0);
         assertFalse(gates.CameraLocked());
     }
@@ -367,8 +450,52 @@ class LaunchGatesTest {
         properties.aimDoneDegrees = 0.5;
         when(vision.GetSideDegrees()).thenReturn(-20.0);
         when(vision.GetGroupBearing()).thenReturn(-1.2);
-        org.junit.jupiter.api.Assertions.assertTrue(gates.CameraLocked());
+        assertTrue(gates.CameraLocked());
         when(vision.GetGroupBearing()).thenReturn(1.0);
         assertFalse(gates.CameraLocked());
+    }
+
+    @Test
+    @DisplayName("nectar's lock uses the opposite launcher offset: it opens with the hive 1 deg right, not left")
+    void nectarLockUsesTheOppositeOffset() {
+        properties.launcherOffsetNoRangeDeg = 1;   // no range here: a round 1 degree
+        properties.aimDoneDegrees = 0.5;
+        when(vision.GetGroupBearing()).thenReturn(1.2);   // pollen's spot: wrong for nectar
+        operator.right_trigger = 1;
+        loop();
+        assertFalse(gates.IsNectarOpen());
+        when(vision.GetGroupBearing()).thenReturn(-1.2);  // nectar's spot
+        loop();
+        assertTrue(gates.IsNectarOpen());
+    }
+
+    // ---- Settle before launch (0056): pollen only ----
+
+    @Test
+    @DisplayName("settle on: the pollen gate waits for the launcher to settle, then opens")
+    void pollenWaitsForTheSettle() {
+        properties.teleopLaunchSettles = true;
+        Launcher launcher = mock(Launcher.class);
+        when(launcher.SettleStatus()).thenReturn("settling");
+        gates.SetLauncher(launcher);
+        operator.left_trigger = 1;
+        loop();
+        assertFalse(gates.IsPollenOpen());
+        verify(launcher, atLeastOnce()).BeginSettle();
+        when(launcher.SettleDone()).thenReturn(true);
+        loop();
+        assertTrue(gates.IsPollenOpen());
+    }
+
+    @Test
+    @DisplayName("settle on: the nectar gate opens at once, without settling the launcher")
+    void nectarDoesNotSettle() {
+        properties.teleopLaunchSettles = true;
+        Launcher launcher = mock(Launcher.class);
+        gates.SetLauncher(launcher);
+        operator.right_trigger = 1;
+        loop();
+        assertTrue(gates.IsNectarOpen());
+        verify(launcher, never()).BeginSettle();
     }
 }

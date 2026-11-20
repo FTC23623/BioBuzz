@@ -22,10 +22,14 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.types.Alliance;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
 
 /** The strip with a pretend Prism driver: we check exactly which bytes it is sent. */
 @DisplayName("LightStrip (Prism driver)")
@@ -52,6 +56,79 @@ class LightStripTest {
         // Plain wiring in these tests: the switch closed means pollen. PollenSensorTest covers the flip.
         properties.pollenSensorInverted = false;
         pollenSensor = new PollenSensor(op, properties);
+        // These tests check the plain underglow during INIT; the snake tests turn it back on.
+        properties.stripInitSnake = false;
+        // The stop numbers below are written one past the last LED; stopIsLastLed checks the other way.
+        properties.prismStopIsOnePastLast = true;
+    }
+
+    // ---- The INIT snake (stripInitSnake) ----
+
+    @Test
+    @DisplayName("snake is on at INIT by default")
+    void snakeOnByDefault() {
+        Assertions.assertTrue(new BotProperties().stripInitSnake);
+    }
+
+    @Test
+    @DisplayName("INIT snake: drawn in the alliance color with one yellow pollen LED; the plain underglow is not")
+    void snakeDuringInit() {
+        properties.stripInitSnake = true;
+        op.mAlliance = Alliance.RED;
+        LightStrip strip = stripConfigured();
+        strip.ShowStatus();
+        // Starts 3 long on LEDs 0 to 2 (stop 3, one past the last).
+        verify(prism).SolidColor(LightStrip.SNAKE_LAYER, 0, 3, properties.stripBrightness, 255, 0, 0);
+        // One pollen LED: start and one-past-last differ by exactly one.
+        verify(prism, times(1)).SolidColor(eq(LightStrip.SNAKE_POLLEN_LAYER), anyInt(), anyInt(),
+                anyInt(), eq(255), eq(200), eq(0));
+        verify(prism, never()).SolidColor(eq(LightStrip.ALLIANCE_LAYER), anyInt(), anyInt(), anyInt(),
+                anyInt(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("INIT snake: a step only moves its LEDs (no new color, so no flash); a new alliance sends the color fresh")
+    void snakeMoves() {
+        properties.stripInitSnake = true;
+        properties.snakeStepSeconds = 0;   // every loop is a step
+        op.mAlliance = Alliance.BLUE;
+        LightStrip strip = stripConfigured();
+        strip.ShowStatus();   // drawn blue on 0 to 2
+        strip.ShowStatus();   // one step: head on 3 (stop 4), whether or not it ate
+        verify(prism, times(1)).SolidColor(eq(LightStrip.SNAKE_LAYER), anyInt(), anyInt(), anyInt(),
+                eq(0), eq(0), eq(255));
+        verify(prism).MoveRun(eq(LightStrip.SNAKE_LAYER), anyInt(), eq(4), ArgumentMatchers.anyBoolean());
+
+        op.mAlliance = Alliance.RED;
+        strip.ShowStatus();
+        verify(prism, times(1)).SolidColor(eq(LightStrip.SNAKE_LAYER), anyInt(), eq(5), anyInt(),
+                eq(255), eq(0), eq(0));
+    }
+
+    @Test
+    @DisplayName("START: the snake stops for good, every layer cleared, the plain underglow back")
+    void snakeStopsAtStart() {
+        properties.stripInitSnake = true;
+        properties.snakeStepSeconds = 0;
+        op.mAlliance = Alliance.RED;
+        LightStrip strip = stripConfigured();
+        strip.ShowStatus();
+        strip.ShowStatus();
+        strip.Process();   // START
+        InOrder order = inOrder(prism);
+        for (int layer = 0; layer < PrismLedDriver.LAYERS; layer++) {
+            order.verify(prism).ClearLayer(layer);
+        }
+        order.verify(prism).SolidColor(1, 0, 36, properties.stripBrightness, 255, 0, 0);
+        // More loops after START: the snake never draws again.
+        Mockito.clearInvocations(prism);
+        for (int loop = 0; loop < 20; loop++) {
+            strip.Process();
+        }
+        verify(prism, never()).SolidColor(eq(LightStrip.SNAKE_LAYER), anyInt(), anyInt(), anyInt(),
+                anyInt(), anyInt(), anyInt());
+        verify(prism, never()).SolidColor(eq(LightStrip.SNAKE_POLLEN_LAYER), anyInt(), anyInt(), anyInt(),
+                anyInt(), anyInt(), anyInt());
     }
 
     private LightStrip stripConfigured() {
@@ -226,6 +303,23 @@ class LightStripTest {
         LightStrip strip = stripConfigured();
         strip.ShowStatus();
         verify(prism).SolidColor(1, 0, 35, properties.stripBrightness, 0, 0, 255);
+    }
+
+    @Test
+    @DisplayName("today (stop is the last LED): the INIT snake's pollen is ONE LED, start and stop the same")
+    void snakePollenIsOneLed() {
+        properties.prismStopIsOnePastLast = new BotProperties().prismStopIsOnePastLast;
+        properties.stripInitSnake = true;
+        op.mAlliance = Alliance.RED;
+        LightStrip strip = stripConfigured();
+        strip.ShowStatus();
+        ArgumentCaptor<Integer> start = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> stop = ArgumentCaptor.forClass(Integer.class);
+        verify(prism).SolidColor(eq(LightStrip.SNAKE_POLLEN_LAYER), start.capture(), stop.capture(),
+                anyInt(), eq(255), eq(200), eq(0));
+        assertEquals(start.getValue(), stop.getValue());
+        // And the 3-long snake is sent as 0 to 2.
+        verify(prism).SolidColor(LightStrip.SNAKE_LAYER, 0, 2, properties.stripBrightness, 255, 0, 0);
     }
 
     @Test

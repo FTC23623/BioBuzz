@@ -84,7 +84,7 @@ public class StripTest extends LinearOpMode {
             for (int block = 0; block < COLORS.length; block++) {
                 telemetry.addData("LEDs " + FirstLed(block) + "-" + LastLed(block), NAMES[block]);
             }
-            telemetry.addLine("Each color should cover 6 LEDs. 7 there = set prismStopIsOnePastLast false.");
+            telemetry.addLine("Each color should cover 6 LEDs. 7 there = set prismStopIsOnePastLast false; 5 = true.");
             telemetry.update();
             idle();
         }

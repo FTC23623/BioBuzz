@@ -86,16 +86,44 @@ public class PrismLedDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
      * uses start 0, stop 10 for the first ten LEDs, so stop is taken as "one past the last".
      * If each run comes out one LED too long, stop is the last LED itself.
      *
+     * <p>Each setting is its own message, and the Prism draws between them. So the layer is
+     * set up dark: brightness 0 first, then the animation, the LEDs and the color, and the
+     * real brightness last. Sent the other way round (animation and brightness first), the
+     * layer lit up for a moment in its old or default color, which flashed white after a
+     * clear.
+     *
      * @param layer      0 to 9. Higher layers draw on top of lower ones.
      * @param brightness 0 to 100
      * @param red        0 to 255, likewise green and blue
      */
     public void SolidColor(int layer, int startLed, int stopLed, int brightness, int red, int green, int blue) {
+        WriteLayer(layer, SUB_BRIGHTNESS, new byte[] {0});
         WriteLayer(layer, SUB_ANIMATION, new byte[] {(byte) ANIMATION_SOLID});
-        WriteLayer(layer, SUB_BRIGHTNESS, new byte[] {(byte) brightness});
         WriteLayer(layer, SUB_START, new byte[] {(byte) startLed});
         WriteLayer(layer, SUB_STOP, new byte[] {(byte) stopLed});
         WriteLayer(layer, SUB_PRIMARY_COLOR, new byte[] {(byte) red, (byte) green, (byte) blue});
+        WriteLayer(layer, SUB_BRIGHTNESS, new byte[] {(byte) brightness});
+    }
+
+    /**
+     * Move a layer that is already lit to other LEDs, keeping its color and brightness. Two
+     * messages instead of six, and the layer never goes dark or changes color, so a moving
+     * run (the INIT snake) slides without blinking.
+     *
+     * <p>The Prism draws between the two messages, so the order matters. Moving toward higher
+     * LEDs, send the start first; toward lower LEDs, the stop first. Then the run only ever
+     * shrinks for a moment, never stretches across the LEDs in between.
+     *
+     * @param startFirst true: start, then stop. false: stop, then start.
+     */
+    public void MoveRun(int layer, int startLed, int stopLed, boolean startFirst) {
+        if (startFirst) {
+            WriteLayer(layer, SUB_START, new byte[] {(byte) startLed});
+            WriteLayer(layer, SUB_STOP, new byte[] {(byte) stopLed});
+        } else {
+            WriteLayer(layer, SUB_STOP, new byte[] {(byte) stopLed});
+            WriteLayer(layer, SUB_START, new byte[] {(byte) startLed});
+        }
     }
 
     /**

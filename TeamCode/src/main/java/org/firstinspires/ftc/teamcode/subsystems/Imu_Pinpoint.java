@@ -23,6 +23,9 @@ public class Imu_Pinpoint implements Imu {
     private double mHeadingAtReset;
     /** Heading read this loop, so every reader in the loop sees the same number. */
     private double mYawDegrees;
+    /** Position read this loop, turned to match the heading's 0 (see GetXIn). Inches. */
+    private double mXIn;
+    private double mYIn;
 
     public Imu_Pinpoint(HydraOpMode op, BotProperties properties) {
         mOp = op;
@@ -105,6 +108,29 @@ public class Imu_Pinpoint implements Imu {
         double rawHeading = mPinpoint.getHeading(AngleUnit.DEGREES);
         // Keep the answer between -180 and 180.
         mYawDegrees = AngleUnit.normalizeDegrees(rawHeading - mHeadingAtReset);
+        // The Pinpoint's x is forward and y is left of the way it faced at INIT. Circle (or
+        // SetYaw) can move the heading's 0, so turn the position by the same amount: then
+        // GetYaw and GetXIn / GetYIn always agree on which way is 0.
+        double x = mPinpoint.getPosX(DistanceUnit.INCH);
+        double y = mPinpoint.getPosY(DistanceUnit.INCH);
+        double turn = Math.toRadians(mHeadingAtReset);
+        mXIn = x * Math.cos(turn) + y * Math.sin(turn);
+        mYIn = -x * Math.sin(turn) + y * Math.cos(turn);
+    }
+
+    @Override
+    public boolean HasPosition() {
+        return mReady;
+    }
+
+    @Override
+    public double GetXIn() {
+        return mXIn;
+    }
+
+    @Override
+    public double GetYIn() {
+        return mYIn;
     }
 
     @Override

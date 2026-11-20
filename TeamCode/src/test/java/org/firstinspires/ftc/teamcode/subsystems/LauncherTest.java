@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -11,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.function.Consumer;
@@ -20,6 +23,8 @@ import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 /**
  * The two launchers with pretend motors and a pretend operator gamepad. Each motor
@@ -170,36 +175,37 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("distance curve: 2-inch steps, each a little bigger than the last, clamped at both ends")
+    @DisplayName("distance speeds: 2-inch steps along straight lines through four shots, clamped at both ends")
     void curve() {
         BotProperties p = new BotProperties();
         p.launchNearIn = 110;
         p.launchNearRpm = 2900;
+        p.launchMid1In = 120;
+        p.launchMid1Rpm = 3000;
+        p.launchMid2In = 130;
+        p.launchMid2Rpm = 3150;
         p.launchFarIn = 140;
         p.launchFarRpm = 3325;
-        p.launchCurve = 1.1;
         p.launchBandIn = 2;
         assertEquals(2900, Launcher.RpmForRange(100, p), EPS);   // nearer than the near shot
         assertEquals(2900, Launcher.RpmForRange(111.9, p), EPS); // still the first step
-        assertEquals(2922, Launcher.RpmForRange(112, p), EPS);
-        assertEquals(3027, Launcher.RpmForRange(121, p), EPS);
-        assertEquals(3172, Launcher.RpmForRange(130, p), EPS);
+        assertEquals(2920, Launcher.RpmForRange(112, p), EPS);   // 2900 + 100 x 2/10
+        assertEquals(3000, Launcher.RpmForRange(121, p), EPS);   // step 120: the middle shot
+        assertEquals(3150, Launcher.RpmForRange(130, p), EPS);
+        assertEquals(3290, Launcher.RpmForRange(139, p), EPS);   // step 138: 3150 + 175 x 8/10
         assertEquals(3325, Launcher.RpmForRange(140, p), EPS);
         assertEquals(3325, Launcher.RpmForRange(200, p), EPS);   // farther than the far shot
-        // Farther steps are bigger: the curve bends upward, for the ball's arc.
-        double nearStep = Launcher.RpmForRange(112, p) - Launcher.RpmForRange(110, p);
-        double farStep = Launcher.RpmForRange(138, p) - Launcher.RpmForRange(136, p);
-        assertTrue(farStep > nearStep, "near step " + nearStep + ", far step " + farStep);
     }
 
     @Test
-    @DisplayName("curve 1: a straight line between the two shots")
-    void curveOneIsStraight() {
+    @DisplayName("today's speeds: 2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 (and at 145)")
+    void todaysSpeeds() {
         BotProperties p = new BotProperties();
-        p.launchCurve = 1;
-        p.launchBandIn = 0;   // no steps, so the midpoint is exact
-        assertEquals(Math.round((p.launchNearRpm + p.launchFarRpm) / 2),
-                Launcher.RpmForRange((p.launchNearIn + p.launchFarIn) / 2, p), EPS);
+        assertEquals(2760, Launcher.RpmForRange(110, p), EPS);
+        assertEquals(2831, Launcher.RpmForRange(120, p), EPS);
+        assertEquals(2983, Launcher.RpmForRange(130, p), EPS);
+        assertEquals(3115, Launcher.RpmForRange(140, p), EPS);
+        assertEquals(3115, Launcher.RpmForRange(145, p), EPS);
     }
 
     @Test
@@ -208,11 +214,11 @@ class LauncherTest {
         properties.launcherRangeTuning = true;
         tagAt(135);
         launcher.Process();
-        assertEquals(3130, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(135, properties), launcher.GetPollenTargetRpm(), EPS);
         assertEquals(1000, launcher.GetNectarTargetRpm(), EPS);
         tagAt(150);
         launcher.Process();
-        assertEquals(3240, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -237,7 +243,7 @@ class LauncherTest {
         tagAt(121);
         when(vision.GetGroupRange()).thenReturn(131.0);
         launcher.Process();
-        assertEquals(2886, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(121, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -261,7 +267,7 @@ class LauncherTest {
         tagAt(121.9);
         launcher.Process();
         double onTheEdge = launcher.GetPollenTargetRpm();
-        assertEquals(2886, onTheEdge, EPS);
+        assertEquals(Launcher.RpmForRange(121.9, properties), onTheEdge, EPS);
         tagAt(122.3);
         launcher.Process();
         assertEquals(onTheEdge, launcher.GetPollenTargetRpm(), EPS, "122.3 is inside the 1-in hold");
@@ -280,7 +286,7 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("launch lock on: while the gates are open the speed holds; closed, it follows again")
+    @DisplayName("launch lock on: while the pollen gate is open the speed holds; closed, it follows again")
     void launchLockHolds() {
         properties.launcherRangeTuning = true;
         properties.launchLocksRpm = true;
@@ -288,14 +294,33 @@ class LauncherTest {
         launcher.SetLaunchGates(gates);
         tagAt(135);
         launcher.Process();
-        assertEquals(3130, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(135, properties), launcher.GetPollenTargetRpm(), EPS);
         when(gates.IsOpen()).thenReturn(true);
+        when(gates.IsPollenOpen()).thenReturn(true);
         tagAt(150);   // the distance jumps mid-launch
         launcher.Process();
-        assertEquals(3130, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(135, properties), launcher.GetPollenTargetRpm(), EPS);
         when(gates.IsOpen()).thenReturn(false);
+        when(gates.IsPollenOpen()).thenReturn(false);
         launcher.Process();
-        assertEquals(3240, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch lock on: only the nectar gate open, the pollen speed keeps following")
+    void nectarLaunchDoesNotLockPollen() {
+        properties.launcherRangeTuning = true;
+        properties.launchLocksRpm = true;
+        LaunchGates gates = mock(LaunchGates.class);
+        when(gates.IsOpen()).thenReturn(true);
+        when(gates.IsNectarOpen()).thenReturn(true);
+        when(gates.IsPollenOpen()).thenReturn(false);
+        launcher.SetLaunchGates(gates);
+        tagAt(135);
+        launcher.Process();
+        tagAt(150);
+        launcher.Process();
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -304,10 +329,11 @@ class LauncherTest {
         properties.launcherRangeTuning = true;
         LaunchGates gates = mock(LaunchGates.class);
         when(gates.IsOpen()).thenReturn(true);
+        when(gates.IsPollenOpen()).thenReturn(true);
         launcher.SetLaunchGates(gates);
         tagAt(150);
         launcher.Process();
-        assertEquals(3240, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -345,7 +371,7 @@ class LauncherTest {
         assertEquals(1000, launcher.GetPollenTargetRpm(), EPS);
         when(vision.GetTagTiltDegrees()).thenReturn(5.0);    // tipped up
         teleOpLoopNotAiming();
-        assertEquals(3130, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(135, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -357,7 +383,7 @@ class LauncherTest {
         tagAt(135);
         when(vision.GetTagTiltDegrees()).thenReturn(60.0);
         teleOpLoopNotAiming();
-        assertEquals(3130, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(135, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -378,14 +404,15 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("gamepad 2 cross: steady range on (one rumble), again off (two)")
-    void crossTogglesSteady() {
-        tap(down -> gamepad.cross = down);
-        assertTrue(properties.steadyRange);
-        verify(gamepad).rumbleBlips(1);
+    @DisplayName("gamepad 2 cross no longer toggles steady range (it runs the intake now; steadyRange is dashboard-only)")
+    void crossDoesNotToggleSteady() {
+        properties.steadyRange = false;
         tap(down -> gamepad.cross = down);
         assertFalse(properties.steadyRange);
-        verify(gamepad).rumbleBlips(2);
+        properties.steadyRange = true;
+        tap(down -> gamepad.cross = down);
+        assertTrue(properties.steadyRange);
+        verify(gamepad, never()).rumbleBlips(anyInt());
     }
 
     @Test
@@ -394,17 +421,17 @@ class LauncherTest {
         properties.launcherRangeTuning = true;
         tagAt(111);
         launcher.Process();
-        assertEquals(2735, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(111, properties), launcher.GetPollenTargetRpm(), EPS);
         when(vision.SeesTag()).thenReturn(false);
         launcher.Process();
-        assertEquals(2735, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(111, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
     @DisplayName("range tuning on: D-pad up / down trims the whole table, one launcherRpmStep a press")
     void dpadTrimsTheTable() {
         properties.launcherRangeTuning = true;
-        driver.right_bumper = true;   // TeleOp: the table only follows while aiming
+        gamepad.left_bumper = true;   // TeleOp: the table only follows while the operator aims
         tagAt(125);
         double step = properties.launcherRpmStep;
         double tableRpm = Launcher.RpmForRange(125, properties);
@@ -419,7 +446,7 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("TeleOp, no aim button: the camera is not tracking, the speed holds")
+    @DisplayName("TeleOp, no aim button: the camera is not tracking, the speed holds; operator's pollen aim: it tracks")
     void teleOpTracksOnlyWhileAiming() {
         properties.launcherRangeTuning = true;
         tagAt(150);
@@ -427,28 +454,59 @@ class LauncherTest {
         launcher.Process();
         assertEquals(1000, launcher.GetPollenTargetRpm(), EPS);
 
-        driver.right_bumper = true;
+        gamepad.left_bumper = true;
         launcher.HandleUserInput();
         launcher.Process();
-        assertEquals(3240, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
 
         // Let go: holds where it got to, even as the robot moves.
-        driver.right_bumper = false;
+        gamepad.left_bumper = false;
         tagAt(112);
         launcher.HandleUserInput();
         launcher.Process();
-        assertEquals(3240, launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
-    @DisplayName("TeleOp, launch trigger held: tracks too")
+    @DisplayName("TeleOp, operator's pollen launch trigger held: tracks too")
     void teleOpTracksWhileLaunching() {
         properties.launcherRangeTuning = true;
         tagAt(125);
-        driver.right_trigger = 1;
+        gamepad.left_trigger = 1;
         launcher.HandleUserInput();
         launcher.Process();
         assertEquals(Launcher.RpmForRange(125, properties), launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("TeleOp, operator's nectar aim bumper or nectar trigger: tracks too")
+    void teleOpTracksWhileNectarAims() {
+        properties.launcherRangeTuning = true;
+        tagAt(125);
+        gamepad.right_bumper = true;
+        launcher.HandleUserInput();
+        launcher.Process();
+        assertEquals(Launcher.RpmForRange(125, properties), launcher.GetPollenTargetRpm(), EPS);
+
+        gamepad.right_bumper = false;
+        properties.launchTriggerAims = false;   // the trigger still counts, as a launch
+        gamepad.right_trigger = 1;
+        tagAt(140);
+        launcher.HandleUserInput();
+        launcher.Process();
+        assertEquals(Launcher.RpmForRange(140, properties), launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("TeleOp, the driver's right bumper and trigger no longer make it track")
+    void driverButtonsDoNotTrack() {
+        properties.launcherRangeTuning = true;
+        tagAt(150);
+        driver.right_bumper = true;
+        driver.right_trigger = 1;
+        launcher.HandleUserInput();
+        launcher.Process();
+        assertEquals(1000, launcher.GetPollenTargetRpm(), EPS);
     }
 
     @Test
@@ -576,8 +634,8 @@ class LauncherTest {
         properties.launcherOnlyTelemetry = true;
         Launcher l = new Launcher(quiet, properties, gamepad, vision);
         l.Process();
-        verify(screen).addData(org.mockito.ArgumentMatchers.eq("Launcher speed from distance"),
-                org.mockito.ArgumentMatchers.<Object>any());
+        verify(screen).addData(ArgumentMatchers.eq("Launcher speed from distance"),
+                ArgumentMatchers.<Object>any());
     }
 
     @Test
@@ -589,6 +647,6 @@ class LauncherTest {
         properties.launcherOnlyTelemetry = false;
         Launcher l = new Launcher(quiet, properties, gamepad, vision);
         l.Process();
-        org.mockito.Mockito.verifyNoInteractions(screen);
+        Mockito.verifyNoInteractions(screen);
     }
 }

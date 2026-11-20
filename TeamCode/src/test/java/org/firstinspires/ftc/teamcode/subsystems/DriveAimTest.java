@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,17 +15,23 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 /**
  * Aim assist through the real drive code: a pretend camera says where the tag is, and the
  * four pretend motors show which way the robot would turn. Full speed, heading 0, so the
  * numbers are easy to read: a left turn is left wheels forward, right wheels backward.
+ *
+ * <p>Aim and launch are the OPERATOR's (gamepad 2, {@link LaunchChoice}): left bumper / trigger
+ * pollen, right bumper / trigger nectar. The driver only drives.
  */
 @DisplayName("Drive_Manual aim assist")
 class DriveAimTest {
@@ -33,6 +40,8 @@ class DriveAimTest {
     private final Map<String, double[]> power = new LinkedHashMap<>();
     private HydraOpMode op;
     private Gamepad gamepad;
+    /** Gamepad 2: aims and launches. */
+    private Gamepad operator;
     private Vision vision;
     private Drive_Manual drive;
     private Imu imu;
@@ -59,14 +68,18 @@ class DriveAimTest {
             when(hardwareMap.get(DcMotorEx.class, name)).thenReturn(m);
         }
         gamepad = mock(Gamepad.class);
+        operator = mock(Gamepad.class);
         imu = mock(Imu.class);
         when(imu.Ready()).thenReturn(true);
         when(imu.GetYaw()).thenReturn(0.0);
         vision = mock(Vision.class);
-        op = new HydraOpMode(mock(Telemetry.class), hardwareMap, gamepad, mock(Gamepad.class));
+        op = new HydraOpMode(mock(Telemetry.class), hardwareMap, gamepad, operator);
         op.mSafeMode = false;
-        // These tests check the aim itself, dead center. The pollen offset has its own test.
+        // These tests check the aim itself, dead center. The side offset has its own tests;
+        // the launcher offset is off unless a test turns it on.
         properties.aimHiveBearingDeg = 0;
+        properties.launcherSideOffsetIn = 0;
+        properties.launcherOffsetNoRangeDeg = 0;
         // The aim tests check aim alone; the wiggle tests turn it back on.
         properties.launchWiggle = false;
         drive = new Drive_Manual(op, properties, imu, vision);
@@ -110,7 +123,7 @@ class DriveAimTest {
         when(vision.SeesTag()).thenReturn(true);
         when(vision.GetBearing()).thenReturn(20.0);          // nearest tag is to the left...
         when(vision.GetGroupBearing()).thenReturn(-20.0);    // ...but the hive's middle is to the right
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         runLoops();
         assertEquals(-0.4, frontLeft(), EPS);   // turns right
         assertEquals(0.4, frontRight(), EPS);
@@ -120,7 +133,7 @@ class DriveAimTest {
     @DisplayName("launch trigger held: the robot snaps to the hive too, like an auto")
     void launchTriggerAims() {
         tagAt(20);
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         runLoops();
         assertEquals(0.4, frontLeft(), EPS);
         assertEquals(-0.4, frontRight(), EPS);
@@ -131,16 +144,16 @@ class DriveAimTest {
     void launchTriggerAimOff() {
         properties.launchTriggerAims = false;
         tagAt(20);
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         runLoops();
         assertEquals(0, frontLeft(), EPS);
         assertEquals(0, frontRight(), EPS);
     }
 
     @Test
-    @DisplayName("right bumper held, tag 20 degrees to the left: the robot turns left by itself")
+    @DisplayName("operator's left bumper (aim pollen) held, tag 20 degrees to the left: the robot turns left by itself")
     void turnsLeftTowardTag() {
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         tagAt(20);
         runLoops();
         // kP 0.02 x 20 degrees = 0.4, with nothing on the sticks.
@@ -153,7 +166,7 @@ class DriveAimTest {
     @Test
     @DisplayName("tag to the right: turns right")
     void turnsRightTowardTag() {
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         tagAt(-20);
         runLoops();
         assertEquals(-0.4, frontLeft(), EPS);
@@ -169,7 +182,7 @@ class DriveAimTest {
         assertTrue(stickFrontLeft < 0, "stick right should give front left " + stickFrontLeft);
 
         gamepad.right_stick_x = 0;
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         tagAt(-20);
         runLoops();
         assertTrue(frontLeft() < 0, "tag on the right should turn the same way as stick right");
@@ -178,7 +191,7 @@ class DriveAimTest {
     @Test
     @DisplayName("bumper held but no tag in view: the stick still turns the robot")
     void noTagStickStillWorks() {
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         when(vision.SeesTag()).thenReturn(false);
         gamepad.right_stick_x = 1;
         runLoops();
@@ -189,8 +202,150 @@ class DriveAimTest {
     @Test
     @DisplayName("bumper not held: the tag is ignored and the robot stays still")
     void notHeldIgnoresTag() {
-        gamepad.right_bumper = false;
+        operator.left_bumper = false;
         tagAt(20);
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("driving with a tag in view, no aim button: the wheels match the sticks alone")
+    void drivingPastATagDoesNotSteer() {
+        // While driving, the camera may change the launcher's speed (always-track), but never
+        // the heading: only the aim buttons let a tag turn the robot.
+        gamepad.left_stick_y = -0.6f;
+        gamepad.left_stick_x = 0.3f;
+        when(vision.SeesTag()).thenReturn(false);
+        runLoops();
+        double[] sticksAlone = {frontLeft(), frontRight(), backLeft(), backRight()};
+
+        tagAt(25);
+        when(vision.GetRange()).thenReturn(120.0);
+        runLoops();
+        assertEquals(sticksAlone[0], frontLeft(), EPS);
+        assertEquals(sticksAlone[1], frontRight(), EPS);
+        assertEquals(sticksAlone[2], backLeft(), EPS);
+        assertEquals(sticksAlone[3], backRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("aiming turns the robot, but never rewrites the heading: the Pinpoint measures the turn")
+    void aimNeverRewritesHeading() {
+        operator.left_bumper = true;
+        tagAt(20);
+        runLoops();
+        verify(imu, never()).SetYaw(anyDouble());
+        verify(imu, never()).ResetYaw();
+    }
+
+    // ---- Hold position while launching (launchHoldsPosition) ----
+
+    /** The Pinpoint says the robot is here. */
+    private void robotAt(double x, double y) {
+        when(imu.HasPosition()).thenReturn(true);
+        when(imu.GetXIn()).thenReturn(x);
+        when(imu.GetYIn()).thenReturn(y);
+    }
+
+    /** The wheel powers driving the drive stick alone gives, with no hold and no trigger. */
+    private double[] stickOnly(float driveStick) {
+        gamepad.left_stick_y = driveStick;
+        runLoops();
+        double[] powers = {frontLeft(), frontRight(), backLeft(), backRight()};
+        gamepad.left_stick_y = 0;
+        runLoops();
+        return powers;
+    }
+
+    @Test
+    @DisplayName("launch hold: bumped 4 in backward while launching, the robot drives forward like the stick at 0.2")
+    void holdPushesBack() {
+        double[] forward = stickOnly(-0.2f);
+        robotAt(0, 0);
+        operator.left_trigger = 1;
+        when(vision.SeesTag()).thenReturn(false);
+        drive.HandleUserInput();
+        drive.Process();          // the spot is (0, 0)
+        robotAt(-4, 0);           // shoved back 4 in
+        runLoops();
+        // The stick is a float, so allow a float's rounding.
+        double floatEps = 1e-6;
+        assertEquals(forward[0], frontLeft(), floatEps);
+        assertEquals(forward[1], frontRight(), floatEps);
+        assertEquals(forward[2], backLeft(), floatEps);
+        assertEquals(forward[3], backRight(), floatEps);
+    }
+
+    @Test
+    @DisplayName("launch hold: let go of the trigger, no more push")
+    void holdEndsWithTheTrigger() {
+        robotAt(0, 0);
+        operator.left_trigger = 1;
+        drive.HandleUserInput();
+        drive.Process();
+        robotAt(-4, 0);
+        operator.left_trigger = 0;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch hold: moving the stick wins, and once let go the new spot is where it stopped")
+    void sticksBeatTheHold() {
+        robotAt(0, 0);
+        operator.left_trigger = 1;
+        drive.HandleUserInput();
+        drive.Process();
+        // The driver drives 10 in forward on purpose, trigger still held.
+        gamepad.left_stick_y = -0.5f;
+        robotAt(10, 0);
+        runLoops();
+        gamepad.left_stick_y = 0;
+        runLoops();
+        // Stopped at 10 in: that is the new spot, so no push back to 0.
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch hold: shoved past the give-up distance, it stops pushing until the trigger is let go")
+    void holdGivesUp() {
+        properties.launchHoldGiveUpIn = 18;
+        robotAt(0, 0);
+        operator.left_trigger = 1;
+        drive.HandleUserInput();
+        drive.Process();
+        robotAt(-20, 0);
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        robotAt(-4, 0);           // back near the spot: still given up
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch hold: no position (Control Hub IMU), nothing is held")
+    void holdNeedsAPosition() {
+        when(imu.HasPosition()).thenReturn(false);
+        when(imu.GetXIn()).thenReturn(-4.0);
+        operator.left_trigger = 1;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch hold: launchHoldsPosition off, the trigger never pushes")
+    void holdOff() {
+        properties.launchHoldsPosition = false;
+        robotAt(0, 0);
+        operator.left_trigger = 1;
+        drive.HandleUserInput();
+        drive.Process();
+        robotAt(-4, 0);
         runLoops();
         assertEquals(0, frontLeft(), EPS);
         assertEquals(0, frontRight(), EPS);
@@ -199,7 +354,7 @@ class DriveAimTest {
     @Test
     @DisplayName("tag almost centered: no turning, so the robot does not wobble")
     void centeredTagNoTurn() {
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         tagAt(0.5);
         runLoops();
         assertEquals(0, frontLeft(), EPS);
@@ -212,9 +367,9 @@ class DriveAimTest {
     @DisplayName("bumper let go between reading and driving: no aim that loop")
     void releasedBeforeProcessDoesNotAim() {
         tagAt(20);
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         drive.HandleUserInput();
-        gamepad.right_bumper = false;   // let go before the drive acts
+        operator.left_bumper = false;   // let go before the drive acts
         for (int i = 0; i < 50; i++) {
             drive.Process();
         }
@@ -226,7 +381,7 @@ class DriveAimTest {
     @DisplayName("no fresh gamepad reading: a bumper seen once does not keep the robot aiming")
     void staleInputDoesNotAim() {
         tagAt(20);
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         drive.HandleUserInput();
         drive.Process();
         // HandleUserInput stops being called, the bumper still reads down: aim must stop.
@@ -241,10 +396,10 @@ class DriveAimTest {
     @DisplayName("aim, then let go: the robot stops turning, with the tag still in view")
     void letGoStopsAiming() {
         tagAt(20);
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         runLoops();
         assertEquals(0.4, frontLeft(), EPS);
-        gamepad.right_bumper = false;
+        operator.left_bumper = false;
         runLoops();
         assertEquals(0, frontLeft(), EPS);
         assertEquals(0, frontRight(), EPS);
@@ -252,12 +407,13 @@ class DriveAimTest {
 
     // ---- Arcing around the hive: D-pad left / right while aiming (0039) ----
 
-    /** Aiming at a centered hive this many inches away, with round arc settings. */
+    /** Aiming at a centered hive this many inches away, with the arc on and round arc settings. */
     private void aimingAtHive(double rangeIn) {
+        properties.aimArc = true;
         properties.arcStrafePower = 0.4;
         properties.arcRangeKP = 0.02;
         properties.arcMaxDrive = 0.4;
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         tagAt(0);
         when(vision.GetRange()).thenReturn(rangeIn);
     }
@@ -322,6 +478,7 @@ class DriveAimTest {
     @Test
     @DisplayName("D-pad without the aim button: nothing happens")
     void dpadAloneDoesNothing() {
+        properties.aimArc = true;
         properties.arcStrafePower = 0.4;
         tagAt(0);
         when(vision.GetRange()).thenReturn(100.0);
@@ -334,10 +491,22 @@ class DriveAimTest {
     @Test
     @DisplayName("aiming with no tag in view: the D-pad does nothing")
     void arcNeedsATag() {
+        properties.aimArc = true;
         properties.arcStrafePower = 0.4;
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         when(vision.SeesTag()).thenReturn(false);
         gamepad.dpad_right = true;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("aimArc off (the default): aiming with the D-pad held does not strafe")
+    void arcOffByDefault() {
+        aimingAtHive(100);
+        properties.aimArc = new BotProperties().aimArc;   // what the robot ships with
+        gamepad.dpad_left = true;
         runLoops();
         assertEquals(0, frontLeft(), EPS);
         assertEquals(0, frontRight(), EPS);
@@ -374,7 +543,7 @@ class DriveAimTest {
         properties.aimDoneDegrees = 0.1;
         tagAt(0);
         when(vision.GetSideDegrees()).thenReturn(20.0);
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         runLoops();
         // 1 degree to go, to the right: 0.02 x -1 = -0.02.
         assertEquals(-0.02, frontLeft(), EPS);
@@ -391,7 +560,7 @@ class DriveAimTest {
         properties.aimDoneDegrees = 0.1;
         tagAt(0);
         when(vision.GetSideDegrees()).thenReturn(-20.0);
-        gamepad.right_bumper = true;
+        operator.left_bumper = true;
         runLoops();
         // 1 degree to go, to the left: 0.02 x 1 = 0.02.
         assertEquals(0.02, frontLeft(), EPS);
@@ -402,8 +571,91 @@ class DriveAimTest {
         assertEquals(0, frontLeft(), EPS);
     }
 
+    @Test
+    @DisplayName("launcher offset: in front of the hive, pollen turns right until the hive sits 1 deg left, nectar the other way")
+    void launcherOffsetsAreOpposite() {
+        properties.launcherOffsetNoRangeDeg = 1;   // no range in these tests: a round 1 degree
+        properties.aimDoneDegrees = 0.1;
+        tagAt(0);
+        operator.left_bumper = true;
+        runLoops();
+        // Pollen sits left of the camera: 1 degree to go, to the right: 0.02 x -1 = -0.02.
+        assertEquals(-0.02, frontLeft(), EPS);
+        operator.left_bumper = false;
+        operator.right_bumper = true;
+        runLoops();
+        // Nectar sits right of the camera: the mirror, to the left.
+        assertEquals(0.02, frontLeft(), EPS);
+        tagAt(-1);   // now aimed for nectar
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+    }
+
+    @Test
+    @DisplayName("the side offset is the SAME for nectar: left of the hive (no launcher offset), nectar turns right like pollen")
+    void nectarSideOffsetSameAsPollen() {
+        properties.aimHiveBearingDeg = 1;
+        properties.aimDoneDegrees = 0.1;
+        tagAt(0);
+        when(vision.GetSideDegrees()).thenReturn(20.0);
+        operator.right_bumper = true;
+        runLoops();
+        assertEquals(-0.02, frontLeft(), EPS);
+        assertEquals(0.02, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("nectar launch trigger (right trigger) aims for nectar too")
+    void nectarTriggerAims() {
+        properties.launcherOffsetNoRangeDeg = 1;
+        properties.aimDoneDegrees = 0.1;
+        tagAt(0);
+        operator.right_trigger = 1;
+        runLoops();
+        assertEquals(0.02, frontLeft(), EPS);
+        assertEquals(-0.02, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("both operator bumpers held: pollen wins, the robot aims for pollen's launcher offset")
+    void bothBumpersPollenWins() {
+        properties.launcherOffsetNoRangeDeg = 1;
+        properties.aimDoneDegrees = 0.1;
+        tagAt(0);
+        operator.left_bumper = true;
+        operator.right_bumper = true;
+        runLoops();
+        // Same as pollen alone: turns right.
+        assertEquals(-0.02, frontLeft(), EPS);
+        assertEquals(0.02, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("the driver's right bumper and right trigger do nothing now: no aim")
+    void driverButtonsDoNotAim() {
+        tagAt(20);
+        gamepad.right_bumper = true;
+        gamepad.right_trigger = 1;
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("the driver's right trigger does not hold position either")
+    void driverTriggerDoesNotHold() {
+        robotAt(0, 0);
+        gamepad.right_trigger = 1;
+        drive.HandleUserInput();
+        drive.Process();
+        robotAt(-4, 0);
+        runLoops();
+        assertEquals(0, frontLeft(), EPS);
+        assertEquals(0, frontRight(), EPS);
+    }
+
     /** Press a button long enough for the debouncer, then let go. */
-    private void tap(java.util.function.Consumer<Boolean> button) {
+    private void tap(Consumer<Boolean> button) {
         for (int loop = 0; loop < properties.debounce + 2; loop++) {
             button.accept(true);
             drive.HandleUserInput();
@@ -423,7 +675,7 @@ class DriveAimTest {
         properties.wiggleMaxRotate = 0.3;
         properties.wiggleSwitchSeconds = 60;   // long, so the test stays on the left side
         properties.driveNormal = 1;
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         runLoops();
         // 1 degree to go, left: 0.1 x 1 = 0.1, a left turn (positive rotate).
         assertEquals(0.1, frontLeft(), EPS);
@@ -439,7 +691,7 @@ class DriveAimTest {
         properties.wiggleSwitchSeconds = 60;
         properties.driveNormal = 1;
         tagAt(-20);   // the hive well to the right
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         runLoops();
         assertTrue(frontLeft() < -0.1, "aim turns right hard first");
         tagAt(-0.5);  // aimed
@@ -456,16 +708,16 @@ class DriveAimTest {
         properties.fieldCentricDrive = true;
         properties.circleResetsForward = false;
         tap(down -> gamepad.circle = down);
-        org.mockito.Mockito.verify(imu, org.mockito.Mockito.never()).ResetYaw();
+        verify(imu, never()).ResetYaw();
         properties.circleResetsForward = true;
         tap(down -> gamepad.circle = down);
-        org.mockito.Mockito.verify(imu).ResetYaw();
+        verify(imu).ResetYaw();
     }
 
     @Test
-    @DisplayName("wiggle is on at START")
-    void wiggleOnByDefault() {
-        assertTrue(new BotProperties().launchWiggle);
+    @DisplayName("wiggle is off at START (square turns it on)")
+    void wiggleOffByDefault() {
+        assertFalse(new BotProperties().launchWiggle);
     }
 
     @Test
@@ -485,10 +737,10 @@ class DriveAimTest {
         tap(down -> gamepad.square = down);
         assertFalse(properties.launchWiggle);
         verify(gamepad).rumbleBlips(2);
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         runLoops();
         assertEquals(0, frontLeft(), EPS);   // off: the trigger launches without a wiggle
-        gamepad.right_trigger = 0;
+        operator.left_trigger = 0;
         tap(down -> gamepad.square = down);
         assertTrue(properties.launchWiggle);
         verify(gamepad).rumbleBlips(1);
@@ -500,7 +752,7 @@ class DriveAimTest {
         when(imu.Ready()).thenReturn(false);
         properties.launchWiggle = true;
         properties.wiggleSwitchSeconds = 60;
-        gamepad.right_trigger = 1;
+        operator.left_trigger = 1;
         runLoops();
         assertEquals(0, frontLeft(), EPS);
     }

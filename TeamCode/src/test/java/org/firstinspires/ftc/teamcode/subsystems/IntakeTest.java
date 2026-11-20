@@ -112,16 +112,16 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("left bumper: both run forward, each at its own speed; again: off")
-    void bumperToggles() {
+    @DisplayName("cross: both run forward, each at its own speed; again: off")
+    void crossToggles() {
         properties.intakeRpm = 200;
         properties.transferRpm = 300;
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         assertTrue(rollers.IsOn());
         assertEquals(TicksPerSecond(200), intake.velocity, EPS);
         assertEquals(TicksPerSecond(300), transfer.velocity, EPS);
 
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         assertEquals(0, intake.power, EPS);
         assertEquals(0, transfer.power, EPS);
     }
@@ -141,7 +141,7 @@ class IntakeTest {
     @Test
     @DisplayName("square held while intaking: the intake runs backward, the transfer keeps going forward")
     void squareLeavesARunningTransferOn() {
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         gamepad.square = true;
         loop();
         assertEquals(-TicksPerSecond(properties.intakeReverseRpm), intake.velocity, EPS);
@@ -151,7 +151,7 @@ class IntakeTest {
     @Test
     @DisplayName("let go of square: back to forward if it was on")
     void releaseSquareGoesBack() {
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         gamepad.square = true;
         loop();
         gamepad.square = false;
@@ -200,29 +200,35 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("left trigger held: both run forward; let go: off again")
-    void leftTriggerHold() {
-        gamepad.left_trigger = 1;
-        loop();
-        assertTrue(rollers.IsRunning());
-        assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
-        assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
-
-        gamepad.left_trigger = 0;
-        loop();
+    @DisplayName("left trigger held: the intake does NOT run (it launches pollen now)")
+    void leftTriggerDoesNotRun() {
+        for (int i = 0; i < properties.debounce + 2; i++) {
+            gamepad.left_trigger = 1;
+            loop();
+        }
         assertFalse(rollers.IsRunning());
-        assertEquals(0, intake.power, EPS);
-        assertEquals(0, transfer.power, EPS);
+        assertFalse(rollers.IsOn());
+        assertEquals(0, intake.velocity, EPS);
+        assertEquals(0, transfer.velocity, EPS);
     }
 
     @Test
-    @DisplayName("left trigger let go while the bumper has them on: they stay on")
-    void triggerDoesNotTurnOffBumper() {
+    @DisplayName("left bumper: no longer toggles the intake (it aims pollen now)")
+    void leftBumperDoesNotToggle() {
         tap(down -> gamepad.left_bumper = down);
+        assertFalse(rollers.IsOn());
+        assertEquals(0, intake.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("left trigger pulled and let go while cross has them on: they stay on")
+    void triggerDoesNotTurnOffCross() {
+        tap(down -> gamepad.cross = down);
         gamepad.left_trigger = 1;
         loop();
         gamepad.left_trigger = 0;
         loop();
+        assertTrue(rollers.IsOn());
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
     }
 
@@ -242,28 +248,28 @@ class IntakeTest {
     @Test
     @DisplayName("launching with the rollers already on: launching wins, both drop to their feed shares")
     void launchWhileOn() {
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);   // 100% while intaking
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
         assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedIntakeScale), intake.velocity, EPS);
         assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale), transfer.velocity, EPS);
-        // Gates closed again: back to full speed, since the bumper still has them on.
+        // Gates closed again: back to full speed, since cross still has them on.
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
     }
 
     @Test
-    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top; the launch feed is 70% for the intake and 50% for the transfer")
+    @DisplayName("the speeds fit the motor: full speed is the 1150 RPM top; the launch feed is 80% for the intake and 80% for the transfer")
     void speedsFitTheMotor() {
         assertEquals(1150, properties.intakeMaxRpm, EPS);
         assertTrue(properties.intakeRpm <= properties.intakeMaxRpm);
         assertTrue(properties.transferRpm <= properties.intakeMaxRpm);
         assertTrue(properties.intakeReverseRpm <= properties.intakeMaxRpm);
         assertTrue(properties.transferReverseRpm <= properties.intakeMaxRpm);
-        assertEquals(0.7, new BotProperties().launchFeedIntakeScale, EPS);
-        assertEquals(0.5, new BotProperties().launchFeedTransferScale, EPS);
+        assertEquals(0.8, new BotProperties().launchFeedIntakeScale, EPS);
+        assertEquals(0.8, new BotProperties().launchFeedTransferScale, EPS);
     }
 
     @Test
@@ -273,7 +279,7 @@ class IntakeTest {
         properties.rollerUsePower = true;
         properties.intakeRpm = 1150;
         properties.transferRpm = 575;
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         assertEquals(1.0, intake.power, EPS);
         assertEquals(0.5, transfer.power, EPS);
         assertEquals(0, transfer.velocity, EPS);
@@ -306,7 +312,7 @@ class IntakeTest {
     @Test
     @DisplayName("rollers running when the trigger is pulled: the transfer STOPS while the gate opens, the intake slows to its feed speed at once")
     void runningTransferPausesForTheGate() {
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
 
         when(gates.IsOpen()).thenReturn(true);
@@ -320,7 +326,7 @@ class IntakeTest {
         loop();
         assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale), transfer.velocity, EPS);
 
-        // Trigger let go: back to what the bumper says.
+        // Trigger let go: back to what cross says.
         when(gates.IsOpen()).thenReturn(false);
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
@@ -330,7 +336,7 @@ class IntakeTest {
     @Test
     @DisplayName("square while the gate opens: the intake runs backward, and a running transfer does not pause")
     void reverseWinsOverGateOpening() {
-        tap(down -> gamepad.left_bumper = down);
+        tap(down -> gamepad.cross = down);
         when(gates.IsOpen()).thenReturn(true);
         when(gates.IsFullyOpen()).thenReturn(false);
         gamepad.square = true;
@@ -355,6 +361,21 @@ class IntakeTest {
         r.Process();
     }
 
+    /** Hold cross on these rollers just long enough for the debouncer: they turn on (and stay held). */
+    private void pressCross(Intake r) {
+        gamepad.cross = true;
+        for (int i = 0; i < properties.debounce; i++) {
+            loop(r);
+        }
+    }
+
+    /** Press cross on these rollers, then let go. */
+    private void tapCross(Intake r) {
+        pressCross(r);
+        gamepad.cross = false;
+        loop(r);
+    }
+
     @Test
     @DisplayName("intaking and pollen stays detected: the intake runs backward, the transfer keeps going up")
     void rejectsAnExtraBall() {
@@ -363,40 +384,60 @@ class IntakeTest {
         PollenSensor pollen = mock(PollenSensor.class);
         when(pollen.IsDetected()).thenReturn(true);
         Intake r = withPollen(pollen);
-        gamepad.left_trigger = 1;
-        loop(r);
+        pressCross(r);
         assertTrue(r.IsRejecting());
         assertEquals(-TicksPerSecond(properties.intakeReverseRpm), intake.velocity, EPS);
         assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
     }
 
     @Test
-    @DisplayName("after the reject: both stop until the operator lets go, then work again")
+    @DisplayName("after the reject: both stop while cross is still held, then work again after cross is let go")
     void blockedUntilReleased() {
         properties.pollenRejectAfterSeconds = 0;
         properties.pollenRejectSeconds = 0;
         PollenSensor pollen = mock(PollenSensor.class);
         when(pollen.IsDetected()).thenReturn(true);
         Intake r = withPollen(pollen);
-        gamepad.left_trigger = 1;
-        loop(r);   // reject starts
-        loop(r);   // reject over: stopped, trigger still held
+        pressCross(r);   // on, and the reject starts
+        assertTrue(r.IsRejecting());
+        loop(r);         // reject over: stopped, cross still held
         loop(r);
         assertFalse(r.IsRunning());
         assertEquals(0, intake.power, EPS);
         assertEquals(0, transfer.power, EPS);
 
         when(pollen.IsDetected()).thenReturn(false);
-        gamepad.left_trigger = 0;
-        loop(r);   // let go: the block lifts
-        gamepad.left_trigger = 1;
-        loop(r);
+        gamepad.cross = false;
+        loop(r);   // let go: the block lifts, the toggle is off
+        assertFalse(r.IsRunning());
+        tapCross(r);
         assertTrue(r.IsRunning());
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
     }
 
     @Test
-    @DisplayName("the bumper toggle is turned off by a reject, and a press while blocked does nothing")
+    @DisplayName("after the reject, holding cross keeps it blocked; letting go of cross lifts the block")
+    void crossReleaseLiftsTheBlock() {
+        properties.pollenRejectAfterSeconds = 0;
+        properties.pollenRejectSeconds = 0;
+        PollenSensor pollen = mock(PollenSensor.class);
+        when(pollen.IsDetected()).thenReturn(true);
+        Intake r = withPollen(pollen);
+        pressCross(r);
+        when(pollen.IsDetected()).thenReturn(false);
+        loop(r);   // reject over: blocked
+        // Still held, and SetOn from somewhere else can't run it while blocked.
+        r.SetOn(true);
+        loop(r);
+        assertFalse(r.IsRunning(), "blocked while cross is held");
+        gamepad.cross = false;
+        loop(r);
+        assertTrue(r.IsRunning(), "cross let go: the block lifts");
+        assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("the cross toggle is turned off by a reject")
     void rejectTurnsTheToggleOff() {
         properties.pollenRejectAfterSeconds = 0;
         properties.pollenRejectSeconds = 0;
@@ -417,8 +458,7 @@ class IntakeTest {
         PollenSensor pollen = mock(PollenSensor.class);
         when(pollen.IsDetected()).thenReturn(true);
         Intake r = withPollen(pollen);
-        gamepad.left_trigger = 1;
-        loop(r);
+        tapCross(r);
         loop(r);
         assertFalse(r.IsRejecting());
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
@@ -435,7 +475,7 @@ class IntakeTest {
         assertFalse(r.IsRejecting());
 
         when(gates.IsFullyOpen()).thenReturn(true);   // launching: balls pass the switch on purpose
-        gamepad.left_trigger = 1;
+        r.SetOn(true);
         loop(r);
         assertFalse(r.IsRejecting());
 
@@ -458,14 +498,14 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("auto launch: the transfer feeds at 50%, the intake roller stays off")
-    void autoLaunchFeedsAtHalf() {
+    @DisplayName("auto launch: the transfer feeds at its launch share, the intake roller stays off")
+    void autoLaunchFeedsAtTheLaunchShare() {
         rollers.SetOn(true);
         rollers.SetIntakeRollerOn(false);
         when(gates.IsFullyOpen()).thenReturn(true);
         rollers.Process();
-        assertEquals(0.5, properties.launchFeedTransferScale, EPS);
-        assertEquals(TicksPerSecond(properties.transferRpm * 0.5), transfer.velocity, EPS);
+        assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale),
+                transfer.velocity, EPS);
         assertEquals(0, intake.power, EPS);
     }
 
