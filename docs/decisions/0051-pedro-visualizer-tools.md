@@ -33,7 +33,10 @@ they need one more number to be drawn on the field: where they start.
 
   Which wall: B and C only stay on the field from the top wall, and from there their
   FLOWER stops land in front of the top and left wall cells. A faces the opposite way, the
-  bottom wall. This matches the TeleOp hand-over (0046): the blue driver on the east wall.
+  bottom wall. This matches the TeleOp hand-over (0046): the blue driver at the picture's
+  left edge (x = 0), looking right, so the flower side (top wall) is on the driver's left
+  and the garden side (bottom wall) on the right. (Until 2026-11-24 this said the east
+  wall, from the flipped start facings.)
   A was first put beside the bottom-wall cell (x 103.75); the coach moved it two tiles left
   the same day. From there its FLOWER stops land at the left and top wall cells too.
 - **Our autos → visualizer**: `VisualizerExportTest` writes `TeamCode/build/visualizer/

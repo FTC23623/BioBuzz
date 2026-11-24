@@ -36,10 +36,10 @@ public class AutoStrategyGardenD extends PedroAuto {
         return new Pose(55.75, 9, Math.toRadians(-90));
     }
 
-    /** The robot starts facing the driver's left, like Garden Side A. */
+    /** The robot's front points to the driver's right, like Garden Side A. */
     @Override
     protected double StartFacingDeg() {
-        return 90;
+        return -90;
     }
 
     @Override

@@ -39,10 +39,14 @@ public class AutoStrategyB extends PedroAuto {
         return new Pose(55.75, 132.5, Math.toRadians(90));
     }
 
-    /** The robot starts facing the driver's right (was 90 until 2026-11-05: backwards). */
+    /**
+     * The robot's front (the intake) points to the driver's LEFT (90), at the flower side.
+     * The driver faces the hive, flowers to the left, garden to the right. The back (camera
+     * and launchers) faces the hive cell that tips up. Coach, 2026-11-24.
+     */
     @Override
     protected double StartFacingDeg() {
-        return -90;
+        return 90;
     }
 
     /** How far the robot creeps forward off the start, in inches. */

@@ -49,14 +49,14 @@ public class AutoStrategyGardenE extends PedroAuto {
     }
 
     /**
-     * The robot starts facing the driver's LEFT (90, seen from the driver), like Garden Side A:
-     * the same spot. This is NOT the field heading (270): TeleOp adds how far Pedro has
-     * turned since the start (PedroAuto.HandoffYaw), so 270 here would hand TeleOp a heading
-     * half a turn off, and field-centric "forward" would point at the driver.
+     * The robot's front points to the driver's RIGHT (-90, seen from the driver), like Garden
+     * Side A: the same spot. This is NOT the field heading (270): the field picture has the
+     * blue driver at its left edge, looking right. TeleOp adds how far Pedro has turned since
+     * the start (PedroAuto.HandoffYaw) to this number.
      */
     @Override
     protected double StartFacingDeg() {
-        return 90;
+        return -90;
     }
     @Override
     protected List<Path> BuildPaths() {

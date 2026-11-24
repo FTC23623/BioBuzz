@@ -242,8 +242,8 @@ public abstract class PedroAuto extends LinearOpMode {
      * first: 0 for an auto measured from its start, the field heading for a field-spot auto.
      *
      * <pre>
-     *     start facing the driver's left (90), start pose heading 270 (field), now 300:
-     *     turned 30 left since the start, so TeleOp yaw 90 + 30 = 120
+     *     start facing the driver's right (-90), start pose heading 270 (field), now 300:
+     *     turned 30 left since the start, so TeleOp yaw -90 + 30 = -60
      * </pre>
      *
      * @param startFacingDeg  {@link #StartFacingDeg()}, seen from the driver
@@ -258,8 +258,10 @@ public abstract class PedroAuto extends LinearOpMode {
     /**
      * Which way the robot faces on its start spot, seen from the driver, in degrees: 0 away
      * from the driver, 90 to the driver's left, -90 to the driver's right, 180 toward the
-     * driver. TeleOp uses it to keep "forward" away from the driver after the auto
-     * (docs/decisions/0046). NaN (the default) = not known: TeleOp then zeroes the heading
+     * driver. The driver faces the hive, with the flower side to the left and the garden
+     * side to the right, so a garden side auto (front at the garden) is -90 and a flower side
+     * auto (front at the flowers) is 90. TeleOp uses it to keep "forward" away from the driver
+     * after the auto (docs/decisions/0046). NaN (the default) = not known: TeleOp then zeroes the heading
      * at INIT, as before.
      */
     protected double StartFacingDeg() {

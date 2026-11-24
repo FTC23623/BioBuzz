@@ -31,11 +31,16 @@ point it straight. The coach asked for three things:
 
   | Auto | Start facing |
   |---|---|
-  | Garden Side Auto A | 90, the driver's left |
-  | Flower Side Auto B | -90, the driver's right |
-  | Flower Side Auto C | -90, the driver's right |
+  | Garden side autos (A, D, E) | -90, the driver's right |
+  | Flower side autos (B, C) | 90, the driver's left |
 
-  (Flipped on 2026-11-05: the first numbers had A right and B, C left, backwards.)
+  The driver faces the hive, with the flower side to the left and the garden side to the
+  right. The robot's front (the intake) points at its own side's wall, so its back (camera
+  and launchers) faces the hive cell that tips up. Seen from the robot, a garden side auto
+  has its left side away from the driver, a flower side auto its right side.
+
+  (History: the first numbers were these. They were flipped on 2026-11-05, to A left and
+  B, C right, and put back on 2026-11-24 from the coach's description above.)
 
   Every loop, the auto saves start facing + Pedro's heading in `objects/HeadingHandoff`.
   It is a static field, so it lives from one OpMode to the next in the same Robot

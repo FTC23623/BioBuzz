@@ -92,27 +92,27 @@ class MatchOpModesTest {
     }
 
     @Test
-    @DisplayName("start facing, seen from the driver: A to the left, B and C to the right")
+    @DisplayName("start facing, seen from the driver: garden side autos to the right, flower side autos to the left")
     void startFacing() {
-        assertEquals(90, new AutoStrategyA().StartFacingDeg(), 1e-9);
-        assertEquals(-90, new AutoStrategyB().StartFacingDeg(), 1e-9);
-        assertEquals(-90, new AutoStrategyC().StartFacingDeg(), 1e-9);
-        assertEquals(90, new AutoStrategyGardenD().StartFacingDeg(), 1e-9);
-        assertEquals(90, new AutoStrategyGardenE().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyA().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyB().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyC().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyGardenD().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyGardenE().StartFacingDeg(), 1e-9);
         // The backups start the same way as the auto they copy.
-        assertEquals(90, new AutoStrategyARed().StartFacingDeg(), 1e-9);
-        assertEquals(-90, new AutoStrategyCBlue().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyARed().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyCBlue().StartFacingDeg(), 1e-9);
     }
 
     @Test
     @DisplayName("heading handoff counts only the turn since the start: the same for a start-measured and a field-spot auto")
     void handoffFromStart() {
         // Garden Side A: measured from its start, now turned 30 left.
-        double fromStartAuto = PedroAuto.HandoffYaw(90, new Pose(0, 0, 0), Math.toRadians(30));
+        double fromStartAuto = PedroAuto.HandoffYaw(-90, new Pose(0, 0, 0), Math.toRadians(30));
         // Garden Side E: field spots, start heading 270, now at 300: also 30 left.
-        double fieldSpotAuto = PedroAuto.HandoffYaw(90, new AutoStrategyGardenE().StartPose(), Math.toRadians(300));
-        assertEquals(120, fromStartAuto, 1e-9);
-        assertEquals(120, fieldSpotAuto, 1e-9);
+        double fieldSpotAuto = PedroAuto.HandoffYaw(-90, new AutoStrategyGardenE().StartPose(), Math.toRadians(300));
+        assertEquals(-60, fromStartAuto, 1e-9);
+        assertEquals(-60, fieldSpotAuto, 1e-9);
     }
 
     @Test
