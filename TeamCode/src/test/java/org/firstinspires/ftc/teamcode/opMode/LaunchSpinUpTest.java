@@ -36,9 +36,9 @@ class LaunchSpinUpTest {
     }
 
     @Test
-    @DisplayName("the launch speed is 2735 RPM, never above the near shot")
+    @DisplayName("the launch speed is 2635 RPM, never above the near shot")
     void minRpm() {
-        Assertions.assertEquals(2735, properties.autoLaunchMinRpm, 1e-9);
+        Assertions.assertEquals(2635, properties.autoLaunchMinRpm, 1e-9);
         assertTrue(properties.autoLaunchMinRpm <= properties.launchNearRpm);
     }
 

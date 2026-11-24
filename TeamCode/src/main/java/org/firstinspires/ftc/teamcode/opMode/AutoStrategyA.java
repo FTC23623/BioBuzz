@@ -71,41 +71,35 @@ public class AutoStrategyA extends PedroAuto {
 //     import com.pedropathing.paths.interpolator.Interpolator;
 // Start the auto from the spot the recording started from, facing the same way.
 
-        Pose spot1 = new Pose(-13.6, 4.3);   // heading -0 deg
-        Pose spot2 = new Pose(-25.4, -18.1);   // heading 32 deg
-        Pose spot3 = new Pose(-39.5, -42.2);   // heading -93 deg
-        Pose spot4 = new Pose(-31.7, -22.7);   // heading -181 deg
-        Pose spot5 = new Pose(-100.0, -22.7);   // heading -177 deg
-        Pose spot6 = new Pose(-110.9, -5.9);   // heading -175 deg
-        Pose spot7 = new Pose(-118.7, -6.5);   // heading -174 deg
-        Pose spot8 = new Pose(-111.0, -5.7);   // heading -173 deg
-        Pose spot9 = new Pose(-84.6, -38.1);   // heading -162 deg
+        Pose spot1 = new Pose(-8.6, -11.0);   // heading -25 deg
+        Pose spot2 = new Pose(-39.6, -41.4);   // heading -94 deg
+        Pose spot3 = new Pose(-37.8, -22.2);   // heading -184 deg
+        Pose spot4 = new Pose(-112.5, -18.5);   // heading -163 deg
+        Pose spot5 = new Pose(-118.7, -3.3);   // heading -183 deg
+        Pose spot6 = new Pose(-116.0, -3.5);   // heading -179 deg
+        Pose spot7 = new Pose(-106.3, -32.7);   // heading -160 deg
 
-        Path toSpot1 = line(StartPose(), spot1).constant(Math.toRadians(-0));
-        Path toSpot2 = line(spot1, spot2).heading(Interpolator.linear(Math.toRadians(-0), Math.toRadians(32)));
-        Path toSpot3 = line(spot2, spot3).heading(Interpolator.linear(Math.toRadians(32), Math.toRadians(-93)));
-        Path toSpot4 = line(spot3, spot4).heading(Interpolator.linear(Math.toRadians(-93), Math.toRadians(-181)));
-        Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-181), Math.toRadians(-177)));
-        Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-177), Math.toRadians(-175)));
-        Path toSpot7 = line(spot6, spot7).constant(Math.toRadians(-174));
-        Path toSpot8 = line(spot7, spot8).heading(Interpolator.linear(Math.toRadians(-174), Math.toRadians(-173)));
-        Path toSpot9 = line(spot8, spot9).heading(Interpolator.linear(Math.toRadians(-173), Math.toRadians(-162)));
+        Path toSpot1 = line(StartPose(), spot1).heading(Interpolator.linear(Math.toRadians(0), Math.toRadians(-25)));
+        Path toSpot2 = line(spot1, spot2).heading(Interpolator.linear(Math.toRadians(-25), Math.toRadians(-94)));
+        Path toSpot3 = line(spot2, spot3).heading(Interpolator.linear(Math.toRadians(-94), Math.toRadians(-184)));
+        Path toSpot4 = line(spot3, spot4).heading(Interpolator.linear(Math.toRadians(-184), Math.toRadians(-163)));
+        Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-163), Math.toRadians(-183)));
+        Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-183), Math.toRadians(-179)));
+        Path toSpot7 = line(spot6, spot7).heading(Interpolator.linear(Math.toRadians(-179), Math.toRadians(-160)));
 
         List<Path> paths = new ArrayList<>();
         paths.add(toSpot1);
         paths.add(LAUNCH);
         paths.add(toSpot2);
-        paths.add(toSpot3);
         paths.add(FLOWER);
+        paths.add(toSpot3);
         paths.add(toSpot4);
+        paths.add(LAUNCH);
         paths.add(toSpot5);
+        paths.add(FLOWER);
         paths.add(toSpot6);
         paths.add(LAUNCH);
         paths.add(toSpot7);
-        paths.add(FLOWER);
-        paths.add(toSpot8);
-        paths.add(LAUNCH);
-        paths.add(toSpot9);
         return paths;
     }
 }

@@ -285,7 +285,8 @@ public class BotProperties {
     // came down another 35: 2735 to 3240. Then the whole curve back up 25: 2760 to 3265.
     // Then from the robot: 120 in down 80, 130 in down 100, 140 in and past down 150. One
     // curve could not bend that way, so the curve became four measured shots joined by
-    // straight lines (launchMid1 and launchMid2 added; launchCurve removed).
+    // straight lines (launchMid1 and launchMid2 added; launchCurve removed). Then the whole
+    // pollen curve down 100: 2660, 2731, 2883, 3015.
 
     /**
      * true: the pollen launcher's target follows the distance curve below whenever a tag of
@@ -296,8 +297,8 @@ public class BotProperties {
     // The speed comes from four measured shots, near to far, joined by straight lines and
     // stepped every launchBandIn inches:
     //
-    //     110 in 2760   120 in 2831   130 in 2983   140 in 3115
-    //     124 in = 2831 + (2983 - 2831) x 4/10 = 2892
+    //     110 in 2660   120 in 2731   130 in 2883   140 in 3015
+    //     124 in = 2731 + (2883 - 2731) x 4/10 = 2792
     //
     // Nearer than nearIn uses the near speed; farther than farIn uses the far speed. To tune
     // one distance, change just its RPM: the lines on either side follow. Keep the inches in
@@ -307,25 +308,25 @@ public class BotProperties {
     /**
      * The near measured shot: RPM that scored from there (2900, less 150 for the inertia
      * wheel, +50 on 2026-11-05, -30 for overshooting up close, -35 with the whole curve,
-     * +25 with the whole curve).
+     * +25 with the whole curve, -100 with the whole curve).
      */
-    public double launchNearRpm = 2760;
+    public double launchNearRpm = 2660;
     /** The first middle shot: distance, in inches. */
     public double launchMid1In = 120;
-    /** The first middle shot: RPM (2911 on the old curve, down 80). */
-    public double launchMid1Rpm = 2831;
+    /** The first middle shot: RPM (2911 on the old curve, down 80, then -100 with the whole curve). */
+    public double launchMid1Rpm = 2731;
     /** The second middle shot: distance, in inches. */
     public double launchMid2In = 130;
-    /** The second middle shot: RPM (3083 on the old curve, down 100). */
-    public double launchMid2Rpm = 2983;
+    /** The second middle shot: RPM (3083 on the old curve, down 100, then -100 with the whole curve). */
+    public double launchMid2Rpm = 2883;
     /** The far measured shot: distance, in inches. Every distance past it uses its speed. */
     public double launchFarIn = 140;
     /**
      * The far measured shot: RPM that scored from there and past it (3300 measured, +25 on
      * 2026-11-03, -100 on 2026-11-04, +50 on 2026-11-05, -35 with the whole curve, +25 with
-     * the whole curve, -150 from 145 in on the robot).
+     * the whole curve, -150 from 145 in on the robot, -100 with the whole curve).
      */
-    public double launchFarRpm = 3115;
+    public double launchFarRpm = 3015;
     // The NECTAR launcher's own curve (docs/decisions/0057). The same four distances as
     // pollen, its own four speeds. Until 2026-11-21 nectar had one fixed speed (3100). It
     // started as the pollen curve plus 50 (2760, 2831, 2983, 3115, each +50).
@@ -639,10 +640,11 @@ public class BotProperties {
      * robot, so the auto no longer waits for "at speed" (coach, 2026-11-03: 2800, then 2950).
      * 2800 since 2026-11-04: the near shot came down 150 with the inertia wheel, and a
      * near target of 2750 would never reach 2950. The near shot was 2800 from 2026-11-05;
-     * both came down 30 to 2770 together, then 35 more to 2735, so a near target is never
-     * below this floor. Keep this at or below launchNearRpm.
+     * both came down 30 to 2770 together, then 35 more to 2735, then 100 more to 2635 with
+     * the pollen curve (near shot 2660), so a near target is never below this floor. Keep
+     * this at or below launchNearRpm.
      */
-    public double autoLaunchMinRpm = 2735;
+    public double autoLaunchMinRpm = 2635;
     /**
      * A LAUNCH_WHEN_TAG_SEEN step still waiting for one of our hive's tags this many seconds
      * after START launches anyway, facing the way it is. AUTO is 30 seconds (Competition

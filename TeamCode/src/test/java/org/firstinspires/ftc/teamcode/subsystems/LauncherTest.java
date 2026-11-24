@@ -198,14 +198,14 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("today's pollen speeds: 2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 (and at 145)")
+    @DisplayName("today's pollen speeds: 2660 at 110 in, 2731 at 120, 2883 at 130, 3015 from 140 (and at 145)")
     void todaysSpeeds() {
         BotProperties p = new BotProperties();
-        assertEquals(2760, Launcher.RpmForRange(110, p), EPS);
-        assertEquals(2831, Launcher.RpmForRange(120, p), EPS);
-        assertEquals(2983, Launcher.RpmForRange(130, p), EPS);
-        assertEquals(3115, Launcher.RpmForRange(140, p), EPS);
-        assertEquals(3115, Launcher.RpmForRange(145, p), EPS);
+        assertEquals(2660, Launcher.RpmForRange(110, p), EPS);
+        assertEquals(2731, Launcher.RpmForRange(120, p), EPS);
+        assertEquals(2883, Launcher.RpmForRange(130, p), EPS);
+        assertEquals(3015, Launcher.RpmForRange(140, p), EPS);
+        assertEquals(3015, Launcher.RpmForRange(145, p), EPS);
     }
 
     @Test

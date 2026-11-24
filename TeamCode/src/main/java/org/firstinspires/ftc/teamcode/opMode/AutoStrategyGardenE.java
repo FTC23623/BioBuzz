@@ -21,9 +21,12 @@ import java.util.List;
  * D: no second flower. It heads onto A's way across the field (spot 4) and straight on to the
  * final spot, the loading zone (spot 9).
  *
- * <p>Pedro measures in inches: x grows as the robot drives forward, y grows as it drives left.
- * The robot starts facing the wall, so backing up is minus x and the garden (to its right) is
- * minus y. See {@link PedroAuto} for more.
+ * <p>Unlike the other autos, the spots here are FIELD spots, copied from the Pedro Pathing
+ * Visualizer (blue): inches from the field's corner, heading 0 pointing right. So
+ * {@link #StartPose()} is the field start, not (0, 0): Pedro has to know the robot starts
+ * there, or the first path would send it toward (50.8, 25) measured from wherever it stands.
+ * Red works too: the field is the same turned half a turn, and so is the whole route. See
+ * {@link PedroAuto} for more.
  */
 // Group "Auto" (it reads the alliance magnet), like A. At the end it picks HyDrive.
 @Autonomous(name = "Auto: " + AutoStrategyGardenE.NAME, group = "Auto", preselectTeleOp = HyDrive.NAME)
@@ -36,7 +39,21 @@ public class AutoStrategyGardenE extends PedroAuto {
     protected Pose FieldStartBlue() {
         return new Pose(55.75, 9, Math.toRadians(-90));
     }
-    /** The robot starts facing the driver's left, like Garden Side A. */
+    /** The start, as a field spot (blue), in the same measure as the paths below. */
+    static final Pose START = PoseFactory.degrees().of(55.1393, 8.8607, 270);
+
+    /** The paths are field spots, so Pedro starts at the field start, not (0, 0). */
+    @Override
+    protected Pose StartPose() {
+        return START;
+    }
+
+    /**
+     * The robot starts facing the driver's LEFT (90, seen from the driver), like Garden Side A:
+     * the same spot. This is NOT the field heading (270): TeleOp adds how far Pedro has
+     * turned since the start (PedroAuto.HandoffYaw), so 270 here would hand TeleOp a heading
+     * half a turn off, and field-centric "forward" would point at the driver.
+     */
     @Override
     protected double StartFacingDeg() {
         return 90;
@@ -46,7 +63,7 @@ public class AutoStrategyGardenE extends PedroAuto {
         // Spots copied from AutoStrategyA (recorded with Tool: Pose Recorder).
         PoseFactory poseFactory = PoseFactory.degrees();
 
-        Pose start = poseFactory.of(55.1393, 8.8607, 90);
+        Pose start = START;
         Pose launchSpot1 = poseFactory.of(50.8358, 24.983, 265);
         Pose launchSpot1Segment1Start = poseFactory.of(50.8358, 24.983, 270);
         Pose launchSpot1Segment1End = poseFactory.of(50.8358, 24.983, 265);
@@ -82,23 +99,23 @@ public class AutoStrategyGardenE extends PedroAuto {
         Pose bLauchSpot3Segment1Start = poseFactory.of(33.3954, 119.2938, 270);
         Pose bLauchSpot3Segment1End = poseFactory.of(33.3954, 119.2938, 300);
 
-        Path launchSpot1Path = Paths.line(start, launchSpot1).heading(Interpolator.piecewise().until(1, Interpolator.linear(launchSpot1Segment1Start, launchSpot1Segment1End)));
-        Path gardenFlowerPickupPath = Paths.line(launchSpot1, gardenFlowerPickup).heading(Interpolator.piecewise().until(0.5, Interpolator.linear(gardenFlowerPickupSegment1Start, gardenFlowerPickupSegment1End)).until(1, Interpolator.linear(gardenFlowerPickupSegment2Start, gardenFlowerPickupSegment2End)));
-        Path tipDetectSpotPath = Paths.line(gardenFlowerPickup, tipDetectSpot).constant(tipDetectSpot);
-        Path launchSpot2Path = Paths.line(tipDetectSpot, launchSpot2).heading(Interpolator.piecewise().until(0.25, Interpolator.linear(launchSpot2Segment1Start, launchSpot2Segment1End)).until(1, Interpolator.linear(launchSpot2Segment2Start, launchSpot2Segment2End)));
-        Path homeFlowerPickupPath = Paths.line(launchSpot2, homeFlowerPickup).heading(Interpolator.piecewise().until(1, Interpolator.linear(homeFlowerPickupSegment1Start, homeFlowerPickupSegment1End)));
-        Path launchSpot3Path = Paths.line(homeFlowerPickup, launchSpot3).heading(Interpolator.piecewise().until(1, Interpolator.linear(launchSpot3Segment1Start, launchSpot3Segment1End)));
-        Path homePath = Paths.line(launchSpot3, home).constant(home);
+        Path launchSpot1Path = line(start, launchSpot1).heading(Interpolator.piecewise().until(1, Interpolator.linear(launchSpot1Segment1Start, launchSpot1Segment1End)));
+        Path gardenFlowerPickupPath = line(launchSpot1, gardenFlowerPickup).heading(Interpolator.piecewise().until(0.5, Interpolator.linear(gardenFlowerPickupSegment1Start, gardenFlowerPickupSegment1End)).until(1, Interpolator.linear(gardenFlowerPickupSegment2Start, gardenFlowerPickupSegment2End)));
+        Path tipDetectSpotPath = line(gardenFlowerPickup, tipDetectSpot).constant(tipDetectSpot);
+        Path launchSpot2Path = line(tipDetectSpot, launchSpot2).heading(Interpolator.piecewise().until(0.25, Interpolator.linear(launchSpot2Segment1Start, launchSpot2Segment1End)).until(1, Interpolator.linear(launchSpot2Segment2Start, launchSpot2Segment2End)));
+        Path homeFlowerPickupPath = line(launchSpot2, homeFlowerPickup).heading(Interpolator.piecewise().until(1, Interpolator.linear(homeFlowerPickupSegment1Start, homeFlowerPickupSegment1End)));
+        Path launchSpot3Path = line(homeFlowerPickup, launchSpot3).heading(Interpolator.piecewise().until(1, Interpolator.linear(launchSpot3Segment1Start, launchSpot3Segment1End)));
+        Path homePath = line(launchSpot3, home).constant(home);
 
-        Path bLaunchSpot2Path = Paths.line(tipDetectSpot, bLaunchSpot2).heading(Interpolator.piecewise().until(1, Interpolator.linear(bLaunchSpot2Segment1Start, bLaunchSpot2Segment1End)));
+        Path bLaunchSpot2Path = line(tipDetectSpot, bLaunchSpot2).heading(Interpolator.piecewise().until(1, Interpolator.linear(bLaunchSpot2Segment1Start, bLaunchSpot2Segment1End)));
 
-        Path bHiveTunnelStartPath = Paths.line(bLaunchSpot2, bHiveTunnelStart).heading(Interpolator.piecewise().until(1, Interpolator.linear(bHiveTunnelStartSegment1Start, bHiveTunnelStartSegment1End)));
+        Path bHiveTunnelStartPath = line(bLaunchSpot2, bHiveTunnelStart).heading(Interpolator.piecewise().until(1, Interpolator.linear(bHiveTunnelStartSegment1Start, bHiveTunnelStartSegment1End)));
 
-        Path bHiveTunnelEndPath = Paths.line(bHiveTunnelStart, bHiveTunnelEnd).heading(Interpolator.piecewise().until(1, Interpolator.constant(bHiveTunnelEndSegment1Heading)));
+        Path bHiveTunnelEndPath = line(bHiveTunnelStart, bHiveTunnelEnd).heading(Interpolator.piecewise().until(1, Interpolator.constant(bHiveTunnelEndSegment1Heading)));
 
-        Path bFlowerPickupPath = Paths.line(bHiveTunnelEnd, bFlowerPickup).constant(bFlowerPickup);
+        Path bFlowerPickupPath = line(bHiveTunnelEnd, bFlowerPickup).constant(bFlowerPickup);
 
-        Path bLauchSpot3Path = Paths.line(bFlowerPickup, bLauchSpot3).heading(Interpolator.piecewise().until(1, Interpolator.linear(bLauchSpot3Segment1Start, bLauchSpot3Segment1End)));
+        Path bLauchSpot3Path = line(bFlowerPickup, bLauchSpot3).heading(Interpolator.piecewise().until(1, Interpolator.linear(bLauchSpot3Segment1Start, bLauchSpot3Segment1End)));
 
         List<Path> pathsList = new ArrayList<>();
         pathsList.add(launchSpot1Path);

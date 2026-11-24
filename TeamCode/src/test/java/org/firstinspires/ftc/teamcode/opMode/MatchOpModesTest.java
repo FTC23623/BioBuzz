@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.opMode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.junit.jupiter.api.DisplayName;
@@ -101,6 +102,17 @@ class MatchOpModesTest {
         // The backups start the same way as the auto they copy.
         assertEquals(90, new AutoStrategyARed().StartFacingDeg(), 1e-9);
         assertEquals(-90, new AutoStrategyCBlue().StartFacingDeg(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("heading handoff counts only the turn since the start: the same for a start-measured and a field-spot auto")
+    void handoffFromStart() {
+        // Garden Side A: measured from its start, now turned 30 left.
+        double fromStartAuto = PedroAuto.HandoffYaw(90, new Pose(0, 0, 0), Math.toRadians(30));
+        // Garden Side E: field spots, start heading 270, now at 300: also 30 left.
+        double fieldSpotAuto = PedroAuto.HandoffYaw(90, new AutoStrategyGardenE().StartPose(), Math.toRadians(300));
+        assertEquals(120, fromStartAuto, 1e-9);
+        assertEquals(120, fieldSpotAuto, 1e-9);
     }
 
     @Test

@@ -225,9 +225,34 @@ public abstract class PedroAuto extends LinearOpMode {
     /** The paths this auto drives, in order. Runs after {@link #properties} is set up. */
     protected abstract List<Path> BuildPaths();
 
-    /** Where the robot starts: (0, 0), facing forward. An auto may override this. */
+    /**
+     * Where the robot starts, in the same measure as the auto's paths: (0, 0), facing forward,
+     * for an auto measured from its start. An auto whose paths are field spots (copied from
+     * the Pedro Pathing Visualizer, like Garden Side E) returns its field start here, so Pedro
+     * knows where the robot really is before the first path.
+     */
     protected Pose StartPose() {
         return new Pose(0, 0, 0);
+    }
+
+    /**
+     * The TeleOp heading to hand over (docs/decisions/0046): which way the robot faced at its
+     * start, seen from the driver, plus how far Pedro has turned it SINCE THE START. Pedro's
+     * heading is measured in the auto's own measure, so the start pose's heading comes off
+     * first: 0 for an auto measured from its start, the field heading for a field-spot auto.
+     *
+     * <pre>
+     *     start facing the driver's left (90), start pose heading 270 (field), now 300:
+     *     turned 30 left since the start, so TeleOp yaw 90 + 30 = 120
+     * </pre>
+     *
+     * @param startFacingDeg  {@link #StartFacingDeg()}, seen from the driver
+     * @param startPose       {@link #StartPose()}
+     * @param pedroHeadingRad Pedro's heading now, radians
+     */
+    static double HandoffYaw(double startFacingDeg, Pose startPose, double pedroHeadingRad) {
+        double turnedDeg = Math.toDegrees(pedroHeadingRad - startPose.heading());
+        return HeadingHandoff.TeleOpYaw(startFacingDeg, turnedDeg);
     }
 
     /**
@@ -476,8 +501,8 @@ public abstract class PedroAuto extends LinearOpMode {
             Pose where = follower.pose();
             // Every loop, so TeleOp gets the heading from the moment the auto stops.
             if (!Double.isNaN(StartFacingDeg())) {
-                HeadingHandoff.Save(HeadingHandoff.TeleOpYaw(StartFacingDeg(),
-                        Math.toDegrees(where.heading())), HeadingHandoff.NowSeconds());
+                HeadingHandoff.Save(HandoffYaw(StartFacingDeg(), StartPose(), where.heading()),
+                        HeadingHandoff.NowSeconds());
             }
             telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
             telemetry.addData("Waiting for a tag", waitingForTag);

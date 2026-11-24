@@ -44,10 +44,19 @@ class VisualizerExportTest {
         for (Path path : auto.BuildPaths()) {
             if (!IsStep(path)) {
                 Pose end = path.endPose();
-                spots.add(FieldPose.ToField(start, new Pose(end.x(), end.y(), path.heading(1))));
+                spots.add(FieldPose.ToField(start, FromStart(auto, new Pose(end.x(), end.y(), path.heading(1)))));
             }
         }
         return spots;
+    }
+
+    /**
+     * A spot from the auto's paths, measured from where the robot starts. Most autos already
+     * are (their StartPose is (0, 0) facing 0); a field-spot auto like Garden Side E is turned
+     * back to its start first.
+     */
+    static Pose FromStart(PedroAuto auto, Pose pathSpot) {
+        return FieldPose.FromField(auto.StartPose(), pathSpot);
     }
 
     /** true for a LAUNCH, FLOWER or INTAKE step: a stop, not a path to drive. */
@@ -70,6 +79,19 @@ class VisualizerExportTest {
         }
         if (path == PedroAuto.INTAKE_OFF) {
             return "INTAKE_OFF";
+        }
+        // The tipped-hive branch markers (Garden Side E): stops, not paths to drive.
+        if (path == PedroAuto.CHECK_TIPPED) {
+            return "CHECK_TIPPED";
+        }
+        if (path == PedroAuto.IF_TIPPED) {
+            return "IF_TIPPED";
+        }
+        if (path == PedroAuto.IF_NOT_TIPPED) {
+            return "IF_NOT_TIPPED";
+        }
+        if (path == PedroAuto.END_IF) {
+            return "END_IF";
         }
         return null;
     }
@@ -99,10 +121,11 @@ class VisualizerExportTest {
             }
             pathNumber = pathNumber + 1;
             Pose end = path.endPose();
-            Pose fieldEnd = FieldPose.ToField(start, new Pose(end.x(), end.y(), 0));
+            Pose fieldEnd = FieldPose.ToField(start, FromStart(auto, new Pose(end.x(), end.y(), 0)));
             // Pedro keeps headings 0 to 360. Write the start between -180 and 180, and the end
             // as the start plus how far the path really turns, so the turn keeps its direction.
-            double startDeg = FieldPose.WrapDegrees(Math.toDegrees(start.heading() + path.heading(0)));
+            double fromStartDeg = Math.toDegrees(path.heading(0) - auto.StartPose().heading());
+            double startDeg = FieldPose.WrapDegrees(Math.toDegrees(start.heading()) + fromStartDeg);
             double endDeg = startDeg + TurnDegrees(path);
             file.AddPath("to spot " + pathNumber, fieldEnd, startDeg, endDeg);
         }
@@ -149,6 +172,21 @@ class VisualizerExportTest {
         FileWriter writer = new FileWriter(file);
         writer.write(text);
         writer.close();
+    }
+
+    @Test
+    @DisplayName("a field-spot auto (Garden Side E): its StartPose is its field start, so its route starts there")
+    void fieldSpotAutoStartsWhereItSays() {
+        PedroAuto auto = new AutoStrategyGardenE();
+        Pose start = auto.StartPose();
+        // Its StartPose lines up with the visualizer's blue start, within a robot's slop.
+        Pose blue = auto.FieldStartBlue();
+        assertEquals(blue.x(), start.x(), 1.0);
+        assertEquals(blue.y(), start.y(), 1.0);
+        // Started there, the first path ends on its recorded field spot, launch spot 1.
+        Pose firstStop = Route(auto, start).get(1);
+        assertEquals(50.8358, firstStop.x(), 1e-6);
+        assertEquals(24.983, firstStop.y(), 1e-6);
     }
 
     @Test

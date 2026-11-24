@@ -40,7 +40,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the operator holds an
  * aim bumper or a launch trigger ({@link LaunchChoice}) and the camera sees our hive, each
  * launcher's target follows its own four measured shots joined by straight lines, in 2-inch
- * steps. Pollen: 2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 in, plus
+ * steps. Pollen: 2660 at 110 in, 2731 at 120, 2883 at 130, 3015 from 140 in, plus
  * {@code launcherRangeTrimRpm}. Nectar: 2810, 2881, 3033, 3165, plus
  * {@code nectarRangeTrimRpm} (docs/decisions/0057). The wheels are then already at the right
  * speed when a trigger is pulled. With no tag in view the targets stay where they were.
@@ -387,8 +387,8 @@ public class Launcher implements Subsystem {
      *     step start = nearIn + whole steps past nearIn
      *     rpm = the line between the measured shots on either side of the step start
      *
-     *     110 in 2760, 120 in 2831, 130 in 2983, 140 in 3115, steps of 2 in:
-     *     110: 2760   112: 2774   120: 2831   125: 2892   130: 2983   139: 3089   140 and up: 3115
+     *     110 in 2660, 120 in 2731, 130 in 2883, 140 in 3015, steps of 2 in:
+     *     110: 2660   112: 2674   120: 2731   125: 2792   130: 2883   139: 2989   140 and up: 3015
      * </pre>
      *
      * Nearer than nearIn: the near speed. Farther than farIn: the far speed.

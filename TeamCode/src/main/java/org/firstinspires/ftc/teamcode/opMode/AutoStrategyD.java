@@ -31,41 +31,48 @@ public class AutoStrategyD extends PedroAuto {
 
     @Override
     protected List<Path> BuildPaths() {
-        Pose spot1 = new Pose(-11.0, -0.1);   // heading -1 deg
-        Pose spot2 = new Pose(-38.5, -27.6);   // heading -89 deg
-        Pose spot3 = new Pose(-38.7, -41.8);   // heading -91 deg
-        Pose spot4 = new Pose(-35.9, -28.1);   // heading -88 deg
-        Pose spot5 = new Pose(-111.1, -20.6);   // heading -185 deg
-        Pose spot6 = new Pose(-111.1, 5.1);   // heading -184 deg
-        Pose spot7 = new Pose(-119.6, -6.2);   // heading -177 deg
-        Pose spot8 = new Pose(-116.3, 3.8);   // heading -180 deg
-        Pose spot9 = new Pose(-106.3, -31.2);   // heading -159 deg
+        Pose spot1 = new Pose(-6.9, -10);   // heading -1 deg
+        Pose spot2 = new Pose(-10.6, -12.1);   // heading -26 deg
+        Pose spot3 = new Pose(-40.1, -40.9);   // heading -91 deg
+        Pose spot4 = new Pose(-39.9, -26.2);   // heading -90 deg
+        Pose spot5 = new Pose(-17.3, -20.6);   // heading -46 deg
+        Pose spot6 = new Pose(-30.0, 4.2);   // heading -182 deg
+        Pose spot7 = new Pose(-96.6, 4.3);   // heading -180 deg
+        Pose spot8 = new Pose(-120.1, -7.6);   // heading -185 deg
+        Pose spot9 = new Pose(-113.1, -6.3);   // heading -171 deg
+        Pose spot10 = new Pose(-104.8, -36.0);   // heading -160 deg
 
         Path toSpot1 = line(StartPose(), spot1).constant(Math.toRadians(-1));
-        Path toSpot2 = line(spot1, spot2).heading(Interpolator.linear(Math.toRadians(-1), Math.toRadians(-89)));
-        Path toSpot3 = line(spot2, spot3).heading(Interpolator.linear(Math.toRadians(-89), Math.toRadians(-91)));
-        Path toSpot4 = line(spot3, spot4).heading(Interpolator.linear(Math.toRadians(-91), Math.toRadians(-88)));
-        Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-88), Math.toRadians(-185)));
-        Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-185), Math.toRadians(-184)));
-        Path toSpot7 = line(spot6, spot7).heading(Interpolator.linear(Math.toRadians(-184), Math.toRadians(-177)));
-        Path toSpot8 = line(spot7, spot8).heading(Interpolator.linear(Math.toRadians(-177), Math.toRadians(-180)));
-        Path toSpot9 = line(spot8, spot9).heading(Interpolator.linear(Math.toRadians(-180), Math.toRadians(-159)));
+        Path toSpot2 = line(spot1, spot2).heading(Interpolator.linear(Math.toRadians(-1), Math.toRadians(-26)));
+        Path toSpot3 = line(spot2, spot3).heading(Interpolator.linear(Math.toRadians(-26), Math.toRadians(-91)));
+        Path toSpot4 = line(spot3, spot4).heading(Interpolator.linear(Math.toRadians(-91), Math.toRadians(-90)));
+        Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-90), Math.toRadians(-46)));
+        Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-46), Math.toRadians(-182)));
+        Path toSpot7 = line(spot6, spot7).heading(Interpolator.linear(Math.toRadians(-182), Math.toRadians(-180)));
+        Path toSpot8 = line(spot7, spot8).heading(Interpolator.linear(Math.toRadians(-180), Math.toRadians(-185)));
+        Path toSpot9 = line(spot8, spot9).heading(Interpolator.linear(Math.toRadians(-185), Math.toRadians(-171)));
+        Path toSpot10 = line(spot9, spot10).heading(Interpolator.linear(Math.toRadians(-171), Math.toRadians(-160)));
 
         List<Path> paths = new ArrayList<>();
         paths.add(toSpot1);
-        paths.add(LAUNCH);
         paths.add(toSpot2);
+        paths.add(LAUNCH);
         paths.add(toSpot3);
+        paths.add(INTAKE_ON);
         paths.add(FLOWER);
+        paths.add(INTAKE_OFF);
         paths.add(toSpot4);
         paths.add(toSpot5);
+        paths.add(LAUNCH);
         paths.add(toSpot6);
-        paths.add(LAUNCH);
         paths.add(toSpot7);
-        paths.add(FLOWER);
         paths.add(toSpot8);
-        paths.add(LAUNCH);
+        paths.add(INTAKE_ON);
+        paths.add(FLOWER);
+        paths.add(INTAKE_OFF);
         paths.add(toSpot9);
+        paths.add(LAUNCH);
+        paths.add(toSpot10);
         return paths;
     }
 }
