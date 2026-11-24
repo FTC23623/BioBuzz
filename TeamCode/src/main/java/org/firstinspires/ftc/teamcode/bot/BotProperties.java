@@ -263,7 +263,11 @@ public class BotProperties {
      * and so does the dashboard. Each launcher has its own speed.
      */
     public double pollenLauncherRpm = 3100;
-    /** Nectar launcher target speed. D-pad right / left on gamepad 2 changes it. */
+    /**
+     * Nectar launcher target speed. With range tuning on it follows the nectar curve below,
+     * and D-pad right / left on gamepad 2 trims that curve (nectarRangeTrimRpm). Off, the
+     * D-pad changes this number itself.
+     */
     public double nectarLauncherRpm = 3100;
     /** How much one D-pad press changes a launcher's target speed (or its trim, below). */
     public double launcherRpmStep = 25;
@@ -322,6 +326,17 @@ public class BotProperties {
      * the whole curve, -150 from 145 in on the robot).
      */
     public double launchFarRpm = 3115;
+    // The NECTAR launcher's own curve (docs/decisions/0057). The same four distances as
+    // pollen, its own four speeds. Until 2026-11-21 nectar had one fixed speed (3100). It
+    // started as the pollen curve plus 50 (2760, 2831, 2983, 3115, each +50).
+    /** Nectar, the near shot (at launchNearIn): RPM. */
+    public double nectarNearRpm = 2810;
+    /** Nectar, the first middle shot (at launchMid1In): RPM. */
+    public double nectarMid1Rpm = 2881;
+    /** Nectar, the second middle shot (at launchMid2In): RPM. */
+    public double nectarMid2Rpm = 3033;
+    /** Nectar, the far shot (at launchFarIn, and past it): RPM. */
+    public double nectarFarRpm = 3165;
     /** The speed changes in steps this many inches apart, so it doesn't hunt with every reading. */
     public double launchBandIn = 2;
     /**
@@ -405,6 +420,11 @@ public class BotProperties {
      * or slower on the day. On the dashboard's Launcher group.
      */
     public double launcherRangeTrimRpm = 0;
+    /**
+     * The same for the nectar curve: added to every nectar step. D-pad right / left on
+     * gamepad 2 moves it by launcherRpmStep while range tuning is on (docs/decisions/0057).
+     */
+    public double nectarRangeTrimRpm = 0;
     /** The target speed never goes above this. */
     public double launcherMaxRpm = 6000;
     /** How often the launcher measures its speed and picks a new power, in milliseconds. */
@@ -631,6 +651,18 @@ public class BotProperties {
     public double autoLaunchAnywayAtSeconds = 26;
     /** In an auto, how long the gates stay open at a LAUNCH step, in seconds. */
     public double autoLaunchSeconds = 2;
+    /**
+     * A CHECK_TIPPED step holds still and looks at the hive for at most this long, in seconds
+     * (docs/decisions/0057). A tipped tag seen sooner ends the look straight away. A guess:
+     * CHECK on the field how long the camera needs to find the tags after a stop.
+     */
+    public double autoTipLookSeconds = 1;
+    /**
+     * CHECK_TIPPED: true = the tag's tilt must be in the tipped window too (tagTippedMinDeg to
+     * tagTippedMaxDeg), since the hive's tags can be seen before the basket tips. false = any
+     * tag of ours counts as tipped.
+     */
+    public boolean autoTippedNeedsTilt = true;
     // The FLOWER step (docs/decisions/0042): from the spot it was recorded at, the robot backs
     // up, swings the extractor out, works the flower with short strokes forward and back,
     // and swings the extractor in, with the intake running the whole time. Every move is
@@ -777,6 +809,12 @@ public class BotProperties {
      * is right. CHECK ON THE ROBOT: if it is the other way round, set this false.
      */
     public boolean pollenLeftOfCamera = true;
+    /**
+     * Nectar only: once aimed, the robot turns this many degrees further LEFT, on top of the
+     * two parts above. The nectar shots went a little right (coach, 2026-11-21: 1 degree).
+     * Negative turns it further right instead. Pollen is not changed.
+     */
+    public double nectarAimLeftDeg = 1.0;
     /**
      * true: each of the operator's launch triggers also turns the robot to face the middle of
      * our hive's tags, offset for its launcher, while it is held, the way an auto aims before

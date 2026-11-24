@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
-import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
@@ -13,8 +12,9 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *
  * <p>Controls (operator, gamepad 2):
  * <ul>
- *   <li><b>Cross / A</b>: intake and transfer on. Press again: off. (The bumpers and
- *       triggers aim and launch now, see {@link LaunchChoice}.)
+ *   <li><b>Cross / A (hold)</b>: intake and transfer on while held. Let go: off. Not a
+ *       toggle since 2026-11-21 (coach). (The bumpers and triggers aim and launch, see
+ *       {@link LaunchChoice}.)
  *   <li><b>Square (hold)</b>: both run BACKWARD, slower than forward, to spit balls out
  *       one at a time when the robot has picked up too many. Let go and they go back to
  *       what they were doing.
@@ -48,7 +48,6 @@ public class Intake implements Subsystem {
     private final Gamepad mGamepad;
     private final Roller mIntake;
     private final Roller mTransfer;
-    private final Debouncer mOnOffButton;
     /** null when the launch gates are switched off in this OpMode. */
     private final LaunchGates mLaunchGates;
 
@@ -56,7 +55,7 @@ public class Intake implements Subsystem {
     /** Tool: Pose Recorder's blip, this loop only. 0 = none. */
     private double mBlipRpm = 0;
     private boolean mReverseHeld = false;
-    /** The on / off button (cross), held right now. */
+    /** The intake button (cross), held right now. */
     private boolean mOnOffHeld = false;
 
     /** null when there is no pollen sensor: then nothing is ever rejected. */
@@ -94,7 +93,6 @@ public class Intake implements Subsystem {
         mLaunchGates = launchGates;
         mIntake = new Roller("Intake", op, properties, properties.cfgIntake, properties.intakeReversed);
         mTransfer = new Roller("Transfer", op, properties, properties.cfgTransfer, properties.transferReversed);
-        mOnOffButton = new Debouncer(properties.debounce);
     }
 
     @Override
@@ -105,15 +103,10 @@ public class Intake implements Subsystem {
 
     @Override
     public void HandleUserInput() {
+        // On only while cross is held: no debounce, so it stops the moment it is let go.
+        // After a reject, IsRunning() stays false until cross has been let go.
         mOnOffHeld = mGamepad.cross;
-        mOnOffButton.In(mOnOffHeld);
-        if (mOnOffButton.Out()) {
-            mOnOffButton.Used();
-            // After a reject the button does nothing until it has been let go.
-            if (!mBlocked) {
-                mOn = !mOn;
-            }
-        }
+        mOn = mOnOffHeld;
         // Reverse only while held: no debounce, so it stops the moment it is let go.
         mReverseHeld = mGamepad.square;
     }
@@ -207,8 +200,8 @@ public class Intake implements Subsystem {
     }
 
     /**
-     * true when cross (or an auto) has them on, and no reject has stopped them (they stay
-     * stopped until cross is let go).
+     * true while cross is held (or an auto has them on), and no reject has stopped them
+     * (they stay stopped until cross is let go).
      */
     public boolean IsRunning() {
         return mOn && !mBlocked;
@@ -245,7 +238,10 @@ public class Intake implements Subsystem {
         return mLaunchGates != null && mLaunchGates.IsOpen() && !mLaunchGates.IsFullyOpen();
     }
 
-    /** true: intake and transfer run forward. false: off. An auto calls this. */
+    /**
+     * true: intake and transfer run forward. false: off. An auto calls this. In TeleOp, cross
+     * decides every loop, so this only lasts until the next HandleUserInput().
+     */
     public void SetOn(boolean on) {
         mOn = on;
     }
@@ -287,7 +283,7 @@ public class Intake implements Subsystem {
         } else if (IsRunning()) {
             state = "ON, full speed";
         }
-        mOp.mTelemetry.addData("Intake + transfer (gamepad 2: cross on/off, hold square reverse)", state);
+        mOp.mTelemetry.addData("Intake + transfer (gamepad 2: hold cross to run, hold square reverse)", state);
         mIntake.ShowStatus();
         mTransfer.ShowStatus();
     }

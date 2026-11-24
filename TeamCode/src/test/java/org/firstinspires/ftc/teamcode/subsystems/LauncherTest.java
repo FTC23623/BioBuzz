@@ -198,7 +198,7 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("today's speeds: 2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 (and at 145)")
+    @DisplayName("today's pollen speeds: 2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 (and at 145)")
     void todaysSpeeds() {
         BotProperties p = new BotProperties();
         assertEquals(2760, Launcher.RpmForRange(110, p), EPS);
@@ -209,15 +209,65 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("tag in view: the pollen target follows the table every loop; nectar is left alone")
+    @DisplayName("today's nectar speeds: 2810, 2881, 3033, 3165: 50 over the pollen curve")
+    void todaysNectarSpeeds() {
+        BotProperties p = new BotProperties();
+        assertEquals(2810, Launcher.NectarRpmForRange(110, p), EPS);
+        assertEquals(2881, Launcher.NectarRpmForRange(120, p), EPS);
+        assertEquals(3033, Launcher.NectarRpmForRange(130, p), EPS);
+        assertEquals(3165, Launcher.NectarRpmForRange(140, p), EPS);
+        assertEquals(3165, Launcher.NectarRpmForRange(145, p), EPS);
+        // Between shots: the same straight-line rule. 2881 + 152 x 4/10 = 2941.8
+        assertEquals(2942, Launcher.NectarRpmForRange(124, p), EPS);
+    }
+
+    @Test
+    @DisplayName("tag in view: each launcher follows its own curve every loop")
     void followsTheTable() {
         properties.launcherRangeTuning = true;
         tagAt(135);
         launcher.Process();
         assertEquals(Launcher.RpmForRange(135, properties), launcher.GetPollenTargetRpm(), EPS);
-        assertEquals(1000, launcher.GetNectarTargetRpm(), EPS);
+        assertEquals(Launcher.NectarRpmForRange(135, properties), launcher.GetNectarTargetRpm(), EPS);
         tagAt(150);
         launcher.Process();
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
+        assertEquals(Launcher.NectarRpmForRange(150, properties), launcher.GetNectarTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("range tuning on: D-pad right / left trims the nectar curve only")
+    void dpadTrimsTheNectarCurve() {
+        properties.launcherRangeTuning = true;
+        gamepad.right_bumper = true;   // TeleOp: the curves only follow while the operator aims
+        tagAt(125);
+        double step = properties.launcherRpmStep;
+        tap(down -> gamepad.dpad_right = down);
+        tap(down -> gamepad.dpad_right = down);
+        launcher.Process();
+        assertEquals(2 * step, properties.nectarRangeTrimRpm, EPS);
+        assertEquals(0, properties.launcherRangeTrimRpm, EPS);
+        assertEquals(Launcher.NectarRpmForRange(125, properties) + 2 * step, launcher.GetNectarTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(125, properties), launcher.GetPollenTargetRpm(), EPS);
+        tap(down -> gamepad.dpad_left = down);
+        launcher.Process();
+        assertEquals(Launcher.NectarRpmForRange(125, properties) + step, launcher.GetNectarTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("launch lock on: the nectar gate open holds nectar; pollen keeps following")
+    void nectarLaunchLocksNectar() {
+        properties.launcherRangeTuning = true;
+        properties.launchLocksRpm = true;
+        LaunchGates gates = mock(LaunchGates.class);
+        launcher.SetLaunchGates(gates);
+        tagAt(135);
+        launcher.Process();
+        when(gates.IsOpen()).thenReturn(true);
+        when(gates.IsNectarOpen()).thenReturn(true);
+        tagAt(150);
+        launcher.Process();
+        assertEquals(Launcher.NectarRpmForRange(135, properties), launcher.GetNectarTargetRpm(), EPS);
         assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
     }
 

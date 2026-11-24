@@ -42,8 +42,13 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchChoice;
  * <p><b>Scoring</b>: with {@code autoRunScoring} on, the launchers spin and the transfer runs
  * from START to the end. The intake roller stays off except during a FLOWER step
  * ({@code autoIntakeRoller}, docs/decisions/0043), or between an INTAKE_ON and an INTAKE_OFF
- * step (docs/decisions/0047). A LAUNCH step opens both launch gates,
- * and the transfer feeds the launch at {@code launchFeedTransferScale} (80%).
+ * step (docs/decisions/0047). A LAUNCH step opens both launch gates, and while they are open
+ * the intake roller runs too, so it pushes up any ball stuck low: the intake feeds at
+ * {@code launchFeedIntakeScale} (80%) and the transfer at {@code launchFeedTransferScale} (80%).
+ *
+ * <p><b>Tipped or not</b> (docs/decisions/0057): a {@link #CHECK_TIPPED} step looks at the hive,
+ * and the steps between {@link #IF_TIPPED}, {@link #IF_NOT_TIPPED} and {@link #END_IF} run
+ * only for the answer they are under. See {@link #IF_TIPPED} for an example.
  */
 public abstract class PedroAuto extends LinearOpMode {
 
@@ -126,6 +131,55 @@ public abstract class PedroAuto extends LinearOpMode {
      * Recorder writes it after a D-pad down press.
      */
     protected static final Path INTAKE_OFF = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Put this in the list to look at the hive: has its basket tipped up? The robot holds still
+     * where the last path ended for at most {@code autoTipLookSeconds} (1 s). It counts as
+     * tipped the moment the camera sees one of our hive's tags with its tilt in the tipped
+     * window ({@code tagTippedMinDeg} to {@code tagTippedMaxDeg}). No such tag by then: not
+     * tipped. The answer is kept until the next CHECK_TIPPED, for the {@link #IF_TIPPED} and
+     * {@link #IF_NOT_TIPPED} steps after it. Before any CHECK_TIPPED the answer is "not tipped".
+     * Stop facing the hive, so the camera can see it.
+     */
+    // Markers, like LAUNCH, so the loop can tell them apart.
+    protected static final Path CHECK_TIPPED = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * The steps after this run only if the last {@link #CHECK_TIPPED} said the hive tipped.
+     * They end at an {@link #IF_NOT_TIPPED} (the steps for "not tipped" follow it) or at an
+     * {@link #END_IF}. The auto carries on after the END_IF either way. These markers take no
+     * time.
+     *
+     * <pre>
+     *     paths.add(toLaunchSpot);
+     *     paths.add(LAUNCH);
+     *     paths.add(CHECK_TIPPED);     // look at the hive: has it tipped?
+     *     paths.add(IF_TIPPED);
+     *     paths.add(toFlower);         //   yes: work the flower, come back
+     *     paths.add(FLOWER);
+     *     paths.add(backFromFlower);
+     *     paths.add(IF_NOT_TIPPED);
+     *     paths.add(LAUNCH);           //   no: launch again from here
+     *     paths.add(END_IF);
+     *     paths.add(toLoadingZone);    // both ways end here
+     * </pre>
+     *
+     * <p>Two rules. <b>Both ways must end where the robot stands at the END_IF</b>, since the
+     * next path starts from there. And <b>no IF inside an IF</b>: one level only. Either side
+     * may be left out: IF_TIPPED ... END_IF, or IF_NOT_TIPPED ... END_IF.
+     */
+    protected static final Path IF_TIPPED = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** Ends the "tipped" steps; the steps for "not tipped" follow, up to the {@link #END_IF}. */
+    protected static final Path IF_NOT_TIPPED = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** Ends an {@link #IF_TIPPED} / {@link #IF_NOT_TIPPED}. The steps after it always run. */
+    protected static final Path END_IF = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** The last CHECK_TIPPED's answer: true = the hive has tipped up. */
+    private boolean mHiveTipped = false;
+    /** true once a CHECK_TIPPED has run, for the Driver Station. */
+    private boolean mTipChecked = false;
 
     /** true while the intake roller should run between steps: INTAKE_ON / INTAKE_OFF set it. */
     private boolean mRollerOn = false;
@@ -266,7 +320,12 @@ public abstract class PedroAuto extends LinearOpMode {
         ElapsedTime stepTimer = new ElapsedTime();
         // Times the whole auto, from START, for "launch anyway".
         ElapsedTime autoTimer = new ElapsedTime();
-        int pathNumber = 0;
+        // The first step to run: an IF marker at the top is skipped like any other.
+        int pathNumber = NextStep(paths, -1, mHiveTipped);
+        if (pathNumber >= paths.size()) {
+            // Only IF markers in the list: nothing to drive. Step 0 is one; it does nothing.
+            pathNumber = 0;
+        }
         int pathsGivenUp = 0;
         // true while a LAUNCH_WHEN_TAG_SEEN step is still waiting for the camera.
         boolean waitingForTag = paths.get(pathNumber) == LAUNCH_WHEN_TAG_SEEN;
@@ -350,6 +409,9 @@ public abstract class PedroAuto extends LinearOpMode {
                     spinningUp = false;
                     launchesDone = launchesDone + 1;
                     bot.OpenLaunchGates(true);
+                    // The intake roller feeds the launch too, even where it is off between
+                    // steps, so a ball stuck low is pushed up. Back to before at the end.
+                    bot.SetIntakeRoller(true);
                     stepTimer.reset();
                 }
             }
@@ -361,6 +423,23 @@ public abstract class PedroAuto extends LinearOpMode {
                 pathFinished = FlowerStep(bot, follower);
             } else if (step == INTAKE_ON || step == INTAKE_OFF) {
                 // Done the moment it starts: StartStep already switched the intake.
+                pathFinished = true;
+            } else if (step == CHECK_TIPPED) {
+                // Look at the hive until a tipped tag is seen, or the look time is up.
+                if (bot.SeesTippedHive()) {
+                    mHiveTipped = true;
+                    mTipChecked = true;
+                    pathFinished = true;
+                } else if (stepTimer.seconds() >= botProperties.autoTipLookSeconds) {
+                    mHiveTipped = false;
+                    mTipChecked = true;
+                    pathFinished = true;
+                } else {
+                    pathFinished = false;
+                }
+            } else if (IsBranchMarker(step)) {
+                // IF_TIPPED, IF_NOT_TIPPED, END_IF: NextStep() skips them. Only here when the
+                // list holds nothing else.
                 pathFinished = true;
             } else if (launching) {
                 pathFinished = stepTimer.seconds() >= botProperties.autoLaunchSeconds;
@@ -375,13 +454,17 @@ public abstract class PedroAuto extends LinearOpMode {
                 pathFinished = !follower.following();
             }
             if (launching && pathFinished) {
-                // The launch time is up: close the gates and stop flashing the light.
+                // The launch time is up: close the gates and stop flashing the light. The
+                // intake roller goes back to what it did before the launch.
                 bot.ShowLaunching(false);
                 bot.OpenLaunchGates(false);
+                bot.SetIntakeRoller(mRollerOn);
             }
-            boolean morePathsLeft = pathNumber + 1 < paths.size();
+            // The next step, skipping the IF steps that don't match the hive.
+            int nextStep = NextStep(paths, pathNumber, mHiveTipped);
+            boolean morePathsLeft = nextStep < paths.size();
             if (pathFinished && morePathsLeft) {
-                pathNumber = pathNumber + 1;
+                pathNumber = nextStep;
                 waitingForTag = paths.get(pathNumber) == LAUNCH_WHEN_TAG_SEEN;
                 spinningUp = paths.get(pathNumber) == LAUNCH;
                 StartStep(bot, follower, paths.get(pathNumber), stepTimer);
@@ -414,6 +497,14 @@ public abstract class PedroAuto extends LinearOpMode {
             }
             telemetry.addData("Launching", !waitingForTag && !aiming && !spinningUp && launching);
             telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
+            if (step == CHECK_TIPPED) {
+                telemetry.addData("Hive tipped", "looking, %.1f of at most %.1f s",
+                        stepTimer.seconds(), botProperties.autoTipLookSeconds);
+            } else if (mTipChecked) {
+                telemetry.addData("Hive tipped", mHiveTipped ? "YES" : "no");
+            } else {
+                telemetry.addData("Hive tipped", "not checked yet");
+            }
             telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
             if (step == FLOWER) {
                 String doing = "done";
@@ -421,7 +512,7 @@ public abstract class PedroAuto extends LinearOpMode {
                     doing = mFlowerActions.get(mFlowerIndex).name;
                 }
                 telemetry.addData("Flower", "%d of %d: %s", mFlowerIndex + 1, mFlowerActions.size(), doing);
-            } else if (!launching) {
+            } else if (!launching && !IsMarker(step)) {
                 telemetry.addData("Give up on this path after (s)", "%.1f", giveUpSeconds[pathNumber]);
             }
             telemetry.addData("Paths given up (took too long)", pathsGivenUp);
@@ -523,6 +614,72 @@ public abstract class PedroAuto extends LinearOpMode {
         return Math.atan2(Math.sin(change), Math.cos(change));
     }
 
+    /** true for IF_TIPPED, IF_NOT_TIPPED and END_IF: steps that only choose what runs next. */
+    static boolean IsBranchMarker(Path step) {
+        return step == IF_TIPPED || step == IF_NOT_TIPPED || step == END_IF;
+    }
+
+    /** true for any marker step: one the robot never drives (LAUNCH, FLOWER, IF_TIPPED, ...). */
+    static boolean IsMarker(Path step) {
+        return step == LAUNCH || step == LAUNCH_WHEN_TAG_SEEN || step == FLOWER
+                || step == INTAKE_ON || step == INTAKE_OFF || step == CHECK_TIPPED
+                || IsBranchMarker(step);
+    }
+
+    /**
+     * Which step runs after step {@code from}, given the hive's answer. IF steps are never
+     * run themselves: they only choose.
+     *
+     * <pre>
+     *     0 CHECK_TIPPED  1 IF_TIPPED  2 toFlower  3 IF_NOT_TIPPED  4 LAUNCH  5 END_IF  6 toEnd
+     *     tipped:     after 0 comes 2; after 2 comes 6 (the not-tipped steps are skipped)
+     *     not tipped: after 0 comes 4; after 4 comes 6
+     * </pre>
+     *
+     * @param from   the step that just finished. -1 for the first step of the auto.
+     * @param tipped the last CHECK_TIPPED's answer
+     * @return the next step's number, or {@code paths.size()} when no steps are left
+     */
+    static int NextStep(List<Path> paths, int from, boolean tipped) {
+        int i = from + 1;
+        while (i < paths.size()) {
+            Path step = paths.get(i);
+            if (step == IF_TIPPED) {
+                if (tipped) {
+                    i = i + 1;   // into the tipped steps
+                } else {
+                    // Skip the tipped steps: on to the not-tipped steps, or past the END_IF.
+                    i = IndexAfter(paths, i, IF_NOT_TIPPED, END_IF);
+                }
+            } else if (step == IF_NOT_TIPPED) {
+                if (tipped) {
+                    // The tipped steps are done (or there were none): skip the not-tipped ones.
+                    i = IndexAfter(paths, i, END_IF, END_IF);
+                } else {
+                    i = i + 1;   // into the not-tipped steps
+                }
+            } else if (step == END_IF) {
+                i = i + 1;
+            } else {
+                return i;
+            }
+        }
+        return paths.size();
+    }
+
+    /**
+     * Just past the first {@code a} or {@code b} after step {@code from}. Neither one found:
+     * {@code paths.size()}, so the rest of the list is skipped.
+     */
+    private static int IndexAfter(List<Path> paths, int from, Path a, Path b) {
+        for (int i = from + 1; i < paths.size(); i++) {
+            if (paths.get(i) == a || paths.get(i) == b) {
+                return i + 1;
+            }
+        }
+        return paths.size();
+    }
+
     /** Start one step from the list: drive a path, stop and launch, or stop and wait for a tag. */
     private void StartStep(Bot bot, Follower follower, Path step, ElapsedTime stepTimer) {
         stepTimer.reset();
@@ -553,6 +710,9 @@ public abstract class PedroAuto extends LinearOpMode {
             mRollerOn = false;
             bot.RunIntake(mIntakeRunning);
             bot.SetIntakeRoller(false);
+        } else if (step == CHECK_TIPPED || IsBranchMarker(step)) {
+            // Nothing new to follow: the follower keeps holding the robot where it is.
+            // CHECK_TIPPED looks at the hive in the loop.
         } else {
             follower.follow(step);
         }

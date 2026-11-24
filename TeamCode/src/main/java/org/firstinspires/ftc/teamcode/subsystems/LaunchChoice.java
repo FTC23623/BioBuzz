@@ -18,7 +18,8 @@ import org.firstinspires.ftc.teamcode.objects.AimAssist;
  * <p>Where the hive's middle should sit in the camera once aimed ({@link #AimAtDeg}) is the
  * side offset ({@code aimHiveBearingDeg}, by which side of the hive the robot stands, the
  * same for both) plus the launcher offset ({@link #LauncherOffsetDeg}: each launcher sits
- * 2 inches to one side of the camera, so pollen and nectar aim opposite ways).
+ * 2 inches to one side of the camera, so pollen and nectar aim opposite ways). Nectar also
+ * turns {@code nectarAimLeftDeg} (1) further left.
  */
 public enum LaunchChoice {
     NONE,
@@ -55,8 +56,9 @@ public enum LaunchChoice {
 
     /**
      * Where the hive's middle should sit in the camera once aimed for this launcher, in
-     * degrees, left positive: the side offset plus the launcher offset. Feed it to
-     * {@code AimAssist.AimError}.
+     * degrees, left positive: the side offset plus the launcher offset. For nectar, minus
+     * {@code nectarAimLeftDeg}: the hive sitting further right in the camera means the
+     * robot has turned further left. Feed it to {@code AimAssist.AimError}.
      *
      * <pre>
      *     aimHiveBearingDeg 1, 2 in launchers, pollen left, 110 in:
@@ -69,7 +71,11 @@ public enum LaunchChoice {
      */
     public double AimAtDeg(double sideDeg, double rangeIn, BotProperties p) {
         double side = AimAssist.SideOffset(sideDeg, p.aimHiveBearingDeg, p.aimSideCenterDeg);
-        return side + LauncherOffsetDeg(rangeIn, p);
+        double aimAt = side + LauncherOffsetDeg(rangeIn, p);
+        if (this == NECTAR) {
+            aimAt = aimAt - p.nectarAimLeftDeg;
+        }
+        return aimAt;
     }
 
     /**

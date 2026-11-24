@@ -25,7 +25,7 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * <b>left trigger (hold)</b> launches pollen; <b>right bumper (hold)</b> aims nectar,
  * <b>right trigger (hold)</b> launches nectar. Both sides at once: pollen wins. A launch
  * trigger aims too, then opens its gate and the intake and transfer push the balls in.
- * <b>Cross</b> runs the intake and transfer (on / off), <b>square (hold)</b> runs them
+ * <b>Cross (hold)</b> runs the intake and transfer while held, <b>square (hold)</b> runs them
  * backward, slowly, to spit out extra balls, triangle (hold) the flower extractor, D-pad
  * up/down pollen speed, right/left nectar speed, circle always-track. The launchers are
  * always on. See docs/decisions/0023, 0032, 0039 and 0040.

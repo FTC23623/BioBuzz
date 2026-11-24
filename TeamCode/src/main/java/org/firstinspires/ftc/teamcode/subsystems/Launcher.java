@@ -21,9 +21,10 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  *
  * <p>Controls (operator, gamepad 2):
  * <ul>
- *   <li><b>D-pad up / down</b>: pollen launcher 50 RPM faster / slower. With range tuning
- *       on (below) this trims the distance table instead, by the same 50.
- *   <li><b>D-pad right / left</b>: nectar launcher target up / down 50 RPM.
+ *   <li><b>D-pad up / down</b>: pollen launcher {@code launcherRpmStep} (25) RPM faster /
+ *       slower. With range tuning on (below) this trims the pollen curve instead, by the same 25.
+ *   <li><b>D-pad right / left</b>: the same for nectar: with range tuning on it trims the
+ *       nectar curve ({@code nectarRangeTrimRpm}), off it sets the nectar speed itself.
  *   <li>Steady range (docs/decisions/0048) is a dashboard setting only: cross runs the
  *       intake now.
  *   <li><b>Circle / B</b>: always-track range on / off (docs/decisions/0049): the speed
@@ -37,11 +38,13 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * not flip the speed every loop.
  *
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the operator holds an
- * aim bumper or a launch trigger ({@link LaunchChoice}) and the camera sees our hive, the
- * pollen launcher's target follows four measured shots joined by straight lines, in 2-inch
- * steps (2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 in), plus {@code launcherRangeTrimRpm}. The
- * wheel is then already at the right speed when the trigger is pulled. With no tag in view
- * the target stays where it was. {@code launcherRangeTuning = false} turns this off.
+ * aim bumper or a launch trigger ({@link LaunchChoice}) and the camera sees our hive, each
+ * launcher's target follows its own four measured shots joined by straight lines, in 2-inch
+ * steps. Pollen: 2760 at 110 in, 2831 at 120, 2983 at 130, 3115 from 140 in, plus
+ * {@code launcherRangeTrimRpm}. Nectar: 2810, 2881, 3033, 3165, plus
+ * {@code nectarRangeTrimRpm} (docs/decisions/0057). The wheels are then already at the right
+ * speed when a trigger is pulled. With no tag in view the targets stay where they were.
+ * {@code launcherRangeTuning = false} turns this off for both.
  *
  * <p>The targets ARE {@code pollenLauncherRpm} and {@code nectarLauncherRpm} in
  * BotProperties. The D-pad and the distance table change them there, so the dashboard shows
@@ -83,8 +86,10 @@ public class Launcher implements Subsystem {
     private String mRangeStatus = "no tag seen yet";
     /** Steady range: the step start, in inches, the speed is held on. NaN = none yet. */
     private double mHeldStepIn = Double.NaN;
-    /** The curve, one RPM per step, looked up each loop instead of worked out. */
+    /** The pollen curve, one RPM per step, looked up each loop instead of worked out. */
     private final RpmTable mRpmTable = new RpmTable();
+    /** The nectar curve, the same way (docs/decisions/0057). */
+    private final RpmTable mNectarRpmTable = new RpmTable();
     /** Settle before launch: the pollen wheel on its locked target (0056). */
     private final SpeedSettle mSettle = new SpeedSettle();
     /** The clock the settle is timed with. */
@@ -151,11 +156,20 @@ public class Launcher implements Subsystem {
                 ChangePollenRpm(-mProperties.launcherRpmStep);
             }
         }
+        // Right / left: the same for nectar, with its own trim.
         if (Pressed(mNectarFasterButton, mGamepad.dpad_right)) {
-            ChangeNectarRpm(mProperties.launcherRpmStep);
+            if (mProperties.launcherRangeTuning) {
+                mProperties.nectarRangeTrimRpm = mProperties.nectarRangeTrimRpm + mProperties.launcherRpmStep;
+            } else {
+                ChangeNectarRpm(mProperties.launcherRpmStep);
+            }
         }
         if (Pressed(mNectarSlowerButton, mGamepad.dpad_left)) {
-            ChangeNectarRpm(-mProperties.launcherRpmStep);
+            if (mProperties.launcherRangeTuning) {
+                mProperties.nectarRangeTrimRpm = mProperties.nectarRangeTrimRpm - mProperties.launcherRpmStep;
+            } else {
+                ChangeNectarRpm(-mProperties.launcherRpmStep);
+            }
         }
         // Circle: always-track range on / off. Rumble 1 on, 2 off.
         if (Pressed(mAlwaysTrackButton, mGamepad.circle)) {
@@ -201,24 +215,25 @@ public class Launcher implements Subsystem {
     }
 
     /**
-     * The pollen launcher's target from the distance to the tag, while a tag of ours is in
-     * view. With no tag the target stays where it was, so a shot can still be taken.
+     * Both launchers' targets from the distance to the tag, while a tag of ours is in view,
+     * each from its own curve. With no tag the targets stay where they were, so a shot can
+     * still be taken.
      */
     private void FollowDistance() {
         if (!mProperties.launcherRangeTuning) {
             mRangeStatus = "OFF (launcherRangeTuning): D-pad sets the speed";
             return;
         }
-        if (mSettle.IsActive()) {
-            // A launch command: hold the target still so the wheel can settle on it (0056).
-            mRangeStatus = String.format(Locale.US, "LOCKED to settle, holding %.0f",
-                    mProperties.pollenLauncherRpm);
-            return;
-        }
-        if (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsPollenOpen()) {
-            // Launching: hold the speed the gates opened at, so it doesn't jump mid-launch.
-            mRangeStatus = String.format(Locale.US, "LOCKED for the launch, holding %.0f",
-                    mProperties.pollenLauncherRpm);
+        // A launcher can be LOCKED: its target holds still while the rest keep following.
+        // Pollen locks for a settle (0056) and while its gate is open (0050). Nectar locks
+        // while its gate is open.
+        boolean pollenSettling = mSettle.IsActive();
+        boolean pollenLocked = pollenSettling
+                || (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsPollenOpen());
+        boolean nectarLocked = mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsNectarOpen();
+        if (pollenLocked && nectarLocked) {
+            mRangeStatus = String.format(Locale.US, "LOCKED for the launch, holding %.0f / %.0f",
+                    mProperties.pollenLauncherRpm, mProperties.nectarLauncherRpm);
             return;
         }
         if (mFromGamepad && !mOperatorAiming) {
@@ -226,15 +241,16 @@ public class Launcher implements Subsystem {
             // tag of ours is seen, tipped up (docs/decisions/0049).
             String why = AlwaysTrackBlocked();
             if (why != null) {
-                mRangeStatus = String.format(Locale.US, "not tracking (%s), holding %.0f",
-                        why, mProperties.pollenLauncherRpm);
+                mRangeStatus = String.format(Locale.US, "not tracking (%s), holding %.0f / %.0f",
+                        why, mProperties.pollenLauncherRpm, mProperties.nectarLauncherRpm);
                 return;
             }
         }
         if (mVision == null || !mVision.SeesTag()) {
             // The held step is forgotten: the next tag starts on its own step.
             mHeldStepIn = Double.NaN;
-            mRangeStatus = String.format(Locale.US, "no tag in view, holding %.0f", mProperties.pollenLauncherRpm);
+            mRangeStatus = String.format(Locale.US, "no tag in view, holding %.0f / %.0f",
+                    mProperties.pollenLauncherRpm, mProperties.nectarLauncherRpm);
             return;
         }
         boolean steady = mProperties.steadyRange;
@@ -244,20 +260,20 @@ public class Launcher implements Subsystem {
         }
         if (rangeIn <= 0) {
             // The camera sees the tag but could not work out how far it is.
-            mRangeStatus = String.format(Locale.US, "tag seen, no distance, holding %.0f", mProperties.pollenLauncherRpm);
+            mRangeStatus = String.format(Locale.US, "tag seen, no distance, holding %.0f / %.0f",
+                    mProperties.pollenLauncherRpm, mProperties.nectarLauncherRpm);
             return;
         }
-        double tableRpm;
+        // Which step of the curves the distance falls on. Both launchers use the same step.
+        double stepIn;
         String mode;
         if (steady && mProperties.launchBandHoldIn > 0) {
             mHeldStepIn = StepFor(rangeIn, mHeldStepIn, mProperties);
-            mRpmTable.UpdateFrom(mProperties);
-            tableRpm = mRpmTable.Rpm(mHeldStepIn);
+            stepIn = mHeldStepIn;
             mode = String.format(Locale.US, "STEADY (%d tags, step %.0f in) ", mVision.CountTags(), mHeldStepIn);
         } else {
             mHeldStepIn = Double.NaN;
-            mRpmTable.UpdateFrom(mProperties);
-            tableRpm = mRpmTable.Rpm(StepStart(rangeIn, mProperties));
+            stepIn = StepStart(rangeIn, mProperties);
             if (steady) {
                 mode = String.format(Locale.US, "STEADY (%d tags) ", mVision.CountTags());
             } else {
@@ -268,9 +284,28 @@ public class Launcher implements Subsystem {
             // Following with no aim button down: always-track did it.
             mode = "ALWAYS " + mode;
         }
-        mProperties.pollenLauncherRpm = KeepInRange(tableRpm + mProperties.launcherRangeTrimRpm);
-        mRangeStatus = String.format(Locale.US, "%s%.0f in -> %.0f RPM, trim %+.0f = %.0f",
-                mode, rangeIn, tableRpm, mProperties.launcherRangeTrimRpm, mProperties.pollenLauncherRpm);
+        mRpmTable.UpdateFrom(mProperties);
+        mNectarRpmTable.UpdateNectarFrom(mProperties);
+        double pollenTableRpm = mRpmTable.Rpm(stepIn);
+        double nectarTableRpm = mNectarRpmTable.Rpm(stepIn);
+        String pollenPart;
+        if (pollenLocked) {
+            String why = pollenSettling ? "LOCKED to settle" : "LOCKED for the launch";
+            pollenPart = String.format(Locale.US, "pollen %s, holding %.0f", why, mProperties.pollenLauncherRpm);
+        } else {
+            mProperties.pollenLauncherRpm = KeepInRange(pollenTableRpm + mProperties.launcherRangeTrimRpm);
+            pollenPart = String.format(Locale.US, "pollen %.0f trim %+.0f = %.0f",
+                    pollenTableRpm, mProperties.launcherRangeTrimRpm, mProperties.pollenLauncherRpm);
+        }
+        String nectarPart;
+        if (nectarLocked) {
+            nectarPart = String.format(Locale.US, "nectar LOCKED for the launch, holding %.0f", mProperties.nectarLauncherRpm);
+        } else {
+            mProperties.nectarLauncherRpm = KeepInRange(nectarTableRpm + mProperties.nectarRangeTrimRpm);
+            nectarPart = String.format(Locale.US, "nectar %.0f trim %+.0f = %.0f",
+                    nectarTableRpm, mProperties.nectarRangeTrimRpm, mProperties.nectarLauncherRpm);
+        }
+        mRangeStatus = String.format(Locale.US, "%s%.0f in -> %s; %s", mode, rangeIn, pollenPart, nectarPart);
     }
 
     /**
@@ -294,7 +329,7 @@ public class Launcher implements Subsystem {
      * true when a tag's tilt says the hive has tipped up: from tagTippedMinDeg to
      * tagTippedMaxDeg. An unknown tilt (NaN) is never tipped.
      */
-    static boolean Tipped(double tiltDeg, BotProperties p) {
+    public static boolean Tipped(double tiltDeg, BotProperties p) {
         if (Double.isNaN(tiltDeg)) {
             return false;
         }
@@ -345,8 +380,8 @@ public class Launcher implements Subsystem {
     }
 
     /**
-     * The RPM for a distance, from the four measured shots in BotProperties joined by
-     * straight lines, in steps of launchBandIn inches:
+     * The POLLEN RPM for a distance, from the four measured shots in BotProperties joined by
+     * straight lines, in steps of launchBandIn inches. A worked example:
      *
      * <pre>
      *     step start = nearIn + whole steps past nearIn
@@ -372,6 +407,11 @@ public class Launcher implements Subsystem {
      */
     static double RpmForStep(double stepStartIn, BotProperties p) {
         return RpmTable.LineRpm(stepStartIn, RpmTable.PointsIn(p), RpmTable.PointsRpm(p));
+    }
+
+    /** The NECTAR RPM for a distance: the same rule, from the nectar curve (0057). */
+    public static double NectarRpmForRange(double rangeIn, BotProperties p) {
+        return RpmTable.LineRpm(StepStart(rangeIn, p), RpmTable.PointsIn(p), RpmTable.NectarPointsRpm(p));
     }
 
     /** Measure both speeds and set both powers. Process() calls this every 50 ms. */

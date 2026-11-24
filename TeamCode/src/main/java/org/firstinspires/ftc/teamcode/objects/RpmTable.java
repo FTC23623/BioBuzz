@@ -8,7 +8,9 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
  * loop looks the RPM up (docs/decisions/0038).
  *
  * <p>The speeds come from four measured shots in BotProperties (near, two in the middle,
- * far), joined by straight lines:
+ * far), joined by straight lines. Each launcher has its own table: pollen's shots are
+ * {@code launchNearRpm}..., nectar's {@code nectarNearRpm}... (docs/decisions/0057). Both use
+ * the same four distances. For example:
  *
  * <pre>
  *     110 in 2760, 120 in 2831, 130 in 2983, 140 in 3115, steps of 2 in:
@@ -32,24 +34,43 @@ public class RpmTable {
         return new double[] {p.launchNearIn, p.launchMid1In, p.launchMid2In, p.launchFarIn};
     }
 
-    /** The RPM measured at each of {@link #PointsIn}, in the same order. */
+    /** The POLLEN RPM measured at each of {@link #PointsIn}, in the same order. */
     public static double[] PointsRpm(BotProperties p) {
         return new double[] {p.launchNearRpm, p.launchMid1Rpm, p.launchMid2Rpm, p.launchFarRpm};
     }
 
-    /** Build the table again, but only if a speed setting changed since last time. */
+    /** The NECTAR RPM at each of {@link #PointsIn}, in the same order (docs/decisions/0057). */
+    public static double[] NectarPointsRpm(BotProperties p) {
+        return new double[] {p.nectarNearRpm, p.nectarMid1Rpm, p.nectarMid2Rpm, p.nectarFarRpm};
+    }
+
+    /** The pollen table: build it again, but only if a speed setting changed since last time. */
     public void UpdateFrom(BotProperties p) {
-        double[] pointsIn = PointsIn(p);
-        double[] pointsRpm = PointsRpm(p);
+        UpdateFrom(PointsIn(p), PointsRpm(p), p.launchBandIn);
+    }
+
+    /** The nectar table: the same, from the nectar speeds. */
+    public void UpdateNectarFrom(BotProperties p) {
+        UpdateFrom(PointsIn(p), NectarPointsRpm(p), p.launchBandIn);
+    }
+
+    /**
+     * Build the table again from these shots, but only if one of them changed since last time.
+     *
+     * @param pointsIn  the measured distances, near to far, in inches
+     * @param pointsRpm the speed at each distance, same order
+     * @param bandIn    inches between steps
+     */
+    public void UpdateFrom(double[] pointsIn, double[] pointsRpm, double bandIn) {
         boolean same = mRpms != null
                 && Arrays.equals(pointsIn, mPointsIn) && Arrays.equals(pointsRpm, mPointsRpm)
-                && p.launchBandIn == mBandIn;
+                && bandIn == mBandIn;
         if (same) {
             return;
         }
         mPointsIn = pointsIn;
         mPointsRpm = pointsRpm;
-        mBandIn = p.launchBandIn;
+        mBandIn = bandIn;
         double nearIn = NearIn();
         double farIn = FarIn();
         if (mBandIn <= 0 || farIn <= nearIn) {

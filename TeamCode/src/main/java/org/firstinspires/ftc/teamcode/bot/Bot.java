@@ -82,10 +82,10 @@ import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
  *   <li><b>Gamepad 2, operator</b>: LEFT bumper (hold) aims pollen, LEFT trigger (hold)
  *       launches pollen; RIGHT bumper (hold) aims nectar, RIGHT trigger (hold) launches
  *       nectar; both sides at once, pollen wins. A launch trigger aims too, and the
- *       intake and transfer push balls in once the gate is open. Cross (press) runs the
- *       intake and transfer on / off, square (hold) runs them backward, slowly, triangle
- *       (hold) deploys the flower extractor, D-pad trims the launcher speeds (pollen
- *       follows the tag's distance), circle flips always-track. The launchers spin from
+ *       intake and transfer push balls in once the gate is open. Cross (hold) runs the
+ *       intake and transfer while held, square (hold) runs them backward, slowly, triangle
+ *       (hold) deploys the flower extractor, D-pad trims the launcher speeds (both
+ *       follow the tag's distance), circle flips always-track. The launchers spin from
  *       START to the end with no button.
  * </ul>
  *
@@ -131,15 +131,16 @@ public class Bot {
     static final String[] LiveTuningDrive = {
             "driveNormal", "driveSlow", "driveStrafeGain", "driveMotorSlewRate",
             "driveSwappedTurnGain", "driveTightTurnGain", "driveDriftSideGain", "driveDriftRearGain",
-            "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "launcherSideOffsetIn", "launcherOffsetNoRangeDeg", "pollenLeftOfCamera", "aimSideCenterDeg", "aimSideReversed",
+            "aimKP", "aimMaxRotate", "aimDoneDegrees", "aimHiveBearingDeg", "launcherSideOffsetIn", "launcherOffsetNoRangeDeg", "pollenLeftOfCamera", "nectarAimLeftDeg", "aimSideCenterDeg", "aimSideReversed",
             "aimArc", "arcStrafePower", "arcRangeKP", "arcMaxDrive",
             "launchHoldsPosition", "launchHoldKP", "launchHoldMaxPower", "launchHoldDoneIn",
             "launchHoldGiveUpIn", "launchHoldStickDeadband",
             "testLog", "testTelemetry", "tuningMarks", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
             "quietTelemetry", "launcherOnlyTelemetry"};
     static final String[] LiveTuningLauncher = {
-            "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm",
-            "launchNearRpm", "launchMid1Rpm", "launchMid2Rpm", "launchFarRpm", "launchBandIn",
+            "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm", "nectarRangeTrimRpm",
+            "launchNearRpm", "launchMid1Rpm", "launchMid2Rpm", "launchFarRpm",
+            "nectarNearRpm", "nectarMid1Rpm", "nectarMid2Rpm", "nectarFarRpm", "launchBandIn",
             "steadyRange", "steadyRangeAverage", "launchBandHoldIn",
             "launchLocksRpm", "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
@@ -655,6 +656,22 @@ public class Bot {
     /** @return true when the camera sees one of our hive's AprilTags. Always false with vision switched off. */
     public boolean SeesTag() {
         return mVision.SeesTag();
+    }
+
+    /**
+     * Has our hive tipped up? true when the camera sees one of our hive's tags and, with
+     * {@code autoTippedNeedsTilt} on, the tag's tilt is in the tipped window
+     * ({@code tagTippedMinDeg} to {@code tagTippedMaxDeg}, the same test always-track uses).
+     * An auto's CHECK_TIPPED step asks this (docs/decisions/0057).
+     */
+    public boolean SeesTippedHive() {
+        if (!mVision.SeesTag()) {
+            return false;
+        }
+        if (!mProperties.autoTippedNeedsTilt) {
+            return true;
+        }
+        return Launcher.Tipped(mVision.GetTagTiltDegrees(), mProperties);
     }
 
     /**

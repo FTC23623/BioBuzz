@@ -60,6 +60,8 @@ class DriveAimTest {
 
     @BeforeEach
     void setUp() {
+        // These tests check the launcher geometry; the nectar-only turn is tested in LaunchChoiceTest.
+        properties.nectarAimLeftDeg = 0;
         HardwareMap hardwareMap = mock(HardwareMap.class);
         for (String name : new String[] {
                 properties.cfgDriveFrontLeft, properties.cfgDriveFrontRight,

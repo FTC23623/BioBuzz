@@ -62,6 +62,9 @@ class IntakeTest {
         // control. The robot runs power mode (rollerUsePower); its own test is below and in
         // RollerTest.
         properties.rollerUsePower = false;
+        // The robot has auto-reject off since 2026-11-19; the reject tests below need it on.
+        // The test that checks "off" turns it off itself.
+        properties.pollenAutoReject = true;
         HardwareMap hardwareMap = mock(HardwareMap.class);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgIntake)).thenReturn(intake.motor);
         when(hardwareMap.tryGet(DcMotorEx.class, properties.cfgTransfer)).thenReturn(transfer.motor);
@@ -84,6 +87,12 @@ class IntakeTest {
             loop();
         }
         button.accept(false);
+        loop();
+    }
+
+    /** Hold cross down for one loop. It stays held until a test lets go. */
+    private void holdCross() {
+        gamepad.cross = true;
         loop();
     }
 
@@ -112,18 +121,31 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("cross: both run forward, each at its own speed; again: off")
-    void crossToggles() {
+    @DisplayName("cross held: both run forward at once, each at its own speed; let go: off at once")
+    void crossRunsWhileHeld() {
         properties.intakeRpm = 200;
         properties.transferRpm = 300;
-        tap(down -> gamepad.cross = down);
+        holdCross();
         assertTrue(rollers.IsOn());
         assertEquals(TicksPerSecond(200), intake.velocity, EPS);
         assertEquals(TicksPerSecond(300), transfer.velocity, EPS);
+        loop();   // still held: still on
+        assertEquals(TicksPerSecond(200), intake.velocity, EPS);
 
+        gamepad.cross = false;
+        loop();
+        assertFalse(rollers.IsOn());
+        assertEquals(0, intake.velocity, EPS);
+        assertEquals(0, transfer.velocity, EPS);
+    }
+
+    @Test
+    @DisplayName("cross is not a toggle: a quick press and let go leaves them off")
+    void crossIsNotAToggle() {
         tap(down -> gamepad.cross = down);
-        assertEquals(0, intake.power, EPS);
-        assertEquals(0, transfer.power, EPS);
+        assertFalse(rollers.IsOn());
+        assertEquals(0, intake.velocity, EPS);
+        assertEquals(0, transfer.velocity, EPS);
     }
 
     @Test
@@ -141,7 +163,7 @@ class IntakeTest {
     @Test
     @DisplayName("square held while intaking: the intake runs backward, the transfer keeps going forward")
     void squareLeavesARunningTransferOn() {
-        tap(down -> gamepad.cross = down);
+        holdCross();
         gamepad.square = true;
         loop();
         assertEquals(-TicksPerSecond(properties.intakeReverseRpm), intake.velocity, EPS);
@@ -151,7 +173,7 @@ class IntakeTest {
     @Test
     @DisplayName("let go of square: back to forward if it was on")
     void releaseSquareGoesBack() {
-        tap(down -> gamepad.cross = down);
+        holdCross();
         gamepad.square = true;
         loop();
         gamepad.square = false;
@@ -163,8 +185,7 @@ class IntakeTest {
     @Test
     @DisplayName("a speed changed in BotProperties (the dashboard) counts on the next loop")
     void liveSpeed() {
-        rollers.SetOn(true);
-        loop();
+        holdCross();
         properties.intakeRpm = 400;
         loop();
         assertEquals(TicksPerSecond(400), intake.velocity, EPS);
@@ -221,9 +242,9 @@ class IntakeTest {
     }
 
     @Test
-    @DisplayName("left trigger pulled and let go while cross has them on: they stay on")
+    @DisplayName("left trigger pulled and let go while cross is held: they stay on")
     void triggerDoesNotTurnOffCross() {
-        tap(down -> gamepad.cross = down);
+        holdCross();
         gamepad.left_trigger = 1;
         loop();
         gamepad.left_trigger = 0;
@@ -248,13 +269,13 @@ class IntakeTest {
     @Test
     @DisplayName("launching with the rollers already on: launching wins, both drop to their feed shares")
     void launchWhileOn() {
-        tap(down -> gamepad.cross = down);
+        holdCross();
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);   // 100% while intaking
         when(gates.IsFullyOpen()).thenReturn(true);
         loop();
         assertEquals(TicksPerSecond(properties.intakeRpm * properties.launchFeedIntakeScale), intake.velocity, EPS);
         assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale), transfer.velocity, EPS);
-        // Gates closed again: back to full speed, since cross still has them on.
+        // Gates closed again: back to full speed, since cross is still held.
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
@@ -279,7 +300,7 @@ class IntakeTest {
         properties.rollerUsePower = true;
         properties.intakeRpm = 1150;
         properties.transferRpm = 575;
-        tap(down -> gamepad.cross = down);
+        holdCross();
         assertEquals(1.0, intake.power, EPS);
         assertEquals(0.5, transfer.power, EPS);
         assertEquals(0, transfer.velocity, EPS);
@@ -312,7 +333,7 @@ class IntakeTest {
     @Test
     @DisplayName("rollers running when the trigger is pulled: the transfer STOPS while the gate opens, the intake slows to its feed speed at once")
     void runningTransferPausesForTheGate() {
-        tap(down -> gamepad.cross = down);
+        holdCross();
         assertEquals(TicksPerSecond(properties.transferRpm), transfer.velocity, EPS);
 
         when(gates.IsOpen()).thenReturn(true);
@@ -326,7 +347,7 @@ class IntakeTest {
         loop();
         assertEquals(TicksPerSecond(properties.transferRpm * properties.launchFeedTransferScale), transfer.velocity, EPS);
 
-        // Trigger let go: back to what cross says.
+        // Trigger let go: back to full speed, since cross is still held.
         when(gates.IsOpen()).thenReturn(false);
         when(gates.IsFullyOpen()).thenReturn(false);
         loop();
@@ -336,7 +357,7 @@ class IntakeTest {
     @Test
     @DisplayName("square while the gate opens: the intake runs backward, and a running transfer does not pause")
     void reverseWinsOverGateOpening() {
-        tap(down -> gamepad.cross = down);
+        holdCross();
         when(gates.IsOpen()).thenReturn(true);
         when(gates.IsFullyOpen()).thenReturn(false);
         gamepad.square = true;
@@ -361,18 +382,9 @@ class IntakeTest {
         r.Process();
     }
 
-    /** Hold cross on these rollers just long enough for the debouncer: they turn on (and stay held). */
+    /** Hold cross on these rollers for one loop: they turn on (and cross stays held). */
     private void pressCross(Intake r) {
         gamepad.cross = true;
-        for (int i = 0; i < properties.debounce; i++) {
-            loop(r);
-        }
-    }
-
-    /** Press cross on these rollers, then let go. */
-    private void tapCross(Intake r) {
-        pressCross(r);
-        gamepad.cross = false;
         loop(r);
     }
 
@@ -408,9 +420,9 @@ class IntakeTest {
 
         when(pollen.IsDetected()).thenReturn(false);
         gamepad.cross = false;
-        loop(r);   // let go: the block lifts, the toggle is off
+        loop(r);   // let go: the block lifts, and they are off (cross is not held)
         assertFalse(r.IsRunning());
-        tapCross(r);
+        pressCross(r);   // held again: they run
         assertTrue(r.IsRunning());
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
     }
@@ -431,22 +443,24 @@ class IntakeTest {
         loop(r);
         assertFalse(r.IsRunning(), "blocked while cross is held");
         gamepad.cross = false;
-        loop(r);
-        assertTrue(r.IsRunning(), "cross let go: the block lifts");
+        loop(r);   // cross let go: the block lifts
+        pressCross(r);
+        assertTrue(r.IsRunning(), "held again after letting go: they run");
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
     }
 
     @Test
-    @DisplayName("the cross toggle is turned off by a reject")
-    void rejectTurnsTheToggleOff() {
+    @DisplayName("an auto's SetOn(true) is turned off by a reject")
+    void rejectTurnsAnAutoOff() {
         properties.pollenRejectAfterSeconds = 0;
         properties.pollenRejectSeconds = 0;
         PollenSensor pollen = mock(PollenSensor.class);
         Intake r = withPollen(pollen);
         r.SetOn(true);
         when(pollen.IsDetected()).thenReturn(true);
-        loop(r);
-        loop(r);
+        // An auto: no gamepad, Process only.
+        r.Process();
+        r.Process();
         assertFalse(r.IsOn());
         assertFalse(r.IsRunning());
     }
@@ -458,7 +472,7 @@ class IntakeTest {
         PollenSensor pollen = mock(PollenSensor.class);
         when(pollen.IsDetected()).thenReturn(true);
         Intake r = withPollen(pollen);
-        tapCross(r);
+        pressCross(r);
         loop(r);
         assertFalse(r.IsRejecting());
         assertEquals(TicksPerSecond(properties.intakeRpm), intake.velocity, EPS);
@@ -475,7 +489,7 @@ class IntakeTest {
         assertFalse(r.IsRejecting());
 
         when(gates.IsFullyOpen()).thenReturn(true);   // launching: balls pass the switch on purpose
-        r.SetOn(true);
+        gamepad.cross = true;
         loop(r);
         assertFalse(r.IsRejecting());
 

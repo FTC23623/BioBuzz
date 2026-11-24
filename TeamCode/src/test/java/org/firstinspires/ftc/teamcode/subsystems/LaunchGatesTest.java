@@ -45,6 +45,8 @@ class LaunchGatesTest {
 
     @BeforeEach
     void setUp() {
+        // These tests check the launcher geometry; the nectar-only turn is tested in LaunchChoiceTest.
+        properties.nectarAimLeftDeg = 0;
         pollen = mock(Servo.class);
         nectar = mock(Servo.class);
         HardwareMap hardwareMap = mock(HardwareMap.class);

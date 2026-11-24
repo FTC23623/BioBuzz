@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,8 @@ class LaunchChoiceTest {
     void setUp() {
         operator = mock(Gamepad.class);
         properties.launchTriggerAims = true;
+        // The nectar-only turn has its own test below.
+        properties.nectarAimLeftDeg = 0;
     }
 
     /** A trigger pulled all the way. */
@@ -152,6 +156,23 @@ class LaunchChoiceTest {
         assertEquals(-1 - launcher, LaunchChoice.NECTAR.AimAtDeg(-20, 110, properties), EPS);
         // Straight in front: the launcher part only.
         assertEquals(launcher, LaunchChoice.POLLEN.AimAtDeg(0, 110, properties), EPS);
+    }
+
+    @Test
+    @DisplayName("nectarAimLeftDeg: nectar's aim spot moves that much right (the robot turns left); pollen's does not")
+    void nectarTurnsFurtherLeft() {
+        properties.aimHiveBearingDeg = 1;
+        properties.aimSideCenterDeg = 5;
+        properties.launcherSideOffsetIn = 2;
+        double pollenBefore = LaunchChoice.POLLEN.AimAtDeg(20, 110, properties);
+        double nectarBefore = LaunchChoice.NECTAR.AimAtDeg(20, 110, properties);
+        properties.nectarAimLeftDeg = 1;
+        assertEquals(nectarBefore - 1, LaunchChoice.NECTAR.AimAtDeg(20, 110, properties), EPS);
+        assertEquals(pollenBefore, LaunchChoice.POLLEN.AimAtDeg(20, 110, properties), EPS);
+        // Aimed for nectar with the hive dead ahead: the robot still has to turn left.
+        assertTrue(AimAssist.AimError(0,
+                LaunchChoice.NECTAR.AimAtDeg(0, 110, properties)) > 0);
+        assertEquals(1.0, new BotProperties().nectarAimLeftDeg, EPS);
     }
 
     @Test
