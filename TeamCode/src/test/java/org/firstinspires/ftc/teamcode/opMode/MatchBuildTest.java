@@ -32,6 +32,8 @@ class MatchBuildTest {
             "AutoStrategyARed", "AutoStrategyBRed", "AutoStrategyCRed",
             "AutoStrategyGardenD", "AutoStrategyGardenDBlue", "AutoStrategyGardenDRed",
             "AutoStrategyGardenE", "AutoStrategyGardenEBlue", "AutoStrategyGardenERed",
+            "AutoStrategyF", "AutoStrategyFBlue", "AutoStrategyFRed",
+            "AutoStrategyG", "AutoStrategyGBlue", "AutoStrategyGRed",
             "HyDrive", "HyDriveBlue", "HyDriveRed"};
 
     private static List<String> Excluded() throws IOException {

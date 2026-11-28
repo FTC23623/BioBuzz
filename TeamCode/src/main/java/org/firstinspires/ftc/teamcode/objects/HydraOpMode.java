@@ -3,7 +3,9 @@ package org.firstinspires.ftc.teamcode.objects;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.types.Alliance;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 
 /**
  * Everything a subsystem needs from the OpMode, in one object.
@@ -36,6 +38,23 @@ public class HydraOpMode {
      * clears it during INIT, so the INIT checks always show (docs/decisions/0041).
      */
     public boolean mQuiet;
+
+    /**
+     * The settings, for the telemetry group switches ({@code tlm...}). The Bot sets it when it
+     * is built. null (a test with no Bot): every group is on.
+     */
+    public BotProperties mProperties;
+
+    /**
+     * Should this group's Driver Station lines show now? Not while the quiet settings hush
+     * everything ({@link #mQuiet}), and not while the group's own switch is off.
+     */
+    public boolean Shows(TelemetryGroup group) {
+        if (mQuiet) {
+            return false;
+        }
+        return mProperties == null || mProperties.TelemetryOn(group);
+    }
 
     /** How long the last loop took, in milliseconds. */
     public double mLoopTime;

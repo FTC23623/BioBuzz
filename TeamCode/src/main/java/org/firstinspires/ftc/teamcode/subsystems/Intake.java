@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
@@ -159,7 +160,7 @@ public class Intake implements Subsystem {
         }
         // A blip lasts one loop: the recorder asks again while it wants more.
         mBlipRpm = 0;
-        if (!mOp.mQuiet) {
+        if (mOp.Shows(TelemetryGroup.INTAKE)) {
             ShowStatus();
         }
     }

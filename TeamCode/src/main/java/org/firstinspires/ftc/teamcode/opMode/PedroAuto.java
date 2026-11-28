@@ -15,7 +15,10 @@ import org.firstinspires.ftc.teamcode.bot.BotProperties;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HeadingHandoff;
 import org.firstinspires.ftc.teamcode.pedro.PedroConstants;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchGates;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchChoice;
+import org.firstinspires.ftc.teamcode.types.HiveUp;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 
 /**
  * Everything the Pedro autos share. An auto only has to say which paths to drive, in its
@@ -47,8 +50,9 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchChoice;
  * {@code launchFeedIntakeScale} (80%) and the transfer at {@code launchFeedTransferScale} (80%).
  *
  * <p><b>Tipped or not</b> (docs/decisions/0057): a {@link #CHECK_TIPPED} step looks at the hive,
- * and the steps between {@link #IF_TIPPED}, {@link #IF_NOT_TIPPED} and {@link #END_IF} run
- * only for the answer they are under. See {@link #IF_TIPPED} for an example.
+ * and the steps under {@link #IF_GARDEN_SIDE_UP}, {@link #IF_FLOWER_SIDE_UP},
+ * {@link #IF_TIPPED} or {@link #IF_NOT_TIPPED}, up to the {@link #END_IF}, run only for the
+ * answer they are under. See {@link #IF_TIPPED} for an example.
  */
 public abstract class PedroAuto extends LinearOpMode {
 
@@ -94,7 +98,7 @@ public abstract class PedroAuto extends LinearOpMode {
 
     /**
      * Put this in the list after the path to a flower to work it there (docs/decisions/0042).
-     * The intake runs, and from where the last path ended the robot:
+     * From where the last path ended the robot:
      * <ol>
      *   <li>backs up {@code autoFlowerBackIn} (7 in), and holds that spot
      *       {@code autoFlowerSettleSeconds} (0.3 s) so the robot has stopped,
@@ -106,6 +110,10 @@ public abstract class PedroAuto extends LinearOpMode {
      * </ol>
      * Every move is along the way the robot faces, so it ends {@code autoFlowerBackIn} behind
      * the spot, still facing the flower. Tool: Pose Recorder writes it after a circle press.
+     *
+     * <p>The intake runs from the first back-up until the extractor has finished swinging
+     * out ({@link #FlowerIntakeOn}). The strokes and the swing back in run with the intake
+     * as it was between steps (INTAKE_ON / INTAKE_OFF, docs/decisions/0047).
      */
     // A third marker, like LAUNCH, so the loop can tell it apart.
     protected static final Path FLOWER = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
@@ -133,13 +141,51 @@ public abstract class PedroAuto extends LinearOpMode {
     protected static final Path INTAKE_OFF = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
     /**
+     * Put this in the list to swing the flower extractor OUT and carry on at once, so it is
+     * open by the time the robot reaches the flower. Takes no time: the next path starts
+     * straight away. The FLOWER step that follows sees the arm already out and skips its
+     * wait for the swing (docs/decisions/0058).
+     *
+     * <pre>
+     *     paths.add(FLOWER_OUT);
+     *     paths.add(toFlower);
+     *     paths.add(FLOWER);
+     * </pre>
+     */
+    protected static final Path FLOWER_OUT = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** Swing the flower extractor back IN and carry on at once. Takes no time. FLOWER does this itself at its end. */
+    protected static final Path FLOWER_IN = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Like {@link #LAUNCH}, but only the NECTAR launcher: waits for the nectar wheel to reach
+     * {@code autoNectarLaunchMinRpm}, settles it when {@code autoLaunchSettles} is on, then
+     * opens only the nectar gate for {@code autoLaunchSeconds}. The pollen gate stays shut.
+     */
+    protected static final Path LAUNCH_NECTAR = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
+     * Like {@link #LAUNCH}, but the gates stay open until every ball switch
+     * (pollenSensor1-4, nectorSensor1-4) has read empty for {@code autoEmptyClearSeconds}, or
+     * {@code autoLaunchUntilEmptyMaxSeconds} after they opened. With no ball switch in the
+     * configuration it runs {@code autoLaunchSeconds}, like LAUNCH.
+     */
+    protected static final Path LAUNCH_UNTIL_EMPTY = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /**
      * Put this in the list to look at the hive: has its basket tipped up? The robot holds still
      * where the last path ended for at most {@code autoTipLookSeconds} (1 s). It counts as
-     * tipped the moment the camera sees one of our hive's tags with its tilt in the tipped
-     * window ({@code tagTippedMinDeg} to {@code tagTippedMaxDeg}). No such tag by then: not
-     * tipped. The answer is kept until the next CHECK_TIPPED, for the {@link #IF_TIPPED} and
-     * {@link #IF_NOT_TIPPED} steps after it. Before any CHECK_TIPPED the answer is "not tipped".
-     * Stop facing the hive, so the camera can see it.
+     * tipped the moment the camera sees one of our hive's tags with its roll in the UP
+     * window ({@code autoTagUpMinDeg} to {@code autoTagUpMaxDeg}). No such tag by then: not
+     * tipped. The tag also says WHICH cell tipped, the garden side's or the flower side's
+     * ({@code gardenSideTags}, {@code flowerSideTags}). The answer is kept until the next
+     * CHECK_TIPPED, for the IF steps after it. Before any CHECK_TIPPED the answer is "not
+     * tipped". Stop with the robot's back (the camera) to the hive, so the camera can see it.
+     * Only the nearest tag is looked at.
+     *
+     * <p>With {@code autoDownMeansOtherSideUp} on, a tag in the DOWN window (the underside of a
+     * cell that is down, seen from close and at an angle) also answers: the OTHER side is up.
+     * A roll in the buffer between the two windows answers nothing.
      */
     // Markers, like LAUNCH, so the loop can tell them apart.
     protected static final Path CHECK_TIPPED = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
@@ -164,22 +210,52 @@ public abstract class PedroAuto extends LinearOpMode {
      *     paths.add(toLoadingZone);    // both ways end here
      * </pre>
      *
-     * <p>Two rules. <b>Both ways must end where the robot stands at the END_IF</b>, since the
-     * next path starts from there. And <b>no IF inside an IF</b>: one level only. Either side
-     * may be left out: IF_TIPPED ... END_IF, or IF_NOT_TIPPED ... END_IF.
+     * <p>When the route depends on WHICH cell tipped, use the side steps instead:
+     *
+     * <pre>
+     *     paths.add(CHECK_TIPPED);
+     *     paths.add(IF_GARDEN_SIDE_UP);
+     *     paths.add(toGardenLaunchSpot);   //   the garden side cell is up
+     *     paths.add(IF_FLOWER_SIDE_UP);
+     *     paths.add(toFlowerLaunchSpot);   //   the flower side cell is up
+     *     paths.add(IF_NOT_TIPPED);
+     *     paths.add(toWaitingSpot);        //   neither is up
+     *     paths.add(END_IF);
+     * </pre>
+     *
+     * <p>Three rules. <b>Every way must end where the robot stands at the END_IF</b>, since the
+     * next path starts from there. <b>No IF inside an IF</b>: one level only. And each IF step
+     * is asked by itself: IF_TIPPED is true for either side, so don't mix it with the side
+     * steps in one IF, or both would run. Any of them may be left out.
      */
     protected static final Path IF_TIPPED = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
-    /** Ends the "tipped" steps; the steps for "not tipped" follow, up to the {@link #END_IF}. */
+    /**
+     * The steps after this run only if the last {@link #CHECK_TIPPED} saw nothing of ours
+     * tipped. They end at the next IF step or the {@link #END_IF}.
+     */
     protected static final Path IF_NOT_TIPPED = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
-    /** Ends an {@link #IF_TIPPED} / {@link #IF_NOT_TIPPED}. The steps after it always run. */
+    /**
+     * The steps after this run only if the last {@link #CHECK_TIPPED} saw the GARDEN side
+     * cell tipped up. They end at the next IF step or the {@link #END_IF}. See
+     * {@link #IF_TIPPED} for an example.
+     */
+    protected static final Path IF_GARDEN_SIDE_UP = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** Like {@link #IF_GARDEN_SIDE_UP}, for the FLOWER side cell. */
+    protected static final Path IF_FLOWER_SIDE_UP = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
+
+    /** Ends the IF steps. The steps after it always run. */
     protected static final Path END_IF = line(new Pose(0, 0), new Pose(1, 0)).constant(0);
 
-    /** The last CHECK_TIPPED's answer: true = the hive has tipped up. */
-    private boolean mHiveTipped = false;
+    /** The last CHECK_TIPPED's answer: which cell of our hive has tipped up, if any. */
+    private HiveUp mHiveUp = HiveUp.NOTHING;
     /** true once a CHECK_TIPPED has run, for the Driver Station. */
     private boolean mTipChecked = false;
+
+    /** true while the flower extractor is out because FLOWER_OUT swung it, until FLOWER_IN or the end of a FLOWER. */
+    private boolean mArmOut = false;
 
     /** true while the intake roller should run between steps: INTAKE_ON / INTAKE_OFF set it. */
     private boolean mRollerOn = false;
@@ -348,7 +424,7 @@ public abstract class PedroAuto extends LinearOpMode {
         // Times the whole auto, from START, for "launch anyway".
         ElapsedTime autoTimer = new ElapsedTime();
         // The first step to run: an IF marker at the top is skipped like any other.
-        int pathNumber = NextStep(paths, -1, mHiveTipped);
+        int pathNumber = NextStep(paths, -1, mHiveUp);
         if (pathNumber >= paths.size()) {
             // Only IF markers in the list: nothing to drive. Step 0 is one; it does nothing.
             pathNumber = 0;
@@ -361,7 +437,7 @@ public abstract class PedroAuto extends LinearOpMode {
         // The heading that faces the tag, in radians. Picked once, when the tag is first seen.
         double aimHeading = 0;
         // true while a launch step waits for the launchers to reach speed, gates still shut.
-        boolean spinningUp = paths.get(pathNumber) == LAUNCH;
+        boolean spinningUp = IsPlainLaunch(paths.get(pathNumber));
         // How many launches have opened the gates so far. The first one waits longer.
         int launchesDone = 0;
         // true while a launch, already fast enough, waits for the speed to settle
@@ -412,20 +488,35 @@ public abstract class PedroAuto extends LinearOpMode {
             }
             if (spinningUp) {
                 // Fast enough to launch: the pollen wheel at autoLaunchMinRpm or more.
-                boolean fastEnough = bot.PollenLauncherAtLeast(botProperties.autoLaunchMinRpm);
+                boolean nectarOnly = step == LAUNCH_NECTAR;
+                boolean fastEnough;
+                if (nectarOnly) {
+                    fastEnough = bot.NectarLauncherAtLeast(botProperties.autoNectarLaunchMinRpm);
+                } else {
+                    fastEnough = bot.PollenLauncherAtLeast(botProperties.autoLaunchMinRpm);
+                }
                 boolean openNow = false;
                 if (settling) {
                     // Speed locked: open once it has settled, or the settle timed out.
-                    if (bot.LaunchSettled()) {
+                    boolean settled = nectarOnly ? bot.NectarLaunchSettled() : bot.LaunchSettled();
+                    if (settled) {
                         settling = false;
-                        bot.CancelLaunchSettle();
+                        if (nectarOnly) {
+                            bot.CancelNectarLaunchSettle();
+                        } else {
+                            bot.CancelLaunchSettle();
+                        }
                         openNow = true;
                     }
                 } else if (ReadyToOpen(fastEnough, stepTimer.seconds(), launchesDone == 0, botProperties)) {
                     if (SettlesBeforeLaunch(step, botProperties)) {
                         // Fast enough: now lock the speed and let it settle (0056).
                         settling = true;
-                        bot.BeginLaunchSettle();
+                        if (nectarOnly) {
+                            bot.BeginNectarLaunchSettle();
+                        } else {
+                            bot.BeginLaunchSettle();
+                        }
                     } else {
                         openNow = true;
                     }
@@ -435,41 +526,43 @@ public abstract class PedroAuto extends LinearOpMode {
                     // time counts from now. The rollers start once the gates are fully open.
                     spinningUp = false;
                     launchesDone = launchesDone + 1;
-                    bot.OpenLaunchGates(true);
+                    bot.OpenLaunchGates(true, !nectarOnly, true);
                     // The intake roller feeds the launch too, even where it is off between
                     // steps, so a ball stuck low is pushed up. Back to before at the end.
                     bot.SetIntakeRoller(true);
                     stepTimer.reset();
                 }
             }
-            boolean launching = step == LAUNCH || step == LAUNCH_WHEN_TAG_SEEN;
+            boolean launching = IsLaunch(step);
             boolean pathFinished;
             if (waitingForTag || aiming || spinningUp) {
                 pathFinished = false;
             } else if (step == FLOWER) {
                 pathFinished = FlowerStep(bot, follower);
-            } else if (step == INTAKE_ON || step == INTAKE_OFF) {
-                // Done the moment it starts: StartStep already switched the intake.
+            } else if (step == INTAKE_ON || step == INTAKE_OFF || step == FLOWER_OUT || step == FLOWER_IN) {
+                // Done the moment it starts: StartStep already switched the intake or the arm.
                 pathFinished = true;
             } else if (step == CHECK_TIPPED) {
                 // Look at the hive until a tipped tag is seen, or the look time is up.
-                if (bot.SeesTippedHive()) {
-                    mHiveTipped = true;
+                HiveUp seen = bot.SeesHiveUp();
+                if (seen.Tipped()) {
+                    mHiveUp = seen;
                     mTipChecked = true;
                     pathFinished = true;
                 } else if (stepTimer.seconds() >= botProperties.autoTipLookSeconds) {
-                    mHiveTipped = false;
+                    mHiveUp = HiveUp.NOTHING;
                     mTipChecked = true;
                     pathFinished = true;
                 } else {
                     pathFinished = false;
                 }
             } else if (IsBranchMarker(step)) {
-                // IF_TIPPED, IF_NOT_TIPPED, END_IF: NextStep() skips them. Only here when the
+                // The IF steps and END_IF: NextStep() skips them. Only here when the
                 // list holds nothing else.
                 pathFinished = true;
             } else if (launching) {
-                pathFinished = stepTimer.seconds() >= botProperties.autoLaunchSeconds;
+                pathFinished = LaunchDone(step, stepTimer.seconds(), bot.BallsEmptyForSeconds(),
+                        bot.BallSensorsFound(), botProperties);
             } else {
                 boolean tookTooLong = stepTimer.seconds() >= giveUpSeconds[pathNumber];
                 if (follower.following() && tookTooLong) {
@@ -488,12 +581,12 @@ public abstract class PedroAuto extends LinearOpMode {
                 bot.SetIntakeRoller(mRollerOn);
             }
             // The next step, skipping the IF steps that don't match the hive.
-            int nextStep = NextStep(paths, pathNumber, mHiveTipped);
+            int nextStep = NextStep(paths, pathNumber, mHiveUp);
             boolean morePathsLeft = nextStep < paths.size();
             if (pathFinished && morePathsLeft) {
                 pathNumber = nextStep;
                 waitingForTag = paths.get(pathNumber) == LAUNCH_WHEN_TAG_SEEN;
-                spinningUp = paths.get(pathNumber) == LAUNCH;
+                spinningUp = IsPlainLaunch(paths.get(pathNumber));
                 StartStep(bot, follower, paths.get(pathNumber), stepTimer);
             }
 
@@ -506,47 +599,81 @@ public abstract class PedroAuto extends LinearOpMode {
                 HeadingHandoff.Save(HandoffYaw(StartFacingDeg(), StartPose(), where.heading()),
                         HeadingHandoff.NowSeconds());
             }
-            telemetry.addData("Path", (pathNumber + 1) + " of " + paths.size());
-            telemetry.addData("Waiting for a tag", waitingForTag);
-            telemetry.addData("Aiming at the tag", aiming);
-            if (settling) {
-                telemetry.addData("Waiting for launchers to reach speed", "settling: %s", bot.LaunchSettleStatus());
-            } else if (spinningUp) {
-                double limit = botProperties.autoSpinUpSeconds;
-                if (launchesDone == 0) {
-                    limit = botProperties.autoFirstSpinUpSeconds;
+            // Grouped, so each block can be switched off on the dashboard (Telemetry group).
+            if (bot.TelemetryOn(TelemetryGroup.AUTO_STEP)) {
+                telemetry.addData("Step", "%d of %d: %s", pathNumber + 1, paths.size(),
+                        StepText(step, where));
+                int upNext = NextStep(paths, pathNumber, mHiveUp);
+                if (upNext < paths.size()) {
+                    telemetry.addData("Next step", "%d: %s", upNext + 1, StepText(paths.get(upNext), null));
+                } else {
+                    telemetry.addData("Next step", "none: the last step");
                 }
-                telemetry.addData("Waiting for launchers to reach speed", "yes, pollen %.0f of %.0f RPM, %.1f of at most %.1f s%s",
-                        bot.PollenLauncherRpm(), botProperties.autoLaunchMinRpm,
-                        stepTimer.seconds(), limit, launchesDone == 0 ? " (first launch)" : "");
-            } else {
-                telemetry.addData("Waiting for launchers to reach speed", "no");
-            }
-            telemetry.addData("Launching", !waitingForTag && !aiming && !spinningUp && launching);
-            telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
-            if (step == CHECK_TIPPED) {
-                telemetry.addData("Hive tipped", "looking, %.1f of at most %.1f s",
-                        stepTimer.seconds(), botProperties.autoTipLookSeconds);
-            } else if (mTipChecked) {
-                telemetry.addData("Hive tipped", mHiveTipped ? "YES" : "no");
-            } else {
-                telemetry.addData("Hive tipped", "not checked yet");
-            }
-            telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
-            if (step == FLOWER) {
-                String doing = "done";
-                if (mFlowerIndex >= 0 && mFlowerIndex < mFlowerActions.size()) {
-                    doing = mFlowerActions.get(mFlowerIndex).name;
+                if (step == FLOWER) {
+                    String doing = "done";
+                    if (mFlowerIndex >= 0 && mFlowerIndex < mFlowerActions.size()) {
+                        doing = mFlowerActions.get(mFlowerIndex).name;
+                    }
+                    telemetry.addData("Flower", "%d of %d: %s", mFlowerIndex + 1, mFlowerActions.size(), doing);
+                } else if (!launching && !IsMarker(step)) {
+                    telemetry.addData("Give up on this step after (s)", "%.1f (now %.1f)",
+                            giveUpSeconds[pathNumber], stepTimer.seconds());
                 }
-                telemetry.addData("Flower", "%d of %d: %s", mFlowerIndex + 1, mFlowerActions.size(), doing);
-            } else if (!launching && !IsMarker(step)) {
-                telemetry.addData("Give up on this path after (s)", "%.1f", giveUpSeconds[pathNumber]);
+                telemetry.addData("Steps given up (took too long)", pathsGivenUp);
+                telemetry.addData("Done", pathFinished && !morePathsLeft);
+                telemetry.addData("Auto time (s)", "%.1f", autoTimer.seconds());
             }
-            telemetry.addData("Paths given up (took too long)", pathsGivenUp);
-            telemetry.addData("Done", pathFinished && !morePathsLeft);
-            telemetry.addData("x (forward, in)", where.x());
-            telemetry.addData("y (left, in)", where.y());
-            telemetry.addData("Heading (deg)", Math.toDegrees(where.heading()));
+            if (bot.TelemetryOn(TelemetryGroup.AUTO_LAUNCH)) {
+                telemetry.addData("Waiting for a tag", waitingForTag);
+                telemetry.addData("Aiming at the tag", aiming);
+                if (settling) {
+                    telemetry.addData("Waiting for launchers to reach speed", "settling: %s",
+                            step == LAUNCH_NECTAR ? bot.NectarLaunchSettleStatus() : bot.LaunchSettleStatus());
+                } else if (spinningUp) {
+                    double limit = botProperties.autoSpinUpSeconds;
+                    if (launchesDone == 0) {
+                        limit = botProperties.autoFirstSpinUpSeconds;
+                    }
+                    boolean nectarOnly = step == LAUNCH_NECTAR;
+                    telemetry.addData("Waiting for launchers to reach speed", "yes, %s %.0f of %.0f RPM, %.1f of at most %.1f s%s",
+                            nectarOnly ? "nectar" : "pollen",
+                            nectarOnly ? bot.NectarLauncherRpm() : bot.PollenLauncherRpm(),
+                            nectarOnly ? botProperties.autoNectarLaunchMinRpm : botProperties.autoLaunchMinRpm,
+                            stepTimer.seconds(), limit, launchesDone == 0 ? " (first launch)" : "");
+                } else {
+                    telemetry.addData("Waiting for launchers to reach speed", "no");
+                }
+                telemetry.addData("Launching", !waitingForTag && !aiming && !spinningUp && launching);
+                if (step == LAUNCH_UNTIL_EMPTY && !spinningUp) {
+                    telemetry.addData("Balls left", "%d on the switches, empty for %.2f of %.2f s",
+                            bot.BallsSeen(), bot.BallsEmptyForSeconds(), botProperties.autoEmptyClearSeconds);
+                }
+                if (launching || aiming || waitingForTag) {
+                    // How far the hive is from the middle of the camera: 0 is centered.
+                    telemetry.addData("Hive bearing off center (deg)", "%.1f (aim done within %.1f)",
+                            bot.GetTagGroupBearing(), botProperties.aimDoneDegrees);
+                }
+                if (step == CHECK_TIPPED) {
+                    telemetry.addData("Hive tipped", "looking, %.1f of at most %.1f s",
+                            stepTimer.seconds(), botProperties.autoTipLookSeconds);
+                } else if (mTipChecked) {
+                    telemetry.addData("Hive tipped", HiveUpText(mHiveUp));
+                } else {
+                    telemetry.addData("Hive tipped", "not checked yet");
+                }
+                telemetry.addData("Launchers at speed", bot.LaunchersAtSpeed());
+                telemetry.addData("Flower arm", mArmOut ? "out" : "in");
+            }
+            if (bot.TelemetryOn(TelemetryGroup.POSE)) {
+                telemetry.addData("x (forward, in)", where.x());
+                telemetry.addData("y (left, in)", where.y());
+                telemetry.addData("Heading (deg)", Math.toDegrees(where.heading()));
+                if (!Double.isNaN(StartFacingDeg())) {
+                    // What TeleOp will be told: 0 = facing away from the driver, 90 = to the left.
+                    telemetry.addData("TeleOp yaw to hand over (deg)",
+                            HandoffYaw(StartFacingDeg(), StartPose(), where.heading()));
+                }
+            }
             bot.EndLoop();
         }
 
@@ -641,21 +768,121 @@ public abstract class PedroAuto extends LinearOpMode {
         return Math.atan2(Math.sin(change), Math.cos(change));
     }
 
-    /** true for IF_TIPPED, IF_NOT_TIPPED and END_IF: steps that only choose what runs next. */
+    /** true for the IF steps and END_IF: steps that only choose what runs next. */
     static boolean IsBranchMarker(Path step) {
-        return step == IF_TIPPED || step == IF_NOT_TIPPED || step == END_IF;
+        return step == IF_TIPPED || step == IF_NOT_TIPPED || step == IF_GARDEN_SIDE_UP
+                || step == IF_FLOWER_SIDE_UP || step == END_IF;
+    }
+
+    /** Is this IF step true for what the last CHECK_TIPPED saw? */
+    static boolean IfMatches(Path ifStep, HiveUp hiveUp) {
+        if (ifStep == IF_TIPPED) {
+            return hiveUp.Tipped();
+        }
+        if (ifStep == IF_NOT_TIPPED) {
+            return hiveUp == HiveUp.NOTHING;
+        }
+        if (ifStep == IF_GARDEN_SIDE_UP) {
+            return hiveUp == HiveUp.GARDEN_SIDE;
+        }
+        if (ifStep == IF_FLOWER_SIDE_UP) {
+            return hiveUp == HiveUp.FLOWER_SIDE;
+        }
+        return false;
+    }
+
+    /** The last CHECK_TIPPED's answer, for the Driver Station. */
+    static String HiveUpText(HiveUp hiveUp) {
+        if (hiveUp == HiveUp.GARDEN_SIDE) {
+            return "YES, garden side";
+        }
+        if (hiveUp == HiveUp.FLOWER_SIDE) {
+            return "YES, flower side";
+        }
+        if (hiveUp == HiveUp.UNKNOWN_SIDE) {
+            return "YES, side not known (tag on neither side's list)";
+        }
+        return "no";
     }
 
     /** true for any marker step: one the robot never drives (LAUNCH, FLOWER, IF_TIPPED, ...). */
     static boolean IsMarker(Path step) {
-        return step == LAUNCH || step == LAUNCH_WHEN_TAG_SEEN || step == FLOWER
+        return IsLaunch(step) || step == FLOWER || step == FLOWER_OUT || step == FLOWER_IN
                 || step == INTAKE_ON || step == INTAKE_OFF || step == CHECK_TIPPED
                 || IsBranchMarker(step);
     }
 
     /**
+     * What a step is, for the Driver Station: a marker's name, or where a drive goes.
+     *
+     * @param where where the robot is now, to show how far is left. null: leave that out.
+     */
+    static String StepText(Path step, Pose where) {
+        if (step == LAUNCH) {
+            return "LAUNCH";
+        } else if (step == LAUNCH_WHEN_TAG_SEEN) {
+            return "LAUNCH_WHEN_TAG_SEEN";
+        } else if (step == LAUNCH_NECTAR) {
+            return "LAUNCH_NECTAR";
+        } else if (step == LAUNCH_UNTIL_EMPTY) {
+            return "LAUNCH_UNTIL_EMPTY";
+        } else if (step == FLOWER) {
+            return "FLOWER";
+        } else if (step == FLOWER_OUT) {
+            return "FLOWER_OUT";
+        } else if (step == FLOWER_IN) {
+            return "FLOWER_IN";
+        } else if (step == INTAKE_ON) {
+            return "INTAKE_ON";
+        } else if (step == INTAKE_OFF) {
+            return "INTAKE_OFF";
+        } else if (step == CHECK_TIPPED) {
+            return "CHECK_TIPPED";
+        } else if (IsBranchMarker(step)) {
+            return "IF marker";
+        }
+        Pose end = step.endPose();
+        String text = String.format("drive to (%.1f, %.1f) facing %.0f deg",
+                end.x(), end.y(), Math.toDegrees(end.heading()));
+        if (where != null) {
+            text = text + String.format(", %.1f in left", Math.hypot(end.x() - where.x(), end.y() - where.y()));
+        }
+        return text;
+    }
+
+    /** true for a launch that stops where the robot is and spins up first: LAUNCH, LAUNCH_NECTAR, LAUNCH_UNTIL_EMPTY. */
+    static boolean IsPlainLaunch(Path step) {
+        return step == LAUNCH || step == LAUNCH_NECTAR || step == LAUNCH_UNTIL_EMPTY;
+    }
+
+    /** true for any launch step, with or without waiting for a tag. */
+    static boolean IsLaunch(Path step) {
+        return IsPlainLaunch(step) || step == LAUNCH_WHEN_TAG_SEEN;
+    }
+
+    /**
+     * Is this launch over? A LAUNCH_UNTIL_EMPTY ends once every ball switch has read empty for
+     * {@code autoEmptyClearSeconds}, or after {@code autoLaunchUntilEmptyMaxSeconds}. With no
+     * ball switch in the robot it is a plain launch, so it can't wait for ever. Every other
+     * launch ends after {@code autoLaunchSeconds}.
+     *
+     * @param secondsOpen how long since the gates opened
+     * @param emptyFor    how long every ball switch has read empty, in a row
+     */
+    static boolean LaunchDone(Path step, double secondsOpen, double emptyFor,
+                              boolean sensorsFound, BotProperties p) {
+        if (step != LAUNCH_UNTIL_EMPTY || !sensorsFound) {
+            return secondsOpen >= p.autoLaunchSeconds;
+        }
+        // Not before the gates have swung open: balls can't have gone yet.
+        boolean gatesOpen = secondsOpen >= LaunchGates.OpenSeconds(p);
+        return (gatesOpen && emptyFor >= p.autoEmptyClearSeconds) || secondsOpen >= p.autoLaunchUntilEmptyMaxSeconds;
+    }
+
+    /**
      * Which step runs after step {@code from}, given the hive's answer. IF steps are never
-     * run themselves: they only choose.
+     * run themselves: they only choose. The steps under an IF step, up to the next IF step
+     * or END_IF, run when that IF step is true for the answer ({@link #IfMatches}).
      *
      * <pre>
      *     0 CHECK_TIPPED  1 IF_TIPPED  2 toFlower  3 IF_NOT_TIPPED  4 LAUNCH  5 END_IF  6 toEnd
@@ -664,29 +891,22 @@ public abstract class PedroAuto extends LinearOpMode {
      * </pre>
      *
      * @param from   the step that just finished. -1 for the first step of the auto.
-     * @param tipped the last CHECK_TIPPED's answer
+     * @param hiveUp the last CHECK_TIPPED's answer
      * @return the next step's number, or {@code paths.size()} when no steps are left
      */
-    static int NextStep(List<Path> paths, int from, boolean tipped) {
+    static int NextStep(List<Path> paths, int from, HiveUp hiveUp) {
         int i = from + 1;
         while (i < paths.size()) {
             Path step = paths.get(i);
-            if (step == IF_TIPPED) {
-                if (tipped) {
-                    i = i + 1;   // into the tipped steps
-                } else {
-                    // Skip the tipped steps: on to the not-tipped steps, or past the END_IF.
-                    i = IndexAfter(paths, i, IF_NOT_TIPPED, END_IF);
-                }
-            } else if (step == IF_NOT_TIPPED) {
-                if (tipped) {
-                    // The tipped steps are done (or there were none): skip the not-tipped ones.
-                    i = IndexAfter(paths, i, END_IF, END_IF);
-                } else {
-                    i = i + 1;   // into the not-tipped steps
-                }
-            } else if (step == END_IF) {
+            if (step == END_IF) {
                 i = i + 1;
+            } else if (IsBranchMarker(step)) {
+                if (IfMatches(step, hiveUp)) {
+                    i = i + 1;   // into this IF step's steps
+                } else {
+                    // Skip its steps: on to the next IF step, or the END_IF.
+                    i = NextBranchMarker(paths, i);
+                }
             } else {
                 return i;
             }
@@ -695,13 +915,13 @@ public abstract class PedroAuto extends LinearOpMode {
     }
 
     /**
-     * Just past the first {@code a} or {@code b} after step {@code from}. Neither one found:
-     * {@code paths.size()}, so the rest of the list is skipped.
+     * The next IF step or END_IF after step {@code from}. None found: {@code paths.size()},
+     * so the rest of the list is skipped.
      */
-    private static int IndexAfter(List<Path> paths, int from, Path a, Path b) {
+    private static int NextBranchMarker(List<Path> paths, int from) {
         for (int i = from + 1; i < paths.size(); i++) {
-            if (paths.get(i) == a || paths.get(i) == b) {
-                return i + 1;
+            if (IsBranchMarker(paths.get(i))) {
+                return i;
             }
         }
         return paths.size();
@@ -714,17 +934,23 @@ public abstract class PedroAuto extends LinearOpMode {
             // Nothing new to follow, so the follower keeps holding the robot where it is.
             // Blink the light yellow. The gates open once the launchers are at speed.
             bot.ShowLaunching(true);
+        } else if (step == LAUNCH_NECTAR || step == LAUNCH_UNTIL_EMPTY) {
+            // Like LAUNCH: hold still, blink yellow. The gates open once the wheel is ready.
+            bot.ShowLaunching(true);
         } else if (step == LAUNCH_WHEN_TAG_SEEN) {
             // Hold still, like LAUNCH, but blink orange until the camera sees a tag.
             bot.ShowWaitingForTag(true);
         } else if (step == FLOWER) {
-            // Work the flower from here. The intake runs for the whole routine.
+            // Work the flower from here. NextFlowerAction turns the intake on for the back-up
+            // and the arm swinging out.
             mFlowerStart = follower.pose();
-            mFlowerActions = FlowerActions(mFlowerStart, botProperties);
+            mFlowerActions = FlowerActions(mFlowerStart, botProperties, mArmOut);
             mFlowerIndex = -1;
-            bot.RunIntake(true);
-            bot.SetIntakeRoller(true);
             NextFlowerAction(bot, follower);
+        } else if (step == FLOWER_OUT || step == FLOWER_IN) {
+            // Swing the arm and carry on: the servo moves while the robot drives.
+            mArmOut = step == FLOWER_OUT;
+            bot.SetFlowerExtractor(mArmOut);
         } else if (step == INTAKE_ON) {
             // Roller and transfer on. The follower keeps holding the robot where it is.
             mIntakeRunning = true;
@@ -775,9 +1001,9 @@ public abstract class PedroAuto extends LinearOpMode {
      * The FLOWER step in order, from the recorded spot:
      *
      * <pre>
-     *     move: back up                 autoFlowerBackIn (7)
+     *     move: back up                 autoFlowerBackIn (7)       intake ON from here...
      *     hold: settle                  autoFlowerSettleSeconds (0.3)
-     *     arm out                       autoExtractorSeconds (0.5)
+     *     arm out                       autoExtractorSeconds (0.5)  ...to here
      *     move: stroke forward          autoFlowerStrokeIn (9)
      *     hold: at the flower           autoFlowerDwellSeconds (1)
      *     move: stroke back             autoFlowerStrokeIn (9)
@@ -786,12 +1012,24 @@ public abstract class PedroAuto extends LinearOpMode {
      * </pre>
      */
     static List<FlowerAction> FlowerActions(Pose spot, BotProperties p) {
+        return FlowerActions(spot, p, false);
+    }
+
+    /**
+     * The same, with {@code armAlreadyOut} true when a FLOWER_OUT swung the arm earlier: the
+     * "arm out" action then takes no time, so the robot goes straight into the first stroke.
+     */
+    static List<FlowerAction> FlowerActions(Pose spot, BotProperties p, boolean armAlreadyOut) {
         List<Pose> moves = FlowerMoves(spot, p);
         List<FlowerAction> actions = new ArrayList<>();
         Pose backedUp = moves.get(0);
         actions.add(new FlowerAction(FlowerAction.MOVE, backedUp, 0, "back up"));
         actions.add(new FlowerAction(FlowerAction.HOLD, backedUp, p.autoFlowerSettleSeconds, "settle"));
-        actions.add(new FlowerAction(FlowerAction.ARM_OUT, backedUp, p.autoExtractorSeconds, "arm out"));
+        if (armAlreadyOut) {
+            actions.add(new FlowerAction(FlowerAction.ARM_OUT, backedUp, 0, "arm already out"));
+        } else {
+            actions.add(new FlowerAction(FlowerAction.ARM_OUT, backedUp, p.autoExtractorSeconds, "arm out"));
+        }
         // moves 1, 3, 5... are forward strokes; 2, 4, 6... are back strokes.
         for (int i = 1; i < moves.size(); i++) {
             Pose to = moves.get(i);
@@ -810,12 +1048,34 @@ public abstract class PedroAuto extends LinearOpMode {
         return actions;
     }
 
+    /**
+     * Is the intake on for this FLOWER action? On from the first back-up until the arm has
+     * finished swinging out: the actions up to and including "arm out". After that it goes
+     * back to what the auto does between steps.
+     */
+    static boolean FlowerIntakeOn(List<FlowerAction> actions, int index) {
+        for (int i = 0; i < actions.size(); i++) {
+            if (actions.get(i).kind == FlowerAction.ARM_OUT) {
+                return index <= i;
+            }
+        }
+        return true;
+    }
+
     /** Start the next FLOWER action. */
     private void NextFlowerAction(Bot bot, Follower follower) {
         mFlowerIndex = mFlowerIndex + 1;
         mFlowerTimer.reset();
         if (mFlowerIndex >= mFlowerActions.size()) {
             return;
+        }
+        if (FlowerIntakeOn(mFlowerActions, mFlowerIndex)) {
+            bot.RunIntake(true);
+            bot.SetIntakeRoller(true);
+        } else {
+            // The arm is out: the intake goes back to what the auto does between steps.
+            bot.RunIntake(mIntakeRunning);
+            bot.SetIntakeRoller(mRollerOn);
         }
         FlowerAction action = mFlowerActions.get(mFlowerIndex);
         if (action.kind == FlowerAction.MOVE) {
@@ -839,8 +1099,10 @@ public abstract class PedroAuto extends LinearOpMode {
         follower.hold(action.spot);
         if (action.kind == FlowerAction.ARM_OUT) {
             bot.SetFlowerExtractor(true);
+            mArmOut = true;
         } else if (action.kind == FlowerAction.ARM_IN) {
             bot.SetFlowerExtractor(false);
+            mArmOut = false;
         }
     }
 

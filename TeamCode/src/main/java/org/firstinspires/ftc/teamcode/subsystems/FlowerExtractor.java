@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
@@ -68,7 +69,7 @@ public class FlowerExtractor implements Subsystem {
         } else {
             SetPosition(mProperties.flowerExtractorClosed);
         }
-        if (!mOp.mQuiet) {
+        if (mOp.Shows(TelemetryGroup.INTAKE)) {
             mOp.mTelemetry.addData("Flower extractor (gamepad 2: hold triangle)", state);
         }
     }

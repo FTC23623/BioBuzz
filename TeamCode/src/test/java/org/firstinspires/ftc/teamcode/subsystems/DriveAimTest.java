@@ -619,15 +619,34 @@ class DriveAimTest {
     }
 
     @Test
-    @DisplayName("both operator bumpers held: pollen wins, the robot aims for pollen's launcher offset")
-    void bothBumpersPollenWins() {
+    @DisplayName("both operator bumpers held: aims between the launchers, so their opposite offsets cancel and a centered hive needs no turn")
+    void bothBumpersAimBetween() {
         properties.launcherOffsetNoRangeDeg = 1;
         properties.aimDoneDegrees = 0.1;
         tagAt(0);
         operator.left_bumper = true;
         operator.right_bumper = true;
         runLoops();
-        // Same as pollen alone: turns right.
+        assertEquals(0.0, frontLeft(), EPS);
+        assertEquals(0.0, frontRight(), EPS);
+        // With launchBothTogether off it is pollen alone again: turns right.
+        properties.launchBothTogether = false;
+        runLoops();
+        assertEquals(-0.02, frontLeft(), EPS);
+        assertEquals(0.02, frontRight(), EPS);
+    }
+
+    @Test
+    @DisplayName("both bumpers: bothAimOffsetDeg moves the aim spot, the robot turns to it")
+    void bothBumpersOffset() {
+        properties.launcherOffsetNoRangeDeg = 1;
+        properties.aimDoneDegrees = 0.1;
+        properties.bothAimOffsetDeg = 1;
+        tagAt(0);
+        operator.left_bumper = true;
+        operator.right_bumper = true;
+        runLoops();
+        // Aim spot +1: the hive should sit 1 deg left, so the robot turns right, like pollen.
         assertEquals(-0.02, frontLeft(), EPS);
         assertEquals(0.02, frontRight(), EPS);
     }

@@ -171,6 +171,32 @@ class ImuHubTest {
     class Pinpoint {
 
         @Test
+        @DisplayName("READY straight after the reset is not trusted until it was seen busy, or time has passed")
+        void resetDone() {
+            assertFalse(Imu_Pinpoint.ResetDone(false, 0.01, 0.5));
+            assertTrue(Imu_Pinpoint.ResetDone(true, 0.01, 0.5));
+            assertTrue(Imu_Pinpoint.ResetDone(false, 0.5, 0.5));
+        }
+
+        @Test
+        @DisplayName("Init: READY on the very first look does not count as ready yet")
+        void notReadyOnFirstLook() {
+            GoBildaPinpointDriver pinpoint = mock(GoBildaPinpointDriver.class);
+            when(hardwareMap.get(GoBildaPinpointDriver.class, properties.cfgPinpoint))
+                    .thenReturn(pinpoint);
+            when(pinpoint.getDeviceStatus()).thenReturn(GoBildaPinpointDriver.DeviceStatus.READY);
+            properties.pinpointResetWaitSeconds = 60;
+            Imu_Pinpoint imu = new Imu_Pinpoint(op, properties);
+            assertFalse(imu.Init());
+            assertFalse(imu.Ready());
+            // Seen busy, then READY: now it counts.
+            when(pinpoint.getDeviceStatus()).thenReturn(GoBildaPinpointDriver.DeviceStatus.CALIBRATING);
+            assertFalse(imu.Init());
+            when(pinpoint.getDeviceStatus()).thenReturn(GoBildaPinpointDriver.DeviceStatus.READY);
+            assertTrue(imu.Init());
+        }
+
+        @Test
         @DisplayName("SetYaw: the heading reads the auto's, and turns from there")
         void setYaw() {
             GoBildaPinpointDriver pinpoint = mock(GoBildaPinpointDriver.class);

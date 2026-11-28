@@ -71,6 +71,12 @@ public class Vision_None implements Vision {
         return Double.NaN;
     }
 
+    /** This camera can't tell: never known. */
+    @Override
+    public double GetTagFlipDegrees() {
+        return Double.NaN;
+    }
+
     /** This camera doesn't work out a position: never known. */
     @Override
     public TagPosition GetPosition() {

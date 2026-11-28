@@ -8,6 +8,7 @@
 # OpMode that isn't listed here fails the tests.
 
 # Test: (group "Test")
+DigitalSensorTest
 DriveMotorTest
 LauncherMotorTest
 LaunchServoTuningTest
@@ -15,6 +16,7 @@ MotorTuningTest
 OdometryPodTest
 PinpointTest
 StripTest
+TipDetectionTest
 VisionTest
 
 # Tool: (group "Tool")

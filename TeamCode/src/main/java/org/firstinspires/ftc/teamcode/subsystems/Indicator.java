@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
@@ -168,7 +169,7 @@ public class Indicator implements Subsystem {
      * the robot configuration it says so, and what the color would have been.
      */
     private void Say(String color, String why) {
-        if (mOp.mQuiet) {
+        if (!mOp.Shows(TelemetryGroup.LIGHTS)) {
             return;
         }
         if (mLight == null) {

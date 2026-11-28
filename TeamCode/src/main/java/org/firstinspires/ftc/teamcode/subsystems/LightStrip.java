@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Random;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.drivers.PrismLedDriver;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.StripSnake;
@@ -371,7 +372,7 @@ public class LightStrip implements Subsystem {
 
     /** What the strip is showing, and what it said about itself at INIT. */
     private void ShowTelemetry(boolean pollenSensed) {
-        if (mStrip == null || mOp.mQuiet) {
+        if (mStrip == null || !mOp.Shows(TelemetryGroup.LIGHTS)) {
             return;
         }
         mOp.mTelemetry.addData("Light strip", "showing " + mShowing);

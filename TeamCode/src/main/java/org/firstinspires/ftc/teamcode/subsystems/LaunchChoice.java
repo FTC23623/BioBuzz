@@ -8,11 +8,15 @@ import org.firstinspires.ftc.teamcode.objects.AimAssist;
  * Which launcher the operator (gamepad 2) is aiming or launching with, read the same way by
  * the drive (aim), the gates (launch) and the launcher (speed from distance).
  *
+ * <p>With {@code operatorSwapsLaunchers} on, left and right swap: the left bumper and
+ * trigger run nectar, the right ones pollen. The list below is for it off.
+ *
  * <ul>
  *   <li><b>Left bumper (hold)</b>: aim pollen. <b>Left trigger (hold)</b>: launch pollen.
  *   <li><b>Right bumper (hold)</b>: aim nectar. <b>Right trigger (hold)</b>: launch nectar.
  *   <li>With {@code launchTriggerAims} on, a launch trigger aims for its launcher too.
- *   <li>Both sides at once: <b>pollen wins</b>.
+ *   <li>Both sides at once: <b>BOTH</b> launchers (aim between them, both gates open).
+ *       With {@code launchBothTogether} off, <b>pollen wins</b> instead.
  * </ul>
  *
  * <p>Where the hive's middle should sit in the camera once aimed ({@link #AimAtDeg}) is the
@@ -24,11 +28,44 @@ import org.firstinspires.ftc.teamcode.objects.AimAssist;
 public enum LaunchChoice {
     NONE,
     POLLEN,
-    NECTAR;
+    NECTAR,
+    /** Both launchers at once (both buttons held, with launchBothTogether). */
+    BOTH;
+
+    /** true when this choice includes the pollen launcher. */
+    public boolean UsesPollen() {
+        return this == POLLEN || this == BOTH;
+    }
+
+    /** true when this choice includes the nectar launcher. */
+    public boolean UsesNectar() {
+        return this == NECTAR || this == BOTH;
+    }
 
     /** Which launcher the operator is launching with: left trigger pollen, right trigger nectar. */
     public static LaunchChoice Launching(Gamepad operator, BotProperties p) {
-        return Pick(operator.left_trigger > p.trgBtnThresh, operator.right_trigger > p.trgBtnThresh);
+        return Pick(PollenTrigger(operator, p) > p.trgBtnThresh, NectarTrigger(operator, p) > p.trgBtnThresh,
+                p.launchBothTogether);
+    }
+
+    /** How far the pollen trigger is pulled, 0 to 1: the left one, or the right with the swap. */
+    public static double PollenTrigger(Gamepad operator, BotProperties p) {
+        return p.operatorSwapsLaunchers ? operator.right_trigger : operator.left_trigger;
+    }
+
+    /** How far the nectar trigger is pulled, 0 to 1: the right one, or the left with the swap. */
+    public static double NectarTrigger(Gamepad operator, BotProperties p) {
+        return p.operatorSwapsLaunchers ? operator.left_trigger : operator.right_trigger;
+    }
+
+    /** true while the pollen bumper is held: the left one, or the right with the swap. */
+    public static boolean PollenBumper(Gamepad operator, BotProperties p) {
+        return p.operatorSwapsLaunchers ? operator.right_bumper : operator.left_bumper;
+    }
+
+    /** true while the nectar bumper is held: the right one, or the left with the swap. */
+    public static boolean NectarBumper(Gamepad operator, BotProperties p) {
+        return p.operatorSwapsLaunchers ? operator.left_bumper : operator.right_bumper;
     }
 
     /**
@@ -36,15 +73,18 @@ public enum LaunchChoice {
      * {@code launchTriggerAims} on.
      */
     public static LaunchChoice Aiming(Gamepad operator, BotProperties p) {
-        boolean pollen = operator.left_bumper
-                || (p.launchTriggerAims && operator.left_trigger > p.trgBtnThresh);
-        boolean nectar = operator.right_bumper
-                || (p.launchTriggerAims && operator.right_trigger > p.trgBtnThresh);
-        return Pick(pollen, nectar);
+        boolean pollen = PollenBumper(operator, p)
+                || (p.launchTriggerAims && PollenTrigger(operator, p) > p.trgBtnThresh);
+        boolean nectar = NectarBumper(operator, p)
+                || (p.launchTriggerAims && NectarTrigger(operator, p) > p.trgBtnThresh);
+        return Pick(pollen, nectar, p.launchBothTogether);
     }
 
-    /** Pollen wins when both are asked for. */
-    static LaunchChoice Pick(boolean pollen, boolean nectar) {
+    /** Both asked for: BOTH, or with {@code allowBoth} off, pollen wins. */
+    static LaunchChoice Pick(boolean pollen, boolean nectar, boolean allowBoth) {
+        if (pollen && nectar && allowBoth) {
+            return BOTH;
+        }
         if (pollen) {
             return POLLEN;
         }
@@ -70,6 +110,12 @@ public enum LaunchChoice {
      * @param rangeIn inches from the camera to the tag. 0 or less = not known.
      */
     public double AimAtDeg(double sideDeg, double rangeIn, BotProperties p) {
+        if (this == BOTH) {
+            // Between the two: with the launchers on opposite sides of the camera their
+            // offsets mostly cancel, leaving the side offset and half of nectar's extra turn.
+            return (POLLEN.AimAtDeg(sideDeg, rangeIn, p) + NECTAR.AimAtDeg(sideDeg, rangeIn, p)) / 2
+                    + p.bothAimOffsetDeg;
+        }
         double side = AimAssist.SideOffset(sideDeg, p.aimHiveBearingDeg, p.aimSideCenterDeg);
         double aimAt = side + LauncherOffsetDeg(rangeIn, p);
         if (this == NECTAR) {

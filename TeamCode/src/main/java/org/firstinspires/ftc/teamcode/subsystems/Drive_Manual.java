@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HoldPosition;
@@ -64,6 +65,11 @@ public class Drive_Manual extends Drive {
     private final Gamepad mOperator;
     private final Vision mVision;
     private final Debouncer mResetHeadingButton;
+    /** The driver's sticks as the gamepad sent them this loop, for the dashboard. */
+    private double mRawLeftX = 0;
+    private double mRawLeftY = 0;
+    private double mRawRightX = 0;
+    private double mRawRightY = 0;
 
     // Read from the gamepad in HandleUserInput, used in Process.
     private double mDrive;
@@ -124,6 +130,11 @@ public class Drive_Manual extends Drive {
             turnStick = turnStick * mProperties.driveTightTurnGain;
         }
         mDrive = mGamepad.left_stick_y;
+        // The sticks just as the gamepad sent them, for the dashboard graphs in Process().
+        mRawLeftX = mGamepad.left_stick_x;
+        mRawLeftY = mGamepad.left_stick_y;
+        mRawRightX = mGamepad.right_stick_x;
+        mRawRightY = mGamepad.right_stick_y;
         mStrafe = -strafeStick * mProperties.driveStrafeGain;
         mRotate = -turnStick;
         // Aim is the operator's: a bumper, or a launch trigger too, so a launch snaps to the hive.
@@ -224,13 +235,13 @@ public class Drive_Manual extends Drive {
             aimSettled = Math.abs(aimError) <= mProperties.aimDoneDegrees;
             mRotate = AimAssist.RotateToward(aimError, mProperties.aimKP,
                     mProperties.aimMaxRotate, mProperties.aimDoneDegrees);
-            if (!mOp.mQuiet) {
+            if (mOp.Shows(TelemetryGroup.DRIVE)) {
                 mOp.mTelemetry.addData("Aim assist", "ON (%s): hive middle %.1f deg (tag %d, %.0f in), turn %.2f",
                         mAimChoice, hiveBearing, mVision.GetTagId(), mVision.GetRange(), mRotate);
             }
-        } else if (mAimHeld && !mOp.mQuiet) {
+        } else if (mAimHeld && mOp.Shows(TelemetryGroup.DRIVE)) {
             mOp.mTelemetry.addLine("Aim assist: held, but no tag in view");
-        } else if (!mOp.mQuiet) {
+        } else if (mOp.Shows(TelemetryGroup.DRIVE)) {
             mOp.mTelemetry.addLine("Aim assist: off");
         }
         // Launch trigger with launchWiggle on: wiggle. It waits for aim to settle, then takes
@@ -244,7 +255,7 @@ public class Drive_Manual extends Drive {
             int side = Wiggle.Side(mWiggleTimer.seconds(), mProperties.wiggleSwitchSeconds);
             mRotate = Wiggle.Turn(yaw, mWiggleCenterYaw, side, mProperties.wiggleDeg,
                     mProperties.wiggleKP, mProperties.wiggleMaxRotate);
-            if (!mOp.mQuiet) {
+            if (mOp.Shows(TelemetryGroup.DRIVE)) {
                 mOp.mTelemetry.addData("Wiggle", "%s of %.1f deg, now %.1f off, turn %.2f",
                         side > 0 ? "left" : "right", mWiggleCenterYaw, yaw - mWiggleCenterYaw, mRotate);
             }
@@ -252,11 +263,13 @@ public class Drive_Manual extends Drive {
             mWiggling = false;
         }
         // The raw buttons, so a trigger that rests a little pressed shows up on the screen.
-        if (!mOp.mQuiet) {
+        if (mOp.Shows(TelemetryGroup.DRIVE)) {
             mOp.mTelemetry.addData("Aim buttons (gamepad 2)",
                     "pollen: bumper %s, trigger %.2f; nectar: bumper %s, trigger %.2f (counts above %.2f)",
-                    mOperator.left_bumper, mOperator.left_trigger, mOperator.right_bumper,
-                    mOperator.right_trigger, mProperties.trgBtnThresh);
+                    LaunchChoice.PollenBumper(mOperator, mProperties),
+                    LaunchChoice.PollenTrigger(mOperator, mProperties),
+                    LaunchChoice.NectarBumper(mOperator, mProperties),
+                    LaunchChoice.NectarTrigger(mOperator, mProperties), mProperties.trgBtnThresh);
         }
 
         // D-pad while aiming: arc around the hive. Strafe the way the D-pad points, and hold
@@ -273,7 +286,7 @@ public class Drive_Manual extends Drive {
             arcStrafe = mArcDirection * mProperties.arcStrafePower;
             arcDrive = AimAssist.HoldRange(rangeIn, mArcRangeIn, mProperties.arcRangeKP,
                     mProperties.arcMaxDrive);
-            if (!mOp.mQuiet) {
+            if (mOp.Shows(TelemetryGroup.DRIVE)) {
                 mOp.mTelemetry.addData("Arc", "holding %.0f in, now %.0f in, drive %.2f",
                         mArcRangeIn, rangeIn, arcDrive);
             }
@@ -309,7 +322,18 @@ public class Drive_Manual extends Drive {
         SetMotorPower(mBackLeftMotor, powers.backLeft * mSpeedLimit);
         SetMotorPower(mBackRightMotor, powers.backRight * mSpeedLimit);
 
-        if (mOp.mQuiet) {
+        if (mProperties.stickTelemetry) {
+            // The driver's sticks, untouched, from -1 to 1. Graph them on the dashboard. Hands
+            // off, each should sit at 0: a number that stays off 0 is stick drift. If these
+            // are right but the robot drives the wrong way, look at the yaw instead. Shown
+            // with quiet telemetry too: they are already read, so they cost no loop time.
+            mOp.mTelemetry.addData("Driver left stick X", mRawLeftX);
+            mOp.mTelemetry.addData("Driver left stick Y", mRawLeftY);
+            mOp.mTelemetry.addData("Driver right stick X", mRawRightX);
+            mOp.mTelemetry.addData("Driver right stick Y", mRawRightY);
+            mOp.mTelemetry.addData("Driver yaw (0 = away from the driver)", yaw);
+        }
+        if (!mOp.Shows(TelemetryGroup.DRIVE)) {
             return;
         }
         if (mOp.mSafeMode) {
@@ -338,7 +362,7 @@ public class Drive_Manual extends Drive {
             return none;
         }
         if (mHoldGaveUp) {
-            if (!mOp.mQuiet) {
+            if (mOp.Shows(TelemetryGroup.DRIVE)) {
                 mOp.mTelemetry.addLine("Launch hold: gave up (shoved too far), let go of the trigger");
             }
             return none;
@@ -347,7 +371,7 @@ public class Drive_Manual extends Drive {
                 || Math.abs(mStrafe) > mProperties.launchHoldStickDeadband;
         if (sticksMoving) {
             ForgetHoldSpot();
-            if (!mOp.mQuiet) {
+            if (mOp.Shows(TelemetryGroup.DRIVE)) {
                 mOp.mTelemetry.addLine("Launch hold: driver moving, new spot when the stick is let go");
             }
             return none;
@@ -365,7 +389,7 @@ public class Drive_Manual extends Drive {
             mGamepad.rumbleBlips(2);
             return none;
         }
-        if (!mOp.mQuiet) {
+        if (mOp.Shows(TelemetryGroup.DRIVE)) {
             mOp.mTelemetry.addData("Launch hold", "%.1f in off, drive %.2f, strafe %.2f",
                     push.offIn, push.drive, push.strafe);
         }

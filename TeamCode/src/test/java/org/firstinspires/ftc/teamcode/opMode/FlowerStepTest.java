@@ -1,7 +1,9 @@
 package org.firstinspires.ftc.teamcode.opMode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.pedropathing.math.Pose;
 import java.util.List;
@@ -72,7 +74,7 @@ class FlowerStepTest {
     }
 
     @Test
-    @DisplayName("the starting numbers are the coach's: back 7 (arm clearance), settle 0.3 s, strokes of 9, a 1 s hold at the flower, 1 pass, half a second for the arm")
+    @DisplayName("the starting numbers are the coach's: back 7, settle 0.3 s, strokes of 9, a 1 s hold at the flower, 1 pass, half a second for the arm")
     void startingNumbers() {
         BotProperties p = new BotProperties();
         assertEquals(7, p.autoFlowerBackIn, closeEnough);
@@ -100,6 +102,20 @@ class FlowerStepTest {
         assertPose(-7, 0, 0, actions.get(2).spot);
         assertEquals(1, actions.get(4).seconds, closeEnough);
         assertPose(2, 0, 0, actions.get(4).spot);
+    }
+
+    @Test
+    @DisplayName("the intake is on from the first back-up until the arm is out, then off the strokes and the swing in")
+    void intakeUntilTheArmIsOut() {
+        List<PedroAuto.FlowerAction> actions = PedroAuto.FlowerActions(new Pose(0, 0, 0), new BotProperties());
+        // back up, settle, arm out: on. Then forward, hold, back, arm in: not forced on.
+        assertTrue(PedroAuto.FlowerIntakeOn(actions, 0));
+        assertTrue(PedroAuto.FlowerIntakeOn(actions, 1));
+        assertTrue(PedroAuto.FlowerIntakeOn(actions, 2));
+        assertFalse(PedroAuto.FlowerIntakeOn(actions, 3));
+        assertFalse(PedroAuto.FlowerIntakeOn(actions, 4));
+        assertFalse(PedroAuto.FlowerIntakeOn(actions, 5));
+        assertFalse(PedroAuto.FlowerIntakeOn(actions, 6));
     }
 
     @Test

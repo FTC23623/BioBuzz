@@ -36,16 +36,18 @@ class LaunchSpinUpTest {
     }
 
     @Test
-    @DisplayName("the launch speed is 2635 RPM, never above the near shot")
+    @DisplayName("the launch speed is 2610 RPM, never above the near shot")
     void minRpm() {
-        Assertions.assertEquals(2635, properties.autoLaunchMinRpm, 1e-9);
+        Assertions.assertEquals(2610, properties.autoLaunchMinRpm, 1e-9);
         assertTrue(properties.autoLaunchMinRpm <= properties.launchNearRpm);
     }
 
     @Test
-    @DisplayName("settle (today): LAUNCH_WHEN_TAG_SEEN settles, a plain LAUNCH does not")
+    @DisplayName("settle (today): every launch settles, since autoLaunchSettles is on")
     void tagLaunchSettles() {
         assertTrue(PedroAuto.SettlesBeforeLaunch(PedroAuto.LAUNCH_WHEN_TAG_SEEN, properties));
+        assertTrue(PedroAuto.SettlesBeforeLaunch(PedroAuto.LAUNCH, properties));
+        properties.autoLaunchSettles = false;
         assertFalse(PedroAuto.SettlesBeforeLaunch(PedroAuto.LAUNCH, properties));
     }
 

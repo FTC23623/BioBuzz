@@ -213,10 +213,10 @@ public class TestLog implements Subsystem {
         Add("reset_forward", driver.circle);
         // Gamepad 2, the operator.
         Gamepad operator = mOp.mOperatorGamepad;
-        Add("aim_pollen", operator.left_bumper);
-        Add("launch_pollen", operator.left_trigger > mProperties.trgBtnThresh);
-        Add("aim_nectar", operator.right_bumper);
-        Add("launch_nectar", operator.right_trigger > mProperties.trgBtnThresh);
+        Add("aim_pollen", LaunchChoice.PollenBumper(operator, mProperties));
+        Add("launch_pollen", LaunchChoice.PollenTrigger(operator, mProperties) > mProperties.trgBtnThresh);
+        Add("aim_nectar", LaunchChoice.NectarBumper(operator, mProperties));
+        Add("launch_nectar", LaunchChoice.NectarTrigger(operator, mProperties) > mProperties.trgBtnThresh);
         Add("intake_toggle", operator.cross);
         Add("reverse", operator.square);
         Add("extractor", operator.triangle);
@@ -228,6 +228,10 @@ public class TestLog implements Subsystem {
         Add("steady_on", mProperties.steadyRange);
         Add("always_track_on", mProperties.rangeAlwaysTracks);
         Add("gates_open", mLaunchGates != null && mLaunchGates.IsOpen());
+        // Which gate, and whether it has had time to swing open (the transfer waits for it).
+        Add("pollen_gate_open", mLaunchGates != null && mLaunchGates.IsPollenOpen());
+        Add("nectar_gate_open", mLaunchGates != null && mLaunchGates.IsNectarOpen());
+        Add("gates_fully_open", mLaunchGates != null && mLaunchGates.IsFullyOpen());
 
         // The camera.
         boolean sees = mVision != null && mVision.SeesTag();

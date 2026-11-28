@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
 
@@ -94,7 +95,7 @@ public class PollenSensor implements Subsystem {
             mOp.mOperatorGamepad.rumble(mProperties.pollenRumbleMs);
         }
         mWasDetected = detected;
-        if (!mOp.mQuiet) {
+        if (mOp.Shows(TelemetryGroup.INTAKE)) {
             ShowStatus();
         }
     }

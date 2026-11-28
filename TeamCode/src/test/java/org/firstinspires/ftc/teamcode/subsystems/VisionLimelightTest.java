@@ -240,6 +240,29 @@ class VisionLimelightTest {
     }
 
     @Test
+    @DisplayName("tags in view: every tag of ours, each with its own angles; none with no pose is NaN; the other alliance's are left out")
+    void tagsInView() {
+        op.mAlliance = Alliance.RED;
+        LLResultTypes.FiducialResult first = tag(30, 0, 3.0);
+        when(first.getTargetPoseCameraSpace()).thenReturn(new Pose3D(
+                new Position(DistanceUnit.INCH, 0, 0, 100, 0),
+                new YawPitchRollAngles(AngleUnit.DEGREES, 7, 3, -34, 0)));
+        LLResultTypes.FiducialResult second = tag(31, 0, 2.0);   // no pose
+        LLResultTypes.FiducialResult other = tag(40, 0, 5.0);    // blue's
+        limelightSees(first, second, other);
+        vision.Process();
+        java.util.List<org.firstinspires.ftc.teamcode.types.TagLook> looks = vision.GetTagsInView();
+        assertEquals(2, looks.size());
+        assertEquals(30, looks.get(0).id);
+        assertEquals(7, looks.get(0).yawDeg, 1e-6);
+        assertEquals(3, looks.get(0).pitchDeg, 1e-6);
+        assertEquals(-34, looks.get(0).rollDeg, 1e-6);
+        assertEquals(100, looks.get(0).rangeIn, 1e-6);
+        assertEquals(31, looks.get(1).id);
+        assertTrue(Double.isNaN(looks.get(1).rollDeg));
+    }
+
+    @Test
     @DisplayName("position from the tags: left of the hive is plus, out is the distance, field pose only with tags")
     void positionFromTags() {
         Pose3D camera = new Pose3D(new Position(DistanceUnit.INCH, -14, 0, -120, 0),

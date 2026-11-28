@@ -31,6 +31,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchServoTuner;
 import org.firstinspires.ftc.teamcode.subsystems.Launcher;
 import org.firstinspires.ftc.teamcode.subsystems.LightStrip;
 import org.firstinspires.ftc.teamcode.subsystems.MotorTuner;
+import org.firstinspires.ftc.teamcode.subsystems.BallSensors;
 import org.firstinspires.ftc.teamcode.subsystems.PollenSensor;
 import org.firstinspires.ftc.teamcode.subsystems.PoseRecorder;
 import org.firstinspires.ftc.teamcode.subsystems.SafeModeKey;
@@ -38,6 +39,9 @@ import org.firstinspires.ftc.teamcode.subsystems.TestLog;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSelector;
 import org.firstinspires.ftc.teamcode.subsystems.Vision_None;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
+import org.firstinspires.ftc.teamcode.types.HiveUp;
+import org.firstinspires.ftc.teamcode.types.TagLook;
 
 /**
  * This season's robot, as one object.
@@ -109,6 +113,8 @@ public class Bot {
     private double mLoopTimeAverage = 0;
     /** true when INIT kept the heading the auto left, instead of zeroing it (0046). */
     private boolean mHeadingFromAuto = false;
+    /** The heading the auto handed over, in degrees. NaN when there was none. */
+    private double mYawFromAuto = Double.NaN;
 
     // The parts of the robot. A part that is disabled in BotProperties stays null.
     private final SafeModeKey mSafeModeKey;
@@ -121,6 +127,7 @@ public class Bot {
     private final Indicator mIndicator;
     private final LightStrip mLightStrip;
     private final FlowerExtractor mFlowerExtractor;
+    private final BallSensors mBallSensors;
 
     /**
      * The settings that show on FTC Dashboard's Config tab, to change while the robot runs
@@ -135,8 +142,12 @@ public class Bot {
             "aimArc", "arcStrafePower", "arcRangeKP", "arcMaxDrive",
             "launchHoldsPosition", "launchHoldKP", "launchHoldMaxPower", "launchHoldDoneIn",
             "launchHoldGiveUpIn", "launchHoldStickDeadband",
-            "testLog", "testTelemetry", "tuningMarks", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate",
-            "quietTelemetry", "launcherOnlyTelemetry"};
+            "testLog", "testTelemetry", "tuningMarks", "launchWiggle", "wiggleDeg", "wiggleSwitchSeconds", "wiggleKP", "wiggleMaxRotate"};
+    /** The Telemetry group on the dashboard: switch each block of Driver Station lines on or off. */
+    static final String[] LiveTuningTelemetry = {
+            "quietTelemetry", "launcherOnlyTelemetry", "stickTelemetry",
+            "tlmAutoStep", "tlmAutoLaunch", "tlmPose", "tlmLauncher", "tlmVision", "tlmDrive",
+            "tlmIntake", "tlmLights"};
     static final String[] LiveTuningLauncher = {
             "pollenLauncherRpm", "nectarLauncherRpm", "launcherRangeTrimRpm", "nectarRangeTrimRpm",
             "launchNearRpm", "launchMid1Rpm", "launchMid2Rpm", "launchFarRpm",
@@ -144,7 +155,7 @@ public class Bot {
             "steadyRange", "steadyRangeAverage", "launchBandHoldIn",
             "launchLocksRpm", "rangeAlwaysTracks", "rangeNeedsTipped", "tagTiltFromRoll", "tagTippedMinDeg", "tagTippedMaxDeg", "launcherKF", "launcherKP", "launcherKI",
             "launcherAtSpeedRpm", "launcherWrongWayRpm", "launcherWrongWaySeconds",
-            "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock",
+            "launchServoSecondsPer60Deg", "launchServoExtraSeconds", "launchNeedsLock", "operatorSwapsLaunchers", "launchBothTogether", "teleopNectarSettles", "bothAimOffsetDeg",
             "teleopLaunchSettles", "autoLaunchSettles", "autoTagLaunchSettles", "launchSettleBandRpm", "launchSettleHoldSeconds",
             "launchSettleTimeoutSeconds"};
     static final String[] LiveTuningIntake = {
@@ -170,8 +181,10 @@ public class Bot {
             DashboardTuning.Show("Drive", mProperties, LiveTuningDrive);
             DashboardTuning.Show("Launcher", mProperties, LiveTuningLauncher);
             DashboardTuning.Show("Intake", mProperties, LiveTuningIntake);
+            DashboardTuning.Show("Telemetry", mProperties, LiveTuningTelemetry);
         }
         mOp = new HydraOpMode(telemetry, opMode.hardwareMap, opMode.gamepad1, opMode.gamepad2);
+        mOp.mProperties = mProperties;
 
         // The Safe Mode key is checked here, one time, before any other part is built. No
         // OpMode can forget it, and it is never read again (docs/decisions/0007).
@@ -237,6 +250,11 @@ public class Bot {
             pollenSensor = new PollenSensor(mOp, mProperties);
             mSystems.add(pollenSensor);
         }
+
+        // The ball switches (pollenSensor1.., nectorSensor1..): an auto's LAUNCH_UNTIL_EMPTY
+        // waits on them. Missing ones are ignored.
+        mBallSensors = new BallSensors(mOp, mProperties);
+        mSystems.add(mBallSensors);
 
         // The intake is handed the gates: once they are open, both rollers push balls in.
         // With the gates switched off it gets null, and the transfer just never does that.
@@ -373,6 +391,7 @@ public class Bot {
         if (!Double.isNaN(yawFromAuto)) {
             mImu.SetYaw(yawFromAuto);
             mHeadingFromAuto = true;
+            mYawFromAuto = yawFromAuto;
         }
     }
 
@@ -403,6 +422,9 @@ public class Bot {
             mOp.mTelemetry.addData("Yaw", mImu.GetYaw());
             if (mHeadingFromAuto) {
                 mOp.mTelemetry.addLine("Forward: kept from the auto. Do not turn the robot. Circle re-sets it.");
+                // 0 = facing away from the driver, 90 = to the driver's left. Compare it with
+                // the way the robot really faces: half a turn off = the auto's StartFacingDeg.
+                mOp.mTelemetry.addData("Yaw the auto handed over", "%.0f", mYawFromAuto);
             } else {
                 mOp.mTelemetry.addLine("Forward: the way the robot faces now");
             }
@@ -624,6 +646,86 @@ public class Bot {
     }
 
     /**
+     * Open (or close) just the gates asked for: the auto's LAUNCH_NECTAR opens only the
+     * nectar gate. Does nothing with no gates.
+     */
+    public void OpenLaunchGates(boolean open, boolean pollen, boolean nectar) {
+        if (mLaunchGates == null) {
+            return;
+        }
+        mLaunchGates.SetOpen(open, pollen, nectar);
+    }
+
+    /** true when the nectar launcher is spinning at least this fast. Always true with no launcher or nectar wheel. */
+    public boolean NectarLauncherAtLeast(double rpm) {
+        if (mLauncher == null) {
+            return true;
+        }
+        return mLauncher.NectarAtLeast(rpm);
+    }
+
+    /** The nectar launcher's measured speed, in RPM. 0 with no launcher. */
+    public double NectarLauncherRpm() {
+        if (mLauncher == null) {
+            return 0;
+        }
+        return mLauncher.GetNectarMeasuredRpm();
+    }
+
+    /** The auto's nectar launch command: lock the nectar speed and wait for it to settle. */
+    public void BeginNectarLaunchSettle() {
+        if (mLauncher != null) {
+            mLauncher.BeginNectarSettle();
+        }
+    }
+
+    /** true once the nectar speed has settled, or the wait timed out. Always true with no launcher. */
+    public boolean NectarLaunchSettled() {
+        if (mLauncher == null) {
+            return true;
+        }
+        return mLauncher.NectarSettleDone();
+    }
+
+    /** Stop waiting on the nectar wheel and unlock its speed. */
+    public void CancelNectarLaunchSettle() {
+        if (mLauncher != null) {
+            mLauncher.CancelNectarSettle();
+        }
+    }
+
+    /** The nectar wheel settling, for the Driver Station. */
+    public String NectarLaunchSettleStatus() {
+        if (mLauncher == null) {
+            return "no launcher";
+        }
+        return mLauncher.NectarSettleStatus();
+    }
+
+    /**
+     * Is this telemetry group switched on? An auto asks this for its own lines. The quiet
+     * settings are not checked: an auto's screen is not what slows a TeleOp loop.
+     */
+    public boolean TelemetryOn(TelemetryGroup group) {
+        return mProperties.TelemetryOn(group);
+    }
+
+    /** true when at least one ball switch is in the robot configuration. */
+    public boolean BallSensorsFound() {
+        return mBallSensors.AnyFound();
+    }
+
+    /** How long every ball switch has read empty, in a row, in seconds. 0 while any shows a ball. */
+    public double BallsEmptyForSeconds() {
+        return mBallSensors.EmptyForSeconds();
+    }
+
+    /** How many ball switches show a ball right now. */
+    public int BallsSeen() {
+        return mBallSensors.BallsSeen();
+    }
+
+    /**
      * true: the flower extractor swings out (deployed). false: back in (stored). An auto's
      * FLOWER step calls this. Does nothing with no extractor.
      */
@@ -660,8 +762,8 @@ public class Bot {
 
     /**
      * Has our hive tipped up? true when the camera sees one of our hive's tags and, with
-     * {@code autoTippedNeedsTilt} on, the tag's tilt is in the tipped window
-     * ({@code tagTippedMinDeg} to {@code tagTippedMaxDeg}, the same test always-track uses).
+     * {@code autoTippedNeedsTilt} on, the tag's roll is in the UP window
+     * ({@code autoTagUpMinDeg} to {@code autoTagUpMaxDeg}, measured on 2026-11-24).
      * An auto's CHECK_TIPPED step asks this (docs/decisions/0057).
      */
     public boolean SeesTippedHive() {
@@ -671,7 +773,41 @@ public class Bot {
         if (!mProperties.autoTippedNeedsTilt) {
             return true;
         }
-        return Launcher.Tipped(mVision.GetTagTiltDegrees(), mProperties);
+        return HiveUp.InWindow(mVision.GetTagFlipDegrees(),
+                mProperties.autoTagUpMinDeg, mProperties.autoTagUpMaxDeg);
+    }
+
+    /**
+     * Which of our hive's cells has tipped up, from the nearest tag of ours. A tipped tag
+     * ({@link #SeesTippedHive()}) means its own side is up: the garden side's or the flower
+     * side's ({@code gardenSideTags}, {@code flowerSideTags}). With
+     * {@code autoDownMeansOtherSideUp} on, a tag in the DOWN window is a cell that is down, so
+     * the OTHER side is up. NOTHING when the tag says neither, or no tag is seen.
+     */
+    public HiveUp SeesHiveUp() {
+        if (!mVision.SeesTag()) {
+            return HiveUp.NOTHING;
+        }
+        boolean down = mProperties.autoDownMeansOtherSideUp
+                && HiveUp.InWindow(mVision.GetTagFlipDegrees(),
+                        mProperties.autoTagDownMinDeg, mProperties.autoTagDownMaxDeg);
+        return HiveUp.FromLook(SeesTippedHive(), down, mVision.GetTagId(),
+                mProperties.gardenSideTags, mProperties.flowerSideTags);
+    }
+
+    /** Every tag of ours in the newest picture, each with its own angles (Test: Tip Detection). */
+    public List<TagLook> TagsInView() {
+        return mVision.GetTagsInView();
+    }
+
+    /** The nearest tag's angle that CHECK_TIPPED reads, degrees. NaN with no tag. */
+    public double TipAngleDegrees() {
+        return mVision.GetTagFlipDegrees();
+    }
+
+    /** The nearest tag's id, for the Driver Station. */
+    public int GetTagId() {
+        return mVision.GetTagId();
     }
 
     /**

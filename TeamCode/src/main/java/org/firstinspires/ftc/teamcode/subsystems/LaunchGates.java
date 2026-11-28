@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.Subsystem;
@@ -11,11 +12,13 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
 /**
  * The pollen and nectar launch servos. A ball launches when its servo opens.
  *
- * <p>Controls (operator, gamepad 2, {@link LaunchChoice}):
+ * <p>Controls (operator, gamepad 2, {@link LaunchChoice}; left and right swap with
+ * {@code operatorSwapsLaunchers}):
  * <ul>
  *   <li><b>Left trigger (hold)</b>: the POLLEN servo opens. Let go: it closes.
  *   <li><b>Right trigger (hold)</b>: the NECTAR servo opens. Let go: it closes.
- *   <li>Both triggers: pollen wins; only the pollen servo opens.
+ *   <li>Both triggers: BOTH servos open together (aiming between the two launchers). With
+ *       {@code launchBothTogether} off, pollen wins instead and only the pollen servo opens.
  * </ul>
  *
  * <p>Hold to open, never a toggle: the moment the operator lets go, the gate closes. The
@@ -31,13 +34,15 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * gamepad buzzes once. There is no override button any more: turn the lock off on the
  * dashboard if the camera has died. An auto's LAUNCH is not checked here; the auto decides.
  *
- * <p><b>Settle first</b> (docs/decisions/0056, {@code teleopLaunchSettles}, on today), POLLEN
- * only: once the left trigger passes the camera lock above, the pollen speed is LOCKED and
- * the gate waits for the wheel to settle on it ({@link Launcher#BeginSettle}), at most
- * {@code launchSettleTimeoutSeconds}. Settled once per pull: the gate then stays open while
- * the trigger is held. Letting go, or losing the lock while still settling, unlocks the
- * speed so the distance moves it again. Nectar's speed doesn't follow the distance, so its
- * gate opens without waiting.
+ * <p><b>Settle first</b> (docs/decisions/0056, {@code teleopLaunchSettles}, on today): once a
+ * trigger passes the camera lock above, that launcher's speed is LOCKED and its gate waits
+ * for the wheel to settle on it ({@link Launcher#BeginSettle}, and for nectar
+ * {@link Launcher#BeginNectarSettle} with {@code teleopNectarSettles}), at most
+ * {@code launchSettleTimeoutSeconds}. Each gate waits for its OWN wheel, so with both
+ * triggers one may open a moment before the other. Settled once per pull: the gate then
+ * stays open while the trigger is held. Letting go, or losing the lock while still settling,
+ * unlocks the speed so the distance moves it again. Nectar settles too because the single
+ * transfer presses a ball against the closed nectar gate: it goes the moment the gate opens.
  *
  * <p><b>Out of the way first.</b> A servo can't say when it got there, so the time it needs
  * is worked out from its speed and how far it turns ({@link #OpenSeconds}). Until then
@@ -69,9 +74,12 @@ public class LaunchGates implements Subsystem {
     private boolean mOpen = false;
     /** true once INIT has sent both gates to closed, so it is sent only once. */
     private boolean mClosedAtInit = false;
-    /** Which gates mOpen opens: both for an auto, one for a TeleOp pull. */
+    /** Which gates are open: both for an auto, whichever have settled for a TeleOp pull. */
     private boolean mPollenOpens = true;
     private boolean mNectarOpens = true;
+    /** What each gate was last loop, to tell when one has just started to open. */
+    private boolean mPrevPollenOpen = false;
+    private boolean mPrevNectarOpen = false;
     /** true once the open position has been sent, so the timer starts only once per launch. */
     private boolean mOpenSent = false;
     private final ElapsedTime mSinceOpened = new ElapsedTime();
@@ -90,10 +98,14 @@ public class LaunchGates implements Subsystem {
     private LaunchChoice mChoice = LaunchChoice.NONE;
     /** true once this pull has buzzed the driver, so one pull is one buzz. */
     private boolean mBuzzedThisPull = false;
-    /** true once this pull has settled (or timed out), so a pull settles only once. */
-    private boolean mSettledThisPull = false;
+    /** true once this pull has settled each wheel (or timed out), so a pull settles only once. */
+    private boolean mPollenSettled = false;
+    private boolean mNectarSettled = false;
     /** Why the gates are shut while the trigger is held, for the Driver Station. */
     private String mLockStatus = "";
+    /** What each wheel is waiting on, while it settles. */
+    private String mPollenWait = "";
+    private String mNectarWait = "";
 
     /**
      * @param gamepad the operator's gamepad: the launch triggers, and the no-lock buzz
@@ -132,38 +144,54 @@ public class LaunchGates implements Subsystem {
     public void HandleUserInput() {
         mFromGamepad = true;
         LaunchChoice choice = LaunchChoice.Launching(mGamepad, mProperties);
-        if (choice != mChoice && mChoice != LaunchChoice.NONE) {
-            // Switched launchers mid-pull: a new pull. Settle again, and time the new gate
-            // opening from now, so the transfer waits for it.
-            mSettledThisPull = false;
-            mBuzzedThisPull = false;
-            mOpenSent = false;
-            if (mLauncher != null) {
-                mLauncher.CancelSettle();
+        if (choice != mChoice) {
+            // A launcher no longer asked for: stop settling it, and settle it again next pull.
+            if (mChoice.UsesPollen() && !choice.UsesPollen()) {
+                mPollenSettled = false;
+                if (mLauncher != null) {
+                    mLauncher.CancelSettle();
+                }
+            }
+            if (mChoice.UsesNectar() && !choice.UsesNectar()) {
+                mNectarSettled = false;
+                if (mLauncher != null) {
+                    mLauncher.CancelNectarSettle();
+                }
+            }
+            if (mChoice != LaunchChoice.NONE) {
+                // Changed launchers mid-pull: the driver may buzz again.
+                mBuzzedThisPull = false;
             }
         }
         mChoice = choice;
         mTriggerHeld = choice != LaunchChoice.NONE;
-        mPollenOpens = choice == LaunchChoice.POLLEN;
-        mNectarOpens = choice == LaunchChoice.NECTAR;
         if (!mTriggerHeld) {
-            // Let go: the next pull may buzz again, and settles again.
+            // Let go: the next pull may buzz again.
             mBuzzedThisPull = false;
-            mSettledThisPull = false;
         }
     }
 
     @Override
     public void Process() {
         if (mFromGamepad) {
-            mOpen = DecideFromTrigger();
+            DecideFromTrigger();
         }
-        // Start the clock the loop the open position is first sent, and note what the camera
-        // sees right now: this is the distance the launch was made from.
-        if (mOpen && !mOpenSent) {
+        // Start the clock the loop a gate first starts to open (a second gate opening later
+        // starts it again, so the transfer waits for that one too), and note what the camera
+        // sees right now: this is the distance the launch was made from. One pull is one
+        // launch, however many gates it opens.
+        boolean pollenNow = IsPollenOpen();
+        boolean nectarNow = IsNectarOpen();
+        boolean newlyOpen = (pollenNow && !mPrevPollenOpen) || (nectarNow && !mPrevNectarOpen);
+        if (newlyOpen) {
             mSinceOpened.reset();
-            RememberLaunch();
+            boolean anyBefore = mPrevPollenOpen || mPrevNectarOpen;
+            if (!anyBefore || !(pollenNow && nectarNow)) {
+                RememberLaunch();
+            }
         }
+        mPrevPollenOpen = pollenNow;
+        mPrevNectarOpen = nectarNow;
         mOpenSent = mOpen;
         if (IsPollenOpen()) {
             SetPosition(mPollenServo, mProperties.pollenServoOpen);
@@ -175,7 +203,7 @@ public class LaunchGates implements Subsystem {
         } else {
             SetPosition(mNectarServo, mProperties.nectarServoClosed);
         }
-        if (mOp.mQuiet) {
+        if (!mOp.Shows(TelemetryGroup.LAUNCHER)) {
             return;
         }
         String state = "closed";
@@ -187,7 +215,11 @@ public class LaunchGates implements Subsystem {
         } else if (mTriggerHeld) {
             state = mLockStatus;
         }
-        mOp.mTelemetry.addData("Launch gates (gamepad 2: hold left trigger pollen, right trigger nectar)", state);
+        if (mProperties.operatorSwapsLaunchers) {
+            mOp.mTelemetry.addData("Launch gates (gamepad 2, SWAPPED: hold left trigger nectar, right trigger pollen)", state);
+        } else {
+            mOp.mTelemetry.addData("Launch gates (gamepad 2: hold left trigger pollen, right trigger nectar)", state);
+        }
         mOp.mTelemetry.addData("Last launch (camera)", mLastLaunch);
         mOp.mTelemetry.addData("Last launch range (in)", "%.0f", mLastLaunchRangeIn);
     }
@@ -201,41 +233,79 @@ public class LaunchGates implements Subsystem {
     }
 
     /**
-     * TeleOp: should the gates be open this loop? The trigger and the camera lock must allow
-     * it, and then the speed must have settled (or timed out) once this pull.
+     * TeleOp: which gates should be open this loop? The trigger and the camera lock must
+     * allow it, and then each launcher's speed must have settled (or timed out) once this
+     * pull. Each gate waits only for its own wheel.
      */
-    private boolean DecideFromTrigger() {
+    private void DecideFromTrigger() {
         if (!TriggerAllows()) {
-            if (!mSettledThisPull && mLauncher != null) {
-                // Let go, or lost the lock before the launch: unlock the speed again.
-                mLauncher.CancelSettle();
+            if (mLauncher != null) {
+                // Let go, or lost the lock before the launch: unlock the speeds again.
+                if (!mPollenSettled) {
+                    mLauncher.CancelSettle();
+                }
+                if (!mNectarSettled) {
+                    mLauncher.CancelNectarSettle();
+                }
             }
-            return false;
+            mPollenOpens = false;
+            mNectarOpens = false;
+            mOpen = false;
+            return;
         }
-        return SettledThisPull();
+        mPollenWait = "";
+        mNectarWait = "";
+        boolean pollenReady = mChoice.UsesPollen() && PollenSettled();
+        boolean nectarReady = mChoice.UsesNectar() && NectarSettled();
+        mPollenOpens = pollenReady;
+        mNectarOpens = nectarReady;
+        mOpen = pollenReady || nectarReady;
+        if (!mOpen) {
+            mLockStatus = (mPollenWait + " " + mNectarWait).trim();
+        }
     }
 
     /**
-     * Settle once per pull: lock the speed, wait for it, then let the gates open. With
+     * Settle pollen once per pull: lock the speed, wait for it, then let its gate open. With
      * teleopLaunchSettles off, or no launcher, there is nothing to wait for.
      */
-    private boolean SettledThisPull() {
-        // Only pollen's speed follows the distance, so only pollen waits for it to settle.
-        if (mSettledThisPull || mLauncher == null || !mProperties.teleopLaunchSettles
-                || mChoice != LaunchChoice.POLLEN) {
-            mSettledThisPull = true;
+    private boolean PollenSettled() {
+        if (mPollenSettled || mLauncher == null || !mProperties.teleopLaunchSettles) {
+            mPollenSettled = true;
             return true;
         }
         if (!mLauncher.IsSettling()) {
             mLauncher.BeginSettle();
         }
         if (mLauncher.SettleDone()) {
-            mSettledThisPull = true;
-            // Unlock the settle. With launchLocksRpm on, the open gates keep it locked.
+            mPollenSettled = true;
+            // Unlock the settle. With launchLocksRpm on, the open gate keeps it locked.
             mLauncher.CancelSettle();
             return true;
         }
-        mLockStatus = "LOCKED, " + mLauncher.SettleStatus();
+        mPollenWait = "pollen LOCKED, " + mLauncher.SettleStatus();
+        return false;
+    }
+
+    /**
+     * The same for nectar (teleopNectarSettles). The single transfer has already pressed a
+     * ball against the closed nectar gate, so the wheel must be ready before the gate opens.
+     */
+    private boolean NectarSettled() {
+        if (mNectarSettled || mLauncher == null || !mProperties.teleopLaunchSettles
+                || !mProperties.teleopNectarSettles) {
+            mNectarSettled = true;
+            return true;
+        }
+        if (!mLauncher.IsNectarSettling()) {
+            mLauncher.BeginNectarSettle();
+        }
+        if (mLauncher.NectarSettleDone()) {
+            mNectarSettled = true;
+            mLauncher.CancelNectarSettle();
+            return true;
+        }
+        mNectarWait = "nectar LOCKED, " + mLauncher.NectarSettleStatus();
         return false;
     }
 
@@ -322,6 +392,16 @@ public class LaunchGates implements Subsystem {
         mOpen = open;
         mPollenOpens = true;
         mNectarOpens = true;
+    }
+
+    /**
+     * Open or close just the gates asked for (an auto's LAUNCH_NECTAR: nectar only). Closing
+     * ignores the two flags.
+     */
+    public void SetOpen(boolean open, boolean pollen, boolean nectar) {
+        mOpen = open;
+        mPollenOpens = pollen;
+        mNectarOpens = nectar;
     }
 
     /** true while either gate has been told to open. */

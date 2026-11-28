@@ -13,9 +13,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.TagPosition;
+import org.firstinspires.ftc.teamcode.types.HiveUp;
+import org.firstinspires.ftc.teamcode.types.TagLook;
 
 /**
  * AprilTags from a Limelight 3A, the camera Decode's robot carried.
@@ -153,7 +156,7 @@ public class Vision_Limelight implements Vision {
                 mSinceSeen.reset();
             }
         }
-        if (!mOp.mQuiet) {
+        if (mOp.Shows(TelemetryGroup.VISION)) {
             ShowStatus();
         }
     }
@@ -279,6 +282,37 @@ public class Vision_Limelight implements Vision {
     }
 
     @Override
+    public List<TagLook> GetTagsInView() {
+        List<TagLook> looks = new ArrayList<>();
+        for (LLResultTypes.FiducialResult tag : mInView) {
+            YawPitchRollAngles angles = Angles(tag.getTargetPoseCameraSpace());
+            double pitch = Double.NaN;
+            double roll = Double.NaN;
+            double yaw = Double.NaN;
+            if (angles != null) {
+                pitch = angles.getPitch(AngleUnit.DEGREES);
+                roll = angles.getRoll(AngleUnit.DEGREES);
+                yaw = angles.getYaw(AngleUnit.DEGREES);
+            }
+            looks.add(new TagLook(tag.getFiducialId(), pitch, roll, yaw,
+                    RangeInches(tag.getTargetPoseCameraSpace()), -tag.getTargetXDegrees(),
+                    tag.getTargetArea()));
+        }
+        return looks;
+    }
+
+    @Override
+    public double GetTagFlipDegrees() {
+        if (!SeesTag()) {
+            return Double.NaN;
+        }
+        if (mProperties.autoTipFromRoll) {
+            return mTagRoll;
+        }
+        return mTagPitch;
+    }
+
+    @Override
     public TagPosition GetPosition() {
         if (!SeesTag()) {
             return TagPosition.UNKNOWN;
@@ -382,6 +416,17 @@ public class Vision_Limelight implements Vision {
             mOp.mTelemetry.addData("Tag tilt", "pitch %.0f, roll %.0f, yaw %.0f deg (tipped: %.0f to %.0f on %s)",
                     mTagPitch, mTagRoll, mTagYaw, mProperties.tagTippedMinDeg, mProperties.tagTippedMaxDeg,
                     mProperties.tagTiltFromRoll ? "roll" : "pitch");
+            double autoAngle = GetTagFlipDegrees();
+            String cell = "between: no answer";
+            if (HiveUp.InWindow(autoAngle, mProperties.autoTagUpMinDeg, mProperties.autoTagUpMaxDeg)) {
+                cell = "UP";
+            } else if (HiveUp.InWindow(autoAngle, mProperties.autoTagDownMinDeg, mProperties.autoTagDownMaxDeg)) {
+                cell = "DOWN";
+            }
+            mOp.mTelemetry.addData("Auto tip check", "%s: %s %.0f (up %.0f to %.0f, down %.0f to %.0f)",
+                    cell, mProperties.autoTipFromRoll ? "roll" : "pitch", autoAngle,
+                    mProperties.autoTagUpMinDeg, mProperties.autoTagUpMaxDeg,
+                    mProperties.autoTagDownMinDeg, mProperties.autoTagDownMaxDeg);
             mOp.mTelemetry.addData("Robot stands", "%.0f deg to the %s of the hive", Math.abs(mSide), Side(mSide));
             mOp.mTelemetry.addData("Tag fills", "%.1f%% of the picture", mArea);
             mOp.mTelemetry.addData("Tag last seen", "%.0f ms ago", mSinceSeen.milliseconds());

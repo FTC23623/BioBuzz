@@ -38,6 +38,12 @@ class MatchOpModesTest {
         assertEquals("Auto: Garden Side E", auto(AutoStrategyGardenE.class).name());
         assertEquals("Blue: Garden Side E", auto(AutoStrategyGardenEBlue.class).name());
         assertEquals("Red: Garden Side E", auto(AutoStrategyGardenERed.class).name());
+        assertEquals("Auto: Flower Side F", auto(AutoStrategyF.class).name());
+        assertEquals("Blue: Flower Side F", auto(AutoStrategyFBlue.class).name());
+        assertEquals("Red: Flower Side F", auto(AutoStrategyFRed.class).name());
+        assertEquals("Auto: Garden Side G", auto(AutoStrategyG.class).name());
+        assertEquals("Blue: Garden Side G", auto(AutoStrategyGBlue.class).name());
+        assertEquals("Red: Garden Side G", auto(AutoStrategyGRed.class).name());
     }
 
     @Test
@@ -45,18 +51,21 @@ class MatchOpModesTest {
     void order() {
         // The Driver Station sorts by group: Auto, then Blue, then Red.
         Class<?>[] sensing = {AutoStrategyA.class, AutoStrategyB.class, AutoStrategyC.class,
-                AutoStrategyGardenD.class, AutoStrategyGardenE.class};
+                AutoStrategyGardenD.class, AutoStrategyGardenE.class,
+                AutoStrategyF.class, AutoStrategyG.class};
         for (Class<?> opMode : sensing) {
             assertEquals("Auto", auto(opMode).group(), opMode.getSimpleName());
         }
         Class<?>[] blue = {AutoStrategyABlue.class, AutoStrategyBBlue.class, AutoStrategyCBlue.class,
-                AutoStrategyGardenDBlue.class, AutoStrategyGardenEBlue.class};
+                AutoStrategyGardenDBlue.class, AutoStrategyGardenEBlue.class,
+                AutoStrategyFBlue.class, AutoStrategyGBlue.class};
         for (Class<?> opMode : blue) {
             assertEquals("Blue", auto(opMode).group(), opMode.getSimpleName());
             assertTrue(auto(opMode).name().startsWith("Blue: "), opMode.getSimpleName());
         }
         Class<?>[] red = {AutoStrategyARed.class, AutoStrategyBRed.class, AutoStrategyCRed.class,
-                AutoStrategyGardenDRed.class, AutoStrategyGardenERed.class};
+                AutoStrategyGardenDRed.class, AutoStrategyGardenERed.class,
+                AutoStrategyFRed.class, AutoStrategyGRed.class};
         for (Class<?> opMode : red) {
             assertEquals("Red", auto(opMode).group(), opMode.getSimpleName());
             assertTrue(auto(opMode).name().startsWith("Red: "), opMode.getSimpleName());
@@ -72,6 +81,8 @@ class MatchOpModesTest {
         assertEquals(hyDrive, auto(AutoStrategyC.class).preselectTeleOp());
         assertEquals(hyDrive, auto(AutoStrategyGardenD.class).preselectTeleOp());
         assertEquals(hyDrive, auto(AutoStrategyGardenE.class).preselectTeleOp());
+        assertEquals(hyDrive, auto(AutoStrategyF.class).preselectTeleOp());
+        assertEquals(hyDrive, auto(AutoStrategyG.class).preselectTeleOp());
     }
 
     @Test
@@ -99,6 +110,8 @@ class MatchOpModesTest {
         assertEquals(90, new AutoStrategyC().StartFacingDeg(), 1e-9);
         assertEquals(-90, new AutoStrategyGardenD().StartFacingDeg(), 1e-9);
         assertEquals(-90, new AutoStrategyGardenE().StartFacingDeg(), 1e-9);
+        assertEquals(90, new AutoStrategyF().StartFacingDeg(), 1e-9);
+        assertEquals(-90, new AutoStrategyG().StartFacingDeg(), 1e-9);
         // The backups start the same way as the auto they copy.
         assertEquals(-90, new AutoStrategyARed().StartFacingDeg(), 1e-9);
         assertEquals(90, new AutoStrategyCBlue().StartFacingDeg(), 1e-9);
@@ -113,6 +126,16 @@ class MatchOpModesTest {
         double fieldSpotAuto = PedroAuto.HandoffYaw(-90, new AutoStrategyGardenE().StartPose(), Math.toRadians(300));
         assertEquals(-60, fromStartAuto, 1e-9);
         assertEquals(-60, fieldSpotAuto, 1e-9);
+    }
+
+    @Test
+    @DisplayName("F and G are field-spot autos: Pedro starts at the start spot they give")
+    void fieldAutosStartWhereTheySay() {
+        assertEquals(132.5, new AutoStrategyF().StartPose().y(), 1e-9);
+        assertEquals(Math.toRadians(90), new AutoStrategyF().StartPose().heading(), 1e-9);
+        assertEquals(9, new AutoStrategyG().StartPose().y(), 1e-9);
+        assertEquals(Math.toRadians(270), new AutoStrategyG().StartPose().heading(), 1e-9);
+        assertEquals(new AutoStrategyG().StartPose().x(), new AutoStrategyG().FieldStartBlue().x(), 1e-9);
     }
 
     @Test

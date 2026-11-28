@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Which launcher the operator (gamepad 2) is aiming or launching with: left side pollen,
- * right side nectar, pollen wins when both are asked for.
+ * right side nectar, both together when both are asked for.
  */
 @DisplayName("LaunchChoice")
 class LaunchChoiceTest {
@@ -86,36 +86,82 @@ class LaunchChoiceTest {
         operator.left_trigger = PULLED;
         operator.right_trigger = PULLED;
         assertEquals(LaunchChoice.NONE, LaunchChoice.Aiming(operator, properties));
-        assertEquals(LaunchChoice.POLLEN, LaunchChoice.Launching(operator, properties));
+        assertEquals(LaunchChoice.BOTH, LaunchChoice.Launching(operator, properties));
     }
 
     @Test
-    @DisplayName("both triggers: POLLEN wins")
-    void bothTriggersPollenWins() {
+    @DisplayName("operatorSwapsLaunchers: left runs NECTAR, right runs POLLEN, bumpers and triggers together")
+    void swapped() {
+        properties.operatorSwapsLaunchers = true;
         operator.left_trigger = PULLED;
+        assertEquals(LaunchChoice.NECTAR, LaunchChoice.Launching(operator, properties));
+        assertEquals(LaunchChoice.NECTAR, LaunchChoice.Aiming(operator, properties));
+        operator.left_trigger = 0;
         operator.right_trigger = PULLED;
         assertEquals(LaunchChoice.POLLEN, LaunchChoice.Launching(operator, properties));
-        assertEquals(LaunchChoice.POLLEN, LaunchChoice.Aiming(operator, properties));
-    }
-
-    @Test
-    @DisplayName("both bumpers, or nectar's bumper with pollen's trigger: POLLEN wins")
-    void bothAimsPollenWins() {
+        operator.right_trigger = 0;
         operator.left_bumper = true;
+        assertEquals(LaunchChoice.NECTAR, LaunchChoice.Aiming(operator, properties));
+        operator.left_bumper = false;
         operator.right_bumper = true;
         assertEquals(LaunchChoice.POLLEN, LaunchChoice.Aiming(operator, properties));
-        operator.left_bumper = false;
+    }
+
+    @Test
+    @DisplayName("operatorSwapsLaunchers: both triggers is still BOTH; one alone is the swapped launcher")
+    void swappedBoth() {
+        properties.operatorSwapsLaunchers = true;
         operator.left_trigger = PULLED;
+        operator.right_trigger = PULLED;
+        assertEquals(LaunchChoice.BOTH, LaunchChoice.Launching(operator, properties));
+        operator.right_trigger = 0;
+        assertEquals(LaunchChoice.NECTAR, LaunchChoice.Launching(operator, properties));
+    }
+
+    @Test
+    @DisplayName("both triggers: BOTH launchers, and aim; launchBothTogether off: POLLEN wins as before")
+    void bothTriggers() {
+        operator.left_trigger = PULLED;
+        operator.right_trigger = PULLED;
+        assertEquals(LaunchChoice.BOTH, LaunchChoice.Launching(operator, properties));
+        assertEquals(LaunchChoice.BOTH, LaunchChoice.Aiming(operator, properties));
+        properties.launchBothTogether = false;
+        assertEquals(LaunchChoice.POLLEN, LaunchChoice.Launching(operator, properties));
         assertEquals(LaunchChoice.POLLEN, LaunchChoice.Aiming(operator, properties));
     }
 
     @Test
-    @DisplayName("Pick: pollen wins, then nectar, else none")
+    @DisplayName("both bumpers, or nectar's bumper with pollen's trigger: BOTH aim")
+    void bothAims() {
+        operator.left_bumper = true;
+        operator.right_bumper = true;
+        assertEquals(LaunchChoice.BOTH, LaunchChoice.Aiming(operator, properties));
+        operator.left_bumper = false;
+        operator.left_trigger = PULLED;
+        assertEquals(LaunchChoice.BOTH, LaunchChoice.Aiming(operator, properties));
+    }
+
+    @Test
+    @DisplayName("BOTH aims between the two launchers, plus bothAimOffsetDeg")
+    void bothAimsBetween() {
+        properties.nectarAimLeftDeg = 1.0;
+        double pollen = LaunchChoice.POLLEN.AimAtDeg(0, 110, properties);
+        double nectar = LaunchChoice.NECTAR.AimAtDeg(0, 110, properties);
+        assertEquals((pollen + nectar) / 2, LaunchChoice.BOTH.AimAtDeg(0, 110, properties), EPS);
+        properties.bothAimOffsetDeg = 0.7;
+        assertEquals((pollen + nectar) / 2 + 0.7, LaunchChoice.BOTH.AimAtDeg(0, 110, properties), EPS);
+        assertTrue(LaunchChoice.BOTH.UsesPollen() && LaunchChoice.BOTH.UsesNectar());
+        assertTrue(LaunchChoice.POLLEN.UsesPollen() && !LaunchChoice.POLLEN.UsesNectar());
+    }
+
+    @Test
+    @DisplayName("Pick: both is BOTH (or pollen with allowBoth off), then pollen, then nectar, else none")
     void pick() {
-        assertEquals(LaunchChoice.POLLEN, LaunchChoice.Pick(true, true));
-        assertEquals(LaunchChoice.POLLEN, LaunchChoice.Pick(true, false));
-        assertEquals(LaunchChoice.NECTAR, LaunchChoice.Pick(false, true));
-        assertEquals(LaunchChoice.NONE, LaunchChoice.Pick(false, false));
+        assertEquals(LaunchChoice.BOTH, LaunchChoice.Pick(true, true, true));
+        assertEquals(LaunchChoice.POLLEN, LaunchChoice.Pick(true, true, false));
+        assertEquals(LaunchChoice.POLLEN, LaunchChoice.Pick(true, false, true));
+        assertEquals(LaunchChoice.NECTAR, LaunchChoice.Pick(false, true, true));
+        assertEquals(LaunchChoice.NONE, LaunchChoice.Pick(false, false, true));
     }
 
     @Test

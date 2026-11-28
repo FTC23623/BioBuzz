@@ -75,7 +75,7 @@ public class AutoStrategyA extends PedroAuto {
 //     import com.pedropathing.paths.interpolator.Interpolator;
 // Start the auto from the spot the recording started from, facing the same way.
 
-        Pose spot1 = new Pose(-8.6, -11.0);   // heading -25 deg
+        Pose spot1 = new Pose(-7.6, -11.0);   // heading -25 deg
         Pose spot2 = new Pose(-39.6, -41.4);   // heading -94 deg
         Pose spot3 = new Pose(-37.8, -22.2);   // heading -184 deg
         Pose spot4 = new Pose(-112.5, -18.5);   // heading -163 deg
@@ -90,12 +90,15 @@ public class AutoStrategyA extends PedroAuto {
         Path toSpot5 = line(spot4, spot5).heading(Interpolator.linear(Math.toRadians(-163), Math.toRadians(-183)));
         Path toSpot6 = line(spot5, spot6).heading(Interpolator.linear(Math.toRadians(-183), Math.toRadians(-179)));
         Path toSpot7 = line(spot6, spot7).heading(Interpolator.linear(Math.toRadians(-179), Math.toRadians(-160)));
+        Path toSpot1from2 = line(spot2, spot1).heading(Interpolator.linear(Math.toRadians(-94), Math.toRadians(-25)));
 
         List<Path> paths = new ArrayList<>();
         paths.add(toSpot1);
         paths.add(LAUNCH);
         paths.add(toSpot2);
         paths.add(FLOWER);
+        paths.add(CHECK_TIPPED);
+        paths.add(IF_FLOWER_SIDE_UP);
         paths.add(toSpot3);
         paths.add(toSpot4);
         paths.add(LAUNCH);
@@ -104,6 +107,10 @@ public class AutoStrategyA extends PedroAuto {
         paths.add(toSpot6);
         paths.add(LAUNCH);
         paths.add(toSpot7);
+        paths.add(IF_GARDEN_SIDE_UP);
+        paths.add(toSpot1from2);
+        paths.add(LAUNCH);
+        paths.add(END_IF);
         return paths;
     }
 }

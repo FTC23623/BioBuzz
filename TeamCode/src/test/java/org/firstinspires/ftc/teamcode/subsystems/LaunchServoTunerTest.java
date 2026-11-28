@@ -109,7 +109,7 @@ class LaunchServoTunerTest {
     }
 
     @Test
-    @DisplayName("flower extractor: bumpers step it, from 0 up to 10 degrees past open (about 0.617)")
+    @DisplayName("flower extractor: bumpers step it, from 0 up to 10 degrees past open")
     void extractorStaysSafe() {
         tap(down -> gamepad.left_bumper = down);
         assertEquals(0, tuner.GetExtractorPosition(), EPS);
@@ -118,7 +118,7 @@ class LaunchServoTunerTest {
         for (int press = 0; press < 80; press++) {
             tap(down -> gamepad.right_bumper = down);
         }
-        assertEquals(0.584 + 10.0 / 300, tuner.GetExtractorPosition(), EPS);
+        assertEquals(properties.flowerExtractorOpen + 10.0 / 300, tuner.GetExtractorPosition(), EPS);
     }
 
     @Test
@@ -132,10 +132,10 @@ class LaunchServoTunerTest {
     }
 
     @Test
-    @DisplayName("cross: flower extractor deploys to 0.584, then stores to 0 on the next press")
+    @DisplayName("cross: flower extractor deploys to the open spot, then stores to 0 on the next press")
     void crossDeploysAndStoresExtractor() {
         tap(down -> gamepad.cross = down);
-        assertEquals(0.584, tuner.GetExtractorPosition(), EPS);
+        assertEquals(properties.flowerExtractorOpen, tuner.GetExtractorPosition(), EPS);
         assertEquals(properties.pollenServoClosed, tuner.GetPollenPosition(), EPS);
         assertEquals(properties.nectarServoClosed, tuner.GetNectarPosition(), EPS);
         tap(down -> gamepad.cross = down);

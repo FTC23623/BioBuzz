@@ -8,6 +8,7 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.AimAssist;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.TagPosition;
@@ -137,7 +138,7 @@ public class Vision_Webcam implements Vision {
             mEverSeen = true;
             mSinceSeen.reset();
         }
-        if (!mOp.mQuiet) {
+        if (mOp.Shows(TelemetryGroup.VISION)) {
             ShowStatus();
         }
     }
@@ -211,6 +212,12 @@ public class Vision_Webcam implements Vision {
     /** The webcam doesn't work out the tag's tilt: never known, so never "tipped". */
     @Override
     public double GetTagTiltDegrees() {
+        return Double.NaN;
+    }
+
+    /** This camera can't tell: never known. */
+    @Override
+    public double GetTagFlipDegrees() {
         return Double.NaN;
     }
 

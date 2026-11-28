@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.Locale;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
+import org.firstinspires.ftc.teamcode.types.TelemetryGroup;
 import org.firstinspires.ftc.teamcode.objects.Debouncer;
 import org.firstinspires.ftc.teamcode.objects.HydraOpMode;
 import org.firstinspires.ftc.teamcode.objects.RpmTable;
@@ -40,7 +41,7 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * <p><b>Speed from distance</b> (docs/decisions/0038): in TeleOp, while the operator holds an
  * aim bumper or a launch trigger ({@link LaunchChoice}) and the camera sees our hive, each
  * launcher's target follows its own four measured shots joined by straight lines, in 2-inch
- * steps. Pollen: 2660 at 110 in, 2731 at 120, 2883 at 130, 3015 from 140 in, plus
+ * steps. Pollen: 2635 at 110 in, 2706 at 120, 2858 at 130, 2990 from 140 in, plus
  * {@code launcherRangeTrimRpm}. Nectar: 2810, 2881, 3033, 3165, plus
  * {@code nectarRangeTrimRpm} (docs/decisions/0057). The wheels are then already at the right
  * speed when a trigger is pulled. With no tag in view the targets stay where they were.
@@ -57,6 +58,10 @@ import org.firstinspires.ftc.teamcode.objects.Subsystem;
  * the wheel to stay within {@code launchSettleBandRpm} of it for
  * {@code launchSettleHoldSeconds}, or at most {@code launchSettleTimeoutSeconds}. The gates
  * (TeleOp) or the auto ask {@link #SettleDone} before they open.
+ *
+ * <p>Nectar settles the same way in TeleOp ({@link #BeginNectarSettle}, teleopNectarSettles):
+ * the one transfer presses a ball against the closed nectar gate, so it would go the moment
+ * the gate opens.
  *
  * <p>The balls are let go by {@link LaunchGates}, on the operator's launch triggers.
  */
@@ -92,6 +97,8 @@ public class Launcher implements Subsystem {
     private final RpmTable mNectarRpmTable = new RpmTable();
     /** Settle before launch: the pollen wheel on its locked target (0056). */
     private final SpeedSettle mSettle = new SpeedSettle();
+    /** The same for the nectar wheel, TeleOp only: its ball waits at the gate (2026-11-25). */
+    private final SpeedSettle mNectarSettle = new SpeedSettle();
     /** The clock the settle is timed with. */
     private final ElapsedTime mSettleClock = new ElapsedTime();
 
@@ -206,9 +213,14 @@ public class Launcher implements Subsystem {
                     mProperties.launchSettleBandRpm, mProperties.launchSettleHoldSeconds,
                     mProperties.launchSettleTimeoutSeconds);
         }
-        if (!mOp.mQuiet) {
+        if (mNectarSettle.IsActive() && !mNectarSettle.IsDone()) {
+            mNectarSettle.Update(mSettleClock.seconds(), mNectar.GetMeasuredRpm(), mProperties.nectarLauncherRpm,
+                    mProperties.launchSettleBandRpm, mProperties.launchSettleHoldSeconds,
+                    mProperties.launchSettleTimeoutSeconds);
+        }
+        if (mOp.Shows(TelemetryGroup.LAUNCHER)) {
             ShowStatus();
-        } else if (mProperties.launcherOnlyTelemetry) {
+        } else if (mProperties.launcherOnlyTelemetry && mProperties.TelemetryOn(TelemetryGroup.LAUNCHER)) {
             // Everything else is hushed; the launchers keep their numbers, for tuning.
             ShowStats();
         }
@@ -230,7 +242,9 @@ public class Launcher implements Subsystem {
         boolean pollenSettling = mSettle.IsActive();
         boolean pollenLocked = pollenSettling
                 || (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsPollenOpen());
-        boolean nectarLocked = mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsNectarOpen();
+        boolean nectarSettling = mNectarSettle.IsActive();
+        boolean nectarLocked = nectarSettling
+                || (mProperties.launchLocksRpm && mLaunchGates != null && mLaunchGates.IsNectarOpen());
         if (pollenLocked && nectarLocked) {
             mRangeStatus = String.format(Locale.US, "LOCKED for the launch, holding %.0f / %.0f",
                     mProperties.pollenLauncherRpm, mProperties.nectarLauncherRpm);
@@ -299,7 +313,8 @@ public class Launcher implements Subsystem {
         }
         String nectarPart;
         if (nectarLocked) {
-            nectarPart = String.format(Locale.US, "nectar LOCKED for the launch, holding %.0f", mProperties.nectarLauncherRpm);
+            String why = nectarSettling ? "LOCKED to settle" : "LOCKED for the launch";
+            nectarPart = String.format(Locale.US, "nectar %s, holding %.0f", why, mProperties.nectarLauncherRpm);
         } else {
             mProperties.nectarLauncherRpm = KeepInRange(nectarTableRpm + mProperties.nectarRangeTrimRpm);
             nectarPart = String.format(Locale.US, "nectar %.0f trim %+.0f = %.0f",
@@ -387,8 +402,8 @@ public class Launcher implements Subsystem {
      *     step start = nearIn + whole steps past nearIn
      *     rpm = the line between the measured shots on either side of the step start
      *
-     *     110 in 2660, 120 in 2731, 130 in 2883, 140 in 3015, steps of 2 in:
-     *     110: 2660   112: 2674   120: 2731   125: 2792   130: 2883   139: 2989   140 and up: 3015
+     *     110 in 2635, 120 in 2706, 130 in 2858, 140 in 2990, steps of 2 in:
+     *     110: 2635   112: 2649   120: 2706   125: 2767   130: 2858   139: 2964   140 and up: 2990
      * </pre>
      *
      * Nearer than nearIn: the near speed. Farther than farIn: the far speed.
@@ -464,6 +479,14 @@ public class Launcher implements Subsystem {
         return mPollen.GetMeasuredRpm() >= rpm;
     }
 
+    /** true when the nectar wheel spins at least this fast, or is not in the configuration. */
+    public boolean NectarAtLeast(double rpm) {
+        if (!mNectar.IsPresent()) {
+            return true;
+        }
+        return mNectar.GetMeasuredRpm() >= rpm;
+    }
+
     public double GetPollenMeasuredRpm() {
         return mPollen.GetMeasuredRpm();
     }
@@ -478,6 +501,38 @@ public class Launcher implements Subsystem {
             return;
         }
         mSettle.Start(mSettleClock.seconds());
+    }
+
+    /**
+     * The same launch command for the nectar wheel: lock its target and wait for it to settle.
+     * A robot with no nectar wheel counts as settled at once.
+     */
+    public void BeginNectarSettle() {
+        if (!mNectar.IsPresent()) {
+            mNectarSettle.Finish();
+            return;
+        }
+        mNectarSettle.Start(mSettleClock.seconds());
+    }
+
+    /** Stop waiting on the nectar wheel and unlock its target. */
+    public void CancelNectarSettle() {
+        mNectarSettle.Cancel();
+    }
+
+    /** true from BeginNectarSettle() until CancelNectarSettle(): the nectar target is locked. */
+    public boolean IsNectarSettling() {
+        return mNectarSettle.IsActive();
+    }
+
+    /** true once the nectar wheel has settled, or the wait timed out. */
+    public boolean NectarSettleDone() {
+        return mNectarSettle.IsDone();
+    }
+
+    /** One line for the Driver Station: the nectar wheel settling, settled, or timed out. */
+    public String NectarSettleStatus() {
+        return mNectarSettle.Status();
     }
 
     /** Stop waiting and unlock the target: the distance may move it again. */
@@ -527,6 +582,7 @@ public class Launcher implements Subsystem {
     private void ShowStats() {
         mOp.mTelemetry.addData("Launcher speed from distance", mRangeStatus);
         mOp.mTelemetry.addData("Launcher settle", mSettle.Status());
+        mOp.mTelemetry.addData("Nectar settle", mNectarSettle.Status());
         mPollen.ShowStatus();
         mNectar.ShowStatus();
     }

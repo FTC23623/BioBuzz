@@ -198,14 +198,14 @@ class LauncherTest {
     }
 
     @Test
-    @DisplayName("today's pollen speeds: 2660 at 110 in, 2731 at 120, 2883 at 130, 3015 from 140 (and at 145)")
+    @DisplayName("today's pollen speeds: 2635 at 110 in, 2706 at 120, 2858 at 130, 2990 from 140 (and at 145)")
     void todaysSpeeds() {
         BotProperties p = new BotProperties();
-        assertEquals(2660, Launcher.RpmForRange(110, p), EPS);
-        assertEquals(2731, Launcher.RpmForRange(120, p), EPS);
-        assertEquals(2883, Launcher.RpmForRange(130, p), EPS);
-        assertEquals(3015, Launcher.RpmForRange(140, p), EPS);
-        assertEquals(3015, Launcher.RpmForRange(145, p), EPS);
+        assertEquals(2635, Launcher.RpmForRange(110, p), EPS);
+        assertEquals(2706, Launcher.RpmForRange(120, p), EPS);
+        assertEquals(2858, Launcher.RpmForRange(130, p), EPS);
+        assertEquals(2990, Launcher.RpmForRange(140, p), EPS);
+        assertEquals(2990, Launcher.RpmForRange(145, p), EPS);
     }
 
     @Test
@@ -269,6 +269,24 @@ class LauncherTest {
         launcher.Process();
         assertEquals(Launcher.NectarRpmForRange(135, properties), launcher.GetNectarTargetRpm(), EPS);
         assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
+    }
+
+    @Test
+    @DisplayName("nectar settle: the nectar target is locked while it waits, pollen keeps following, and it unlocks on cancel")
+    void nectarSettleLocksNectar() {
+        properties.launcherRangeTuning = true;
+        tagAt(135);
+        launcher.Process();
+        launcher.BeginNectarSettle();
+        assertTrue(launcher.IsNectarSettling());
+        assertFalse(launcher.IsSettling());
+        tagAt(150);
+        launcher.Process();
+        assertEquals(Launcher.NectarRpmForRange(135, properties), launcher.GetNectarTargetRpm(), EPS);
+        assertEquals(Launcher.RpmForRange(150, properties), launcher.GetPollenTargetRpm(), EPS);
+        launcher.CancelNectarSettle();
+        launcher.Process();
+        assertEquals(Launcher.NectarRpmForRange(150, properties), launcher.GetNectarTargetRpm(), EPS);
     }
 
     @Test

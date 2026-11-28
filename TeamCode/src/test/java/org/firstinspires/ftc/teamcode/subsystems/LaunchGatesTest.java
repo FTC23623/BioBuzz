@@ -139,15 +139,63 @@ class LaunchGatesTest {
     }
 
     @Test
-    @DisplayName("both triggers: pollen wins, only the pollen gate opens")
-    void bothTriggersOnlyPollen() {
+    @DisplayName("both triggers: both gates open together")
+    void bothTriggersBoth() {
+        operator.left_trigger = 1;
+        operator.right_trigger = 1;
+        loop();
+        assertTrue(gates.IsPollenOpen());
+        assertTrue(gates.IsNectarOpen());
+        verify(pollen).setPosition(properties.pollenServoOpen);
+        verify(nectar).setPosition(properties.nectarServoOpen);
+    }
+
+    @Test
+    @DisplayName("launchBothTogether off: both triggers, pollen wins, only the pollen gate opens")
+    void bothTriggersOnlyPollenWhenOff() {
+        properties.launchBothTogether = false;
         operator.left_trigger = 1;
         operator.right_trigger = 1;
         loop();
         assertTrue(gates.IsPollenOpen());
         assertFalse(gates.IsNectarOpen());
-        verify(pollen).setPosition(properties.pollenServoOpen);
         verify(nectar, never()).setPosition(properties.nectarServoOpen);
+    }
+
+    @Test
+    @DisplayName("both held, one let go: the gate still wanted stays open and nothing restarts; the other shuts")
+    void bothThenOneReleased() {
+        operator.left_trigger = 1;
+        operator.right_trigger = 1;
+        loop();
+        sleepSeconds(IsOpenTime());
+        loop();
+        assertTrue(gates.IsFullyOpen());
+        int launches = gates.LaunchCount();
+        operator.left_trigger = 0;
+        loop();
+        assertFalse(gates.IsPollenOpen());
+        assertTrue(gates.IsNectarOpen());
+        assertTrue(gates.IsFullyOpen(), "nectar was already open: no new wait");
+        assertEquals(launches, gates.LaunchCount());
+    }
+
+    @Test
+    @DisplayName("one held, the other added: the new gate opens with its own wait; the first stays open")
+    void oneThenBoth() {
+        operator.right_trigger = 1;
+        loop();
+        sleepSeconds(IsOpenTime());
+        loop();
+        assertTrue(gates.IsFullyOpen());
+        operator.left_trigger = 1;
+        loop();
+        assertTrue(gates.IsPollenOpen());
+        assertTrue(gates.IsNectarOpen());
+        assertFalse(gates.IsFullyOpen(), "the pollen gate has only just started to open");
+        sleepSeconds(IsOpenTime());
+        loop();
+        assertTrue(gates.IsFullyOpen());
     }
 
     @Test
@@ -399,6 +447,57 @@ class LaunchGatesTest {
     }
 
     @Test
+    @DisplayName("launchBothTogether off: both held, pollen let go: nectar opens and waits its own opening time")
+    void bothHeldThenPollenReleasedWhenOff() {
+        properties.launchBothTogether = false;
+        operator.left_trigger = 1;
+        operator.right_trigger = 1;
+        loop();
+        assertTrue(gates.IsPollenOpen());
+        assertFalse(gates.IsNectarOpen());
+        sleepSeconds(IsOpenTime());
+        loop();
+        assertTrue(gates.IsFullyOpen());
+        operator.left_trigger = 0;
+        loop();
+        assertFalse(gates.IsPollenOpen());
+        assertTrue(gates.IsNectarOpen());
+        assertFalse(gates.IsFullyOpen(), "the nectar gate has only just started to open");
+        sleepSeconds(IsOpenTime());
+        loop();
+        assertTrue(gates.IsFullyOpen());
+    }
+
+    @Test
+    @DisplayName("nectar launching, pollen pulled alone over it: the pollen gate waits its opening time")
+    void nectarThenPollenAlone() {
+        operator.right_trigger = 1;
+        loop();
+        sleepSeconds(IsOpenTime());
+        loop();
+        assertTrue(gates.IsFullyOpen());
+        operator.right_trigger = 0;
+        operator.left_trigger = 1;
+        loop();
+        assertTrue(gates.IsPollenOpen());
+        assertFalse(gates.IsNectarOpen());
+        assertFalse(gates.IsFullyOpen());
+    }
+
+    /** A little longer than the gate's opening time, in seconds. */
+    private double IsOpenTime() {
+        return LaunchGates.OpenSeconds(properties) + 0.05;
+    }
+
+    private static void sleepSeconds(double seconds) {
+        try {
+            Thread.sleep((long) (seconds * 1000));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    @Test
     @DisplayName("let go and pull again: the wait starts over")
     void waitStartsOver() {
         operator.left_trigger = 1;
@@ -471,7 +570,7 @@ class LaunchGatesTest {
         assertTrue(gates.IsNectarOpen());
     }
 
-    // ---- Settle before launch (0056): pollen only ----
+    // ---- Settle before launch (0056): pollen, and nectar too from 2026-11-25 ----
 
     @Test
     @DisplayName("settle on: the pollen gate waits for the launcher to settle, then opens")
@@ -490,14 +589,73 @@ class LaunchGatesTest {
     }
 
     @Test
-    @DisplayName("settle on: the nectar gate opens at once, without settling the launcher")
-    void nectarDoesNotSettle() {
+    @DisplayName("settle on: the nectar gate waits for the NECTAR wheel to settle, then opens (a ball is already at the gate)")
+    void nectarWaitsForItsSettle() {
         properties.teleopLaunchSettles = true;
+        Launcher launcher = mock(Launcher.class);
+        when(launcher.NectarSettleStatus()).thenReturn("settling");
+        gates.SetLauncher(launcher);
+        operator.right_trigger = 1;
+        loop();
+        assertFalse(gates.IsNectarOpen());
+        verify(launcher, atLeastOnce()).BeginNectarSettle();
+        verify(launcher, never()).BeginSettle();
+        when(launcher.NectarSettleDone()).thenReturn(true);
+        loop();
+        assertTrue(gates.IsNectarOpen());
+        assertFalse(gates.IsPollenOpen());
+    }
+
+    @Test
+    @DisplayName("teleopNectarSettles off: the nectar gate opens at once, as before")
+    void nectarSettleOff() {
+        properties.teleopLaunchSettles = true;
+        properties.teleopNectarSettles = false;
         Launcher launcher = mock(Launcher.class);
         gates.SetLauncher(launcher);
         operator.right_trigger = 1;
         loop();
         assertTrue(gates.IsNectarOpen());
-        verify(launcher, never()).BeginSettle();
+        verify(launcher, never()).BeginNectarSettle();
+    }
+
+    @Test
+    @DisplayName("both triggers: each gate waits for its own wheel; one launch is counted")
+    void bothWaitForTheirOwnWheel() {
+        properties.teleopLaunchSettles = true;
+        Launcher launcher = mock(Launcher.class);
+        gates.SetLauncher(launcher);
+        operator.left_trigger = 1;
+        operator.right_trigger = 1;
+        loop();
+        assertFalse(gates.IsPollenOpen());
+        assertFalse(gates.IsNectarOpen());
+        // Nectar settles first: its gate opens, pollen's stays shut.
+        when(launcher.NectarSettleDone()).thenReturn(true);
+        loop();
+        assertTrue(gates.IsNectarOpen());
+        assertFalse(gates.IsPollenOpen());
+        assertEquals(1, gates.LaunchCount());
+        // Then pollen: its gate opens too, and the opening wait starts again for it.
+        when(launcher.SettleDone()).thenReturn(true);
+        loop();
+        assertTrue(gates.IsNectarOpen());
+        assertTrue(gates.IsPollenOpen());
+        assertFalse(gates.IsFullyOpen());
+        assertEquals(1, gates.LaunchCount());
+    }
+
+    @Test
+    @DisplayName("nectar is let go while it settles: its settle is cancelled, so the speed unlocks")
+    void nectarLetGoCancelsItsSettle() {
+        properties.teleopLaunchSettles = true;
+        Launcher launcher = mock(Launcher.class);
+        gates.SetLauncher(launcher);
+        operator.right_trigger = 1;
+        loop();
+        operator.right_trigger = 0;
+        loop();
+        verify(launcher, atLeastOnce()).CancelNectarSettle();
+        assertFalse(gates.IsNectarOpen());
     }
 }

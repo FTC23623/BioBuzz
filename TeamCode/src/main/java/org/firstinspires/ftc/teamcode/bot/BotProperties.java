@@ -141,6 +141,56 @@ public class BotProperties {
      */
     public boolean launcherOnlyTelemetry = true;
     /**
+     * true: every loop, send the driver's sticks (just as the gamepad reads them, -1 to 1)
+     * and the yaw to the Driver Station and the dashboard, even with the quiet settings
+     * above on. For telling stick drift from a wrong heading. On the dashboard's Drive group.
+     * Off in a match build.
+     */
+    public boolean stickTelemetry = true;
+
+    // ---- Telemetry groups --------------------------------------------------------------------
+    // Each switch hides or shows one block of Driver Station lines. On the dashboard's
+    // "Telemetry" group: turn on only what you are tuning. quietTelemetry and
+    // launcherOnlyTelemetry above still hush everything. INIT always shows every check.
+    /** An auto: step number, what the step is, how far from its end, what comes next. */
+    public boolean tlmAutoStep = true;
+    /** An auto: launch, aim, tip check and flower status. */
+    public boolean tlmAutoLaunch = true;
+    /** An auto: x, y, heading and the yaw handed to TeleOp. */
+    public boolean tlmPose = true;
+    /** The launchers and launch gates. */
+    public boolean tlmLauncher = true;
+    /** The camera: tags, range, bearing. */
+    public boolean tlmVision = true;
+    /** The drive: aim assist, launch hold, arc, wiggle. */
+    public boolean tlmDrive = true;
+    /** The intake, the pollen and nectar sensors, the flower extractor. */
+    public boolean tlmIntake = true;
+    /** The indicator light and light strip. */
+    public boolean tlmLights = true;
+
+    /** Is this telemetry group switched on? (The quiet settings are checked by HydraOpMode.) */
+    public boolean TelemetryOn(org.firstinspires.ftc.teamcode.types.TelemetryGroup group) {
+        switch (group) {
+            case AUTO_STEP:
+                return tlmAutoStep;
+            case AUTO_LAUNCH:
+                return tlmAutoLaunch;
+            case POSE:
+                return tlmPose;
+            case LAUNCHER:
+                return tlmLauncher;
+            case VISION:
+                return tlmVision;
+            case DRIVE:
+                return tlmDrive;
+            case INTAKE:
+                return tlmIntake;
+            default:
+                return tlmLights;
+        }
+    }
+    /**
      * true: every loop, one line goes to a CSV file on the hub, in /sdcard/FIRST/logs/: the
      * buttons held (aim, launch, ...), the Limelight's distances, the launcher and roller
      * speeds and powers. For testing; costs a little loop time. Off for matches
@@ -201,6 +251,12 @@ public class BotProperties {
     public String cfgDriveBackLeft = "leftBack";
     public String cfgDriveBackRight = "rightBack";
     public String cfgPinpoint = "pinpoint";
+    /**
+     * At INIT the Pinpoint is reset, which takes about 0.25 s. It only counts as ready once it
+     * has been seen calibrating, or this many seconds after the reset was asked for, so a
+     * heading kept from the auto is never set from the Pinpoint's old heading.
+     */
+    public double pinpointResetWaitSeconds = 0.5;
     /** The IMU inside the Control Hub. Every Control Hub configuration has it by default. */
     public String cfgHubImu = "imu";
 
@@ -286,7 +342,8 @@ public class BotProperties {
     // Then from the robot: 120 in down 80, 130 in down 100, 140 in and past down 150. One
     // curve could not bend that way, so the curve became four measured shots joined by
     // straight lines (launchMid1 and launchMid2 added; launchCurve removed). Then the whole
-    // pollen curve down 100: 2660, 2731, 2883, 3015.
+    // pollen curve down 100: 2660, 2731, 2883, 3015. Then down 25 more (coach, 2026-11-25):
+    // 2635, 2706, 2858, 2990.
 
     /**
      * true: the pollen launcher's target follows the distance curve below whenever a tag of
@@ -297,8 +354,8 @@ public class BotProperties {
     // The speed comes from four measured shots, near to far, joined by straight lines and
     // stepped every launchBandIn inches:
     //
-    //     110 in 2660   120 in 2731   130 in 2883   140 in 3015
-    //     124 in = 2731 + (2883 - 2731) x 4/10 = 2792
+    //     110 in 2635   120 in 2706   130 in 2858   140 in 2990
+    //     124 in = 2706 + (2858 - 2706) x 4/10 = 2767
     //
     // Nearer than nearIn uses the near speed; farther than farIn uses the far speed. To tune
     // one distance, change just its RPM: the lines on either side follow. Keep the inches in
@@ -308,25 +365,26 @@ public class BotProperties {
     /**
      * The near measured shot: RPM that scored from there (2900, less 150 for the inertia
      * wheel, +50 on 2026-11-05, -30 for overshooting up close, -35 with the whole curve,
-     * +25 with the whole curve, -100 with the whole curve).
+     * +25 with the whole curve, -100 with the whole curve, -25 with the whole curve).
      */
-    public double launchNearRpm = 2660;
+    public double launchNearRpm = 2635;
     /** The first middle shot: distance, in inches. */
     public double launchMid1In = 120;
-    /** The first middle shot: RPM (2911 on the old curve, down 80, then -100 with the whole curve). */
-    public double launchMid1Rpm = 2731;
+    /** The first middle shot: RPM (2911 on the old curve, down 80, then -100 with the whole curve, -25 with the whole curve). */
+    public double launchMid1Rpm = 2706;
     /** The second middle shot: distance, in inches. */
     public double launchMid2In = 130;
-    /** The second middle shot: RPM (3083 on the old curve, down 100, then -100 with the whole curve). */
-    public double launchMid2Rpm = 2883;
+    /** The second middle shot: RPM (3083 on the old curve, down 100, then -100 with the whole curve, -25 with the whole curve). */
+    public double launchMid2Rpm = 2858;
     /** The far measured shot: distance, in inches. Every distance past it uses its speed. */
     public double launchFarIn = 140;
     /**
      * The far measured shot: RPM that scored from there and past it (3300 measured, +25 on
      * 2026-11-03, -100 on 2026-11-04, +50 on 2026-11-05, -35 with the whole curve, +25 with
-     * the whole curve, -150 from 145 in on the robot, -100 with the whole curve).
+     * the whole curve, -150 from 145 in on the robot, -100 with the whole curve, -25 with
+     * the whole curve).
      */
-    public double launchFarRpm = 3015;
+    public double launchFarRpm = 2990;
     // The NECTAR launcher's own curve (docs/decisions/0057). The same four distances as
     // pollen, its own four speeds. Until 2026-11-21 nectar had one fixed speed (3100). It
     // started as the pollen curve plus 50 (2760, 2831, 2983, 3115, each +50).
@@ -396,10 +454,19 @@ public class BotProperties {
      */
     public boolean teleopLaunchSettles = true;
     /**
-     * Autos: true = each LAUNCH, once at autoLaunchMinRpm, also locks the speed and waits for
-     * it to settle. false (today) = it opens at autoLaunchMinRpm, as before.
+     * true (today): in TeleOp the NECTAR gate settles too, before it opens. There is one
+     * transfer for both launchers, so a ball is already pressed against the closed nectar gate
+     * (coach, 2026-11-25): without this it left the moment the gate opened, whatever the
+     * nectar wheel was doing. Needs teleopLaunchSettles on as well. Same band, hold and
+     * timeout as pollen.
      */
-    public boolean autoLaunchSettles = false;
+    public boolean teleopNectarSettles = true;
+    /**
+     * Autos: true = each LAUNCH, once at autoLaunchMinRpm, also locks the speed and waits for
+     * it to settle (on since 2026-11-27, so the curve's target is reached, not just the floor).
+     * false = it opens at autoLaunchMinRpm, as before.
+     */
+    public boolean autoLaunchSettles = true;
     /**
      * Autos, LAUNCH_WHEN_TAG_SEEN only: true (today) = settle like above even with
      * autoLaunchSettles off. The tag sets a new, farther target just before the launch, and
@@ -587,7 +654,7 @@ public class BotProperties {
     /** Flower extractor position when closed (stored): gamepad 2 triangle not held. */
     public double flowerExtractorClosed = 0;
     /** Flower extractor position when open (deployed): gamepad 2 triangle held. 0.567 plus 5 degrees. */
-    public double flowerExtractorOpen = 0.584;
+    public double flowerExtractorOpen = 0.56;
     /**
      * Tuning only: the bumpers may push the flower extractor this many degrees past open,
      * to try a further deployed spot. Cross / A still deploys to flowerExtractorOpen. 10
@@ -641,10 +708,10 @@ public class BotProperties {
      * 2800 since 2026-11-04: the near shot came down 150 with the inertia wheel, and a
      * near target of 2750 would never reach 2950. The near shot was 2800 from 2026-11-05;
      * both came down 30 to 2770 together, then 35 more to 2735, then 100 more to 2635 with
-     * the pollen curve (near shot 2660), so a near target is never below this floor. Keep
-     * this at or below launchNearRpm.
+     * the pollen curve (near shot 2660), then 25 more to 2610 with the curve (near shot
+     * 2635), so a near target is never below this floor. Keep this at or below launchNearRpm.
      */
-    public double autoLaunchMinRpm = 2635;
+    public double autoLaunchMinRpm = 2610;
     /**
      * A LAUNCH_WHEN_TAG_SEEN step still waiting for one of our hive's tags this many seconds
      * after START launches anyway, facing the way it is. AUTO is 30 seconds (Competition
@@ -654,23 +721,85 @@ public class BotProperties {
     /** In an auto, how long the gates stay open at a LAUNCH step, in seconds. */
     public double autoLaunchSeconds = 2;
     /**
+     * LAUNCH_NECTAR opens the nectar gate once the nectar launcher spins at least this fast,
+     * in RPM, like autoLaunchMinRpm for pollen. 25 under nectarNearRpm (2810), so a near
+     * target is never below it. CHECK on the robot.
+     */
+    public double autoNectarLaunchMinRpm = 2785;
+    /**
+     * LAUNCH_UNTIL_EMPTY ends once every ball switch has read empty this long, in seconds, so
+     * a ball bouncing over a switch is not taken for "empty".
+     */
+    public double autoEmptyClearSeconds = 0.3;
+    /**
+     * LAUNCH_UNTIL_EMPTY never runs longer than this once the gates are open, in seconds, so
+     * a stuck switch cannot hold the auto. With no ball switch in the configuration it runs
+     * autoLaunchSeconds instead.
+     */
+    public double autoLaunchUntilEmptyMaxSeconds = 4;
+    /**
      * A CHECK_TIPPED step holds still and looks at the hive for at most this long, in seconds
      * (docs/decisions/0057). A tipped tag seen sooner ends the look straight away. A guess:
      * CHECK on the field how long the camera needs to find the tags after a stop.
      */
     public double autoTipLookSeconds = 1;
     /**
-     * CHECK_TIPPED: true = the tag's tilt must be in the tipped window too (tagTippedMinDeg to
-     * tagTippedMaxDeg), since the hive's tags can be seen before the basket tips. false = any
-     * tag of ours counts as tipped.
+     * CHECK_TIPPED: true = the tag's roll must be in the "up" window below too, since the
+     * hive's tags can be seen before the basket tips. false = any tag of ours counts as
+     * tipped.
      */
     public boolean autoTippedNeedsTilt = true;
+    // How CHECK_TIPPED reads a cell from its tag's roll in the Limelight. Measured by the
+    // coach on 2026-11-24, close and at an angle, coming off the flower by the garden:
+    //
+    //     cell UP:    roll -34        cell DOWN (its underside): roll 25
+    //
+    // Each window is 20 degrees either side of its reading. Between them (-14 to 5) is the
+    // buffer: a roll in there answers nothing, so a shaky reading never picks a side.
+    //
+    //     -54 ..... -34 ..... -14      5 ..... 25 ..... 45
+    //     [         UP          ]      [      DOWN       ]
+    //
+    // The numbers are from that one spot. CHECK them again from any other spot an auto does
+    // a CHECK_TIPPED from: the roll changes with where the robot stands.
+    /**
+     * Which of the tag's angles CHECK_TIPPED reads: true = roll (measured), false = pitch.
+     * Only the autos use this. TeleOp's always-track has its own (tagTiltFromRoll).
+     */
+    public boolean autoTipFromRoll = true;
+    /** The cell is UP while that angle is from this... (the reading, -34, less 20) */
+    public double autoTagUpMinDeg = -54;
+    /** ...to this (-34 plus 20). */
+    public double autoTagUpMaxDeg = -14;
+    /** The cell is DOWN while that angle is from this... (the reading, 25, less 20) */
+    public double autoTagDownMinDeg = 5;
+    /** ...to this (25 plus 20). */
+    public double autoTagDownMaxDeg = 45;
+    /**
+     * The tags on the hive cells at the GARDEN side, as {lowest id, highest id}, one pair per
+     * alliance. CHECK_TIPPED uses them to tell which cell tipped (IF_GARDEN_SIDE_UP).
+     * Coach, 2026-11-25: blue's garden side is 42-45, red's is 34-37. (The first guess, 30-33
+     * and 38-41, was the wrong way round.)
+     */
+    public int[][] gardenSideTags = {{34, 37}, {42, 45}};
+    /** The tags on the hive cells at the FLOWER side (IF_FLOWER_SIDE_UP): red 30-33, blue 38-41. */
+    public int[][] flowerSideTags = {{30, 33}, {38, 41}};
+    /**
+     * CHECK_TIPPED: true (today) = a tag in the DOWN window is the underside of a cell that is
+     * down, and that means the OTHER side's cell is up (coach, 2026-11-24). So garden side
+     * down gives IF_FLOWER_SIDE_UP, and the other way round. false = only a tag in the UP
+     * window counts.
+     */
+    public boolean autoDownMeansOtherSideUp = true;
     // The FLOWER step (docs/decisions/0042): from the spot it was recorded at, the robot backs
     // up, swings the extractor out, works the flower with short strokes forward and back,
     // and swings the extractor in, with the intake running the whole time. Every move is
     // along the way the robot faces. Today: back 7, settle, out, forward 9, hold 1 s,
-    // back 9, in. The robot ends 7 inches behind the recorded spot, and is 2 inches PAST
-    // it at the flower. History: back 9 (coach, 2026-11-03: 6 was too close for the long
+    // back 9, in. The robot ends 7 inches behind the recorded spot, and is 2 inches PAST it
+    // at the flower (coach, 2026-11-25: tried back 3 / strokes of 3, then back 6, then back 7
+    // with strokes of 9 again).
+    // The intake runs from the first back-up until the arm has finished swinging out, then
+    // goes back to what the auto does between steps. History: back 9 (coach, 2026-11-03: 6 was too close for the long
     // arm, and it went out before the robot had stopped). Then the extractor was cut about
     // 3 inches shorter, so the whole step moved 3 inches forward: back 9 became back 6. The
     // short arm's tip ends up where the long arm's did, both at arm-out and at the flower.
@@ -687,6 +816,7 @@ public class BotProperties {
      * How long one stroke forward or back is, in inches. 8: one inch further into the flower
      * than the first 7 (coach, 2026-11-03). 9: matches the extra inch of back-up, so the
      * robot still reaches 2 inches past the recorded spot and ends autoFlowerBackIn behind it.
+     * 9 again since 2026-11-25: with back 7 the robot reaches 2 inches past the recorded spot.
      */
     public double autoFlowerStrokeIn = 9;
     /** At the end of each forward stroke the robot holds still this long, in seconds, to extract. */
@@ -824,6 +954,29 @@ public class BotProperties {
      * bumpers still aim.
      */
     public boolean launchTriggerAims = true;
+    /**
+     * false (today): on the operator's gamepad the LEFT bumper and trigger run POLLEN and the
+     * RIGHT ones run NECTAR. true: swapped, LEFT is nectar and RIGHT is pollen. Bumpers and
+     * triggers swap together. "Pollen wins when both are pressed" follows the pollen side.
+     * For a robot that has its launchers the other way round, or an operator who prefers it.
+     * On the dashboard's Launcher group.
+     */
+    public boolean operatorSwapsLaunchers = false;
+    /**
+     * true (today): both launch buttons at once launch BOTH, together: both gates open and
+     * the robot aims between the two launchers (bothAimOffsetDeg). false: pollen wins and
+     * nectar waits for the pollen button to be let go, as before 2026-11-25. Same for the
+     * bumpers' aim.
+     */
+    public boolean launchBothTogether = true;
+    /**
+     * Where the hive's middle should sit when BOTH launchers aim, on top of the middle of
+     * the two launchers' own aims, in degrees, left positive. 0 to start: the launchers are
+     * close together, so the middle of the two is close to right for each. TUNE on the field:
+     * shoot both from a few distances, and if both miss the same way, nudge this. Positive
+     * turns the robot further right (the hive sits further left in the camera).
+     */
+    public double bothAimOffsetDeg = 0;
     /**
      * Within this many degrees of straight in front of the hive the robot counts as neither
      * left nor right, and aims at the hive's middle with no offset. Stops the aim jumping from
@@ -1030,6 +1183,13 @@ public class BotProperties {
 
     /** The pollen switch. Configure it as a "REV Touch Sensor" on a digital port. */
     public String cfgPollenSensor = "pollenSensor";
+    /** The ball switches: this name plus 1..ballSensorCount (pollenSensor1, ...). See BallSensors. */
+    public String cfgPollenSensors = "pollenSensor";
+    public String cfgNectarSensors = "nectorSensor";
+    /** How many switches of each kind to look for. */
+    public int ballSensorCount = 4;
+    /** true: a ball reads OPEN (not pressed) on the ball switches. false: a ball presses it. CHECK with Test: Pollen and Nectar Sensors. */
+    public boolean ballSensorsInverted = false;
     /**
      * true: the switch reads "pressed" when there is NO pollen, and lets go when a ball
      * arrives, so the reading is flipped here. That is how it is wired today (coach,
@@ -1118,6 +1278,7 @@ public class BotProperties {
         testTelemetry = false;
         tuningMarks = false;
         launcherOnlyTelemetry = false;
+        stickTelemetry = false;
         driveCoastWhenIdle = false;
         visionAnyTag = false;
     }

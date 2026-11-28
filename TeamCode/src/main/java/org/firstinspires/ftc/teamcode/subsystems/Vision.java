@@ -43,6 +43,21 @@ public interface Vision extends Subsystem {
     double GetTagTiltDegrees();
 
     /**
+     * @return the nearest tag's angle an auto's CHECK_TIPPED reads, degrees: its roll, or its
+     *     pitch with {@code autoTipFromRoll} off. NaN when no tag is seen or the camera can't
+     *     tell. It says whether the tag's hive cell is up or down (docs/decisions/0057).
+     */
+    double GetTagFlipDegrees();
+
+    /**
+     * Every tag of ours in the newest picture, each with its own angles, range and bearing.
+     * Empty with none, or a camera that can't tell. For Test: Tip Detection.
+     */
+    default java.util.List<org.firstinspires.ftc.teamcode.types.TagLook> GetTagsInView() {
+        return java.util.Collections.emptyList();
+    }
+
+    /**
      * @return where the robot is from the tags alone: from the hive's nearest tag, and the
      *     Limelight's field position when it has the field map (docs/decisions/0054).
      *     {@link TagPosition#UNKNOWN} when no tag is seen or the camera can't tell.

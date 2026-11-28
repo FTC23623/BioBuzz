@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.bot.BotProperties;
@@ -19,6 +20,11 @@ public class Imu_Pinpoint implements Imu {
     private final HydraOpMode mOp;
     private final GoBildaPinpointDriver mPinpoint;
     private boolean mReady;
+    private final BotProperties mProperties;
+    /** Time since the constructor asked the Pinpoint to reset. */
+    private final ElapsedTime mSinceReset = new ElapsedTime();
+    /** true once the Pinpoint has said it is busy (calibrating) after that reset. */
+    private boolean mSawBusy = false;
     /** Raw Pinpoint heading at the last reset. That direction counts as 0. */
     private double mHeadingAtReset;
     /** Heading read this loop, so every reader in the loop sees the same number. */
@@ -29,8 +35,10 @@ public class Imu_Pinpoint implements Imu {
 
     public Imu_Pinpoint(HydraOpMode op, BotProperties properties) {
         mOp = op;
+        mProperties = properties;
         mPinpoint = op.mHardwareMap.get(GoBildaPinpointDriver.class, properties.cfgPinpoint);
         Configure(mPinpoint, properties);
+        mSinceReset.reset();
 
         mReady = false;
         mHeadingAtReset = 0;
@@ -67,6 +75,11 @@ public class Imu_Pinpoint implements Imu {
         GoBildaPinpointDriver.DeviceStatus status = mPinpoint.getDeviceStatus();
         switch (status) {
             case READY:
+                if (!ResetDone(mSawBusy, mSinceReset.seconds(), mProperties.pinpointResetWaitSeconds)) {
+                    // READY, but it may not have started the reset yet: wait a moment.
+                    mOp.mTelemetry.addLine("Pinpoint resetting. Keep the robot still.");
+                    break;
+                }
                 int version = mPinpoint.getDeviceVersion();
                 if (version == 2) {
                     mPinpoint.setErrorDetectionType(GoBildaPinpointDriver.ErrorDetectionType.CRC);
@@ -87,6 +100,7 @@ public class Imu_Pinpoint implements Imu {
                 break;
             case CALIBRATING:
             case NOT_READY:
+                mSawBusy = true;
                 mOp.mTelemetry.addLine("Pinpoint calibrating. Keep the robot still.");
                 break;
             default:
@@ -95,6 +109,17 @@ public class Imu_Pinpoint implements Imu {
                 break;
         }
         return mReady;
+    }
+
+    /**
+     * Has the reset the constructor asked for really happened? The reset takes about a quarter
+     * of a second, and the Pinpoint can still say READY, with its OLD heading, for a moment
+     * before it starts. Right after an auto that old heading is how far the auto turned the
+     * robot, so a heading set from it (SetYaw) would be off by that much once the reset lands.
+     * So READY only counts once the Pinpoint has been seen busy, or enough time has gone by.
+     */
+    static boolean ResetDone(boolean sawBusy, double secondsSinceReset, double waitSeconds) {
+        return sawBusy || secondsSinceReset >= waitSeconds;
     }
 
     @Override

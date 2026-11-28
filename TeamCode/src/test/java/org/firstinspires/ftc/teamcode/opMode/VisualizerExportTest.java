@@ -35,7 +35,7 @@ class VisualizerExportTest {
     private static final double wallMarginIn = 5;
 
     private static final PedroAuto[] AUTOS = {new AutoStrategyA(), new AutoStrategyB(), new AutoStrategyC(),
-            new AutoStrategyGardenD(), new AutoStrategyGardenE()};
+            new AutoStrategyGardenD(), new AutoStrategyGardenE(), new AutoStrategyF(), new AutoStrategyG()};
 
     /** One auto's route as field spots: the start, then where each path ends. */
     static List<Pose> Route(PedroAuto auto, Pose start) {
@@ -89,6 +89,12 @@ class VisualizerExportTest {
         }
         if (path == PedroAuto.IF_NOT_TIPPED) {
             return "IF_NOT_TIPPED";
+        }
+        if (path == PedroAuto.IF_GARDEN_SIDE_UP) {
+            return "IF_GARDEN_SIDE_UP";
+        }
+        if (path == PedroAuto.IF_FLOWER_SIDE_UP) {
+            return "IF_FLOWER_SIDE_UP";
         }
         if (path == PedroAuto.END_IF) {
             return "END_IF";
